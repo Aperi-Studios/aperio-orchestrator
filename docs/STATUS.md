@@ -39,6 +39,7 @@
 
 ## Known limits
 
+- An external audit by another host is pending. The 24-test suite is the builder's verification, not an independent review of the whole repository.
 - Shell steps are not jailed. Changes outside the plan are detected after execution.
 - Snapshot limits are 5,000 files and 50 MB.
 - The project lock is best-effort and a no-op where `fcntl` is unavailable.

@@ -636,6 +636,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Windows installer parity | **not built** | no PowerShell installer in v2 |
 | Public repository | **public** at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperi-Studios/aperio-orchestrator/actions/workflows/tests.yml) |
+| External audit of the whole repo | **pending** | assigned to a different host; not returned |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
 
