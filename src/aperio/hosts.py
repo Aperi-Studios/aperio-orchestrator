@@ -6,6 +6,7 @@ to run a task. This module reports presence and version only.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
@@ -35,6 +36,26 @@ CANDIDATES: list[tuple[str, str]] = [
     ("cursor", "cursor-agent"),
 ]
 
+# Bundled application binaries that may not be on PATH.
+KNOWN_PATHS: dict[str, list[str]] = {
+    "codex": [
+        "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+    ],
+}
+
+
+def resolve_host(name: str) -> str | None:
+    override = os.environ.get(f"APERIO_HOST_{name.upper()}")
+    if override and Path(override).is_file():
+        return str(Path(override))
+    found = shutil.which(name)
+    if found:
+        return str(Path(found))
+    for candidate in KNOWN_PATHS.get(name, []):
+        if Path(candidate).is_file():
+            return candidate
+    return None
+
 
 def _version(binary: str, timeout: int = 5) -> str:
     try:
@@ -55,7 +76,7 @@ def _version(binary: str, timeout: int = 5) -> str:
 def detect_hosts() -> list[Host]:
     hosts: list[Host] = []
     for name, binary in CANDIDATES:
-        path = shutil.which(binary)
+        path = resolve_host(name)
         if not path:
             hosts.append(Host(name=name, binary=binary, path=None, version="", status="not found"))
             continue
@@ -63,7 +84,7 @@ def detect_hosts() -> list[Host]:
             Host(
                 name=name,
                 binary=binary,
-                path=str(Path(path)),
+                path=path,
                 version=_version(path),
                 status="found",
             )

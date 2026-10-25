@@ -66,12 +66,16 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 }
 ```
 
+## Proof
+
+See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and output recorded on 2026-10-26.
+
 ## What works now
 
 - Project initialization and append-only owner asks.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
-- Host dispatch through a disposable project copy for the Claude and Goose adapters. Claude was proven end to end; Goose's command path is tested, but its local bridge returned HTTP 500 during this run.
-- Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. A real Claude reviewer confirmed a verified task.
+- Host dispatch through a disposable project copy for the Claude, Codex, and Goose adapters. Claude and Codex were proven end to end; Goose's command path is tested, but its local bridge returned HTTP 500 during this run.
+- Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. A real Claude reviewer confirmed verified work built by Claude and by Codex.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
 - Independent review enforcement by reviewer name.
@@ -86,7 +90,7 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 
 ## What is not built
 
-- Dispatch to hosts beyond the Claude and Goose adapters.
+- Dispatch to hosts beyond the Claude, Codex, and Goose adapters.
 - A distributed or live two-host mesh; the current store is local.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - A web dashboard.

@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .hosts import resolve_host
 from .model import Plan, Review, Step
 from .paths import PathSafetyError
 from .policy import PolicyError, assert_reviewer, assert_writable
@@ -100,9 +101,9 @@ def _binary_for(host: str) -> str:
         if not Path(override).is_file():
             raise HostError(f"configured host binary does not exist: {override}")
         return override
-    found = shutil.which(host)
+    found = resolve_host(host)
     if not found:
-        raise HostError(f"host is not installed on PATH: {host}")
+        raise HostError(f"host is not installed on PATH or a known application path: {host}")
     return found
 
 
@@ -119,6 +120,15 @@ def _command_for(host: str, binary: str, prompt: str, step: Step) -> list[str]:
             "--output-format",
             "text",
         ]
+    if host == "codex":
+        return [
+            binary,
+            "exec",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "workspace-write",
+            prompt,
+        ]
     if host == "goose":
         return [
             binary,
@@ -130,7 +140,7 @@ def _command_for(host: str, binary: str, prompt: str, step: Step) -> list[str]:
             "--text",
             prompt,
         ]
-    raise HostError(f"no adapter for host: {host} (supported: claude, goose)")
+    raise HostError(f"no adapter for host: {host} (supported: claude, codex, goose)")
 
 
 def _prompt(project: Project, plan: Plan, step: Step) -> str:
@@ -343,6 +353,15 @@ def _review_command(host: str, binary: str, prompt: str, timeout_s: int, budget_
             "--output-format",
             "text",
         ]
+    if host == "codex":
+        return [
+            binary,
+            "exec",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "read-only",
+            prompt,
+        ]
     if host == "goose":
         return [
             binary,
@@ -354,7 +373,7 @@ def _review_command(host: str, binary: str, prompt: str, timeout_s: int, budget_
             "--text",
             prompt,
         ]
-    raise HostError(f"no reviewer adapter for host: {host} (supported: claude, goose)")
+    raise HostError(f"no reviewer adapter for host: {host} (supported: claude, codex, goose)")
 
 
 def _parse_review(text: str) -> dict[str, Any]:

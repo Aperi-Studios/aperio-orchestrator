@@ -26,7 +26,7 @@ A small standard-library core:
 
 - project initialization and append-only asks;
 - plan creation, explicit owner approval, bounded writes, and shell steps;
-- host dispatch through a disposable project copy for Claude and Goose; Claude proven end to end, Goose's command path tested but its local bridge returned HTTP 500;
+- host dispatch through a disposable project copy for Claude, Codex, and Goose; Claude and Codex proven end to end, Goose's command path tested but its local bridge returned HTTP 500;
 - path traversal, absolute path, symlink, and protected-path refusal;
 - change detection for writes outside the declared plan;
 - acceptance checks and evidence records;
@@ -48,7 +48,7 @@ Run on the final public tree:
 
 | Check | Result |
 |---|---|
-| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 49 tests pass |
+| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 50 tests pass |
 | `ruff check src tests` | pass |
 | `shellcheck install.sh` | pass |
 | GitHub Actions, Python 3.10 / 3.12 / 3.14 | pass |
@@ -65,7 +65,7 @@ The demo was run through the full loop: unapproved run refused, approved run app
 
 ## What is not built
 
-- Dispatch to hosts beyond the Claude and Goose adapters.
+- Dispatch to hosts beyond the Claude, Codex, and Goose adapters.
 - A distributed or live two-host mesh; the local store and mediator are implemented.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - Web dashboard.

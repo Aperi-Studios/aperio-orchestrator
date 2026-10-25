@@ -9,14 +9,14 @@
 | Item | Result | Evidence |
 |---|---|---|
 | Core unit tests | 17 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 10 passed | same command; `tests/test_adapter.py` |
+| Adapter tests | 11 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 3 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Installer tests | 5 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 49 passed | same command |
+| Total test suite | 50 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -29,6 +29,7 @@
 | Claude host adapter | real host produced `site/index.html` in a disposable copy; acceptance passed; review and done completed | real-host proof 3, `run-2d57f0f091`; evidence held in the temporary project |
 | Goose host adapter | command path tested with a fake binary; live Goose call failed with HTTP 500 from the local bridge | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command`; live probe output |
 | Host change outside the plan | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
+| Codex host adapter | real Codex built `site/index.html`; fresh Claude review confirmed; task done | task `task-116b1d078e`, run `run-d86056766a`, review `review-5fcf72b5e9` |
 | Fresh-context host review | real Claude reviewer saw only the brief, changed files, acceptance, and evidence; verdict confirmed | review `review-973d3a5fb8` in the temporary goldfish project |
 | Self-review refusal | a host cannot review its own build | `tests/test_adapter.py::test_host_cannot_review_its_own_build` |
 | Documentation drift | Docs links and inline paths resolve; repo check clean | `aperio drift`; `tests/test_drift.py` |
@@ -43,7 +44,7 @@
 
 ## Not built
 
-- Dispatch to hosts beyond the Claude and Goose adapters.
+- Dispatch to hosts beyond the Claude, Codex, and Goose adapters.
 - A distributed or live two-host mesh; the current message store is local and persistent.
 - A real host-to-host exchange over that store.
 - CMS, media, SEO, and Astro/Lumos delivery.

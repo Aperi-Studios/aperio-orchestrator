@@ -104,6 +104,17 @@ class AdapterTests(unittest.TestCase):
             self.assertIn("--no-session", result["steps"][0]["command"])
             self.assertEqual((self.root / "site/index.html").read_text(), "<h1>from host</h1>")
 
+    def test_codex_adapter_builds_an_exec_command(self) -> None:
+        with mock.patch.dict(os.environ, {"APERIO_HOST_CODEX": str(self.host)}):
+            _task, plan = make_plan(self.project, host="codex", prompt="Create the page.", writes=["site/index.html"])
+            result = apply_plan(self.project, plan)
+            self.assertEqual(result["status"], "applied", result)
+            self.assertEqual(result["steps"][0]["host"], "codex")
+            self.assertIn("exec", result["steps"][0]["command"])
+            self.assertIn("--sandbox", result["steps"][0]["command"])
+            self.assertIn("workspace-write", result["steps"][0]["command"])
+            self.assertEqual((self.root / "site/index.html").read_text(), "<h1>from host</h1>")
+
     def test_host_review_confirms_a_verified_task(self) -> None:
         task, plan = make_plan(
             self.project,

@@ -347,7 +347,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--reviewer", default=None)
     p.add_argument("--verdict", choices=["confirmed", "refuted"], default=None)
     p.add_argument("--notes", default="")
-    p.add_argument("--host", default=None, help="run a fresh-context host review (claude or goose)")
+    p.add_argument("--host", default=None, help="run a fresh-context host review (claude, codex, or goose)")
     p.add_argument("--timeout", type=int, default=300)
     p.add_argument("--budget", type=float, default=1.50)
     p.set_defaults(func=cmd_review)
