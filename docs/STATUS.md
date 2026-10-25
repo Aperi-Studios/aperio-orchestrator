@@ -10,9 +10,10 @@
 |---|---|---|
 | Core unit tests | 17 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | 10 passed | same command; `tests/test_adapter.py` |
+| Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Installer tests | 4 passed | same command; `tests/test_installer.py` |
-| Total test suite | 35 passed | same command |
+| Total test suite | 40 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -27,6 +28,7 @@
 | Host change outside the plan | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
 | Fresh-context host review | real Claude reviewer saw only the brief, changed files, acceptance, and evidence; verdict confirmed | review `review-973d3a5fb8` in the temporary goldfish project |
 | Self-review refusal | a host cannot review its own build | `tests/test_adapter.py::test_host_cannot_review_its_own_build` |
+| Documentation drift | Docs links and inline paths resolve; repo check clean | `aperio drift`; `tests/test_drift.py` |
 | `/aperio` command file | installed by the installer | `~/.claude/commands/aperio.md`; host load not verified |
 | Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |
 | Real-home install | binary, skill, and command present; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |

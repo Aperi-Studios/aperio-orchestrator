@@ -34,6 +34,7 @@ A small standard-library core:
 - finish only after verified work and a confirmed review;
 - rollback from pre-run snapshots;
 - handoff generated from actual state;
+- deterministic documentation drift checks for links and inline paths;
 - installer with dry run, idempotent reinstall, skill, `/aperio` command, and uninstall;
 - read-only host detection.
 
@@ -45,7 +46,7 @@ Run on the final public tree:
 
 | Check | Result |
 |---|---|
-| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 35 tests pass |
+| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 40 tests pass |
 | `ruff check src tests` | pass |
 | `shellcheck install.sh` | pass |
 | GitHub Actions, Python 3.10 / 3.12 / 3.14 | pass |
@@ -53,6 +54,7 @@ Run on the final public tree:
 | Real-home install | binary, skill, and command present |
 | Real Claude host dispatch | file written, acceptance passed, review confirmed, done |
 | Real Claude fresh-context review | brief-only reviewer confirmed a verified task |
+| `aperio drift` | clean: docs links and inline paths resolve |
 
 The demo was run through the full loop: unapproved run refused, approved run applied, acceptance passed, review confirmed, task done.
 

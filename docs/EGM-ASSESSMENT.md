@@ -15,7 +15,7 @@ The metaphor:
 - **Goldfish:** a fresh, zero-context reviewer that receives only the draft spec and the live source. It does not inherit the builder's conversation or assumptions.
 - **Human:** owns the decisions, trade-offs, and final approval.
 
-The workflow is: brainstorm, draft a design document under `docs/designs/`, run a multi-stage Goldfish review, resolve findings, merge the specification, implement against it, and run a drift report later.
+The workflow is: brainstorm, draft a design document under the project's design directory, run a multi-stage Goldfish review, resolve findings, merge the specification, implement against it, and run a drift report later.
 
 ## Repository facts
 
@@ -74,7 +74,7 @@ The overlap is real. Installing the full EGM plugin would create two competing w
 | Addition | Why | Cost |
 |---|---|---|
 | `aperio review --host <host>` with fresh context | Independent review that is actually independent | **Implemented and proven with Claude on 2026-10-26** |
-| `aperio drift` | Detect docs that point at missing code or tests | Low |
+| `aperio drift` | Detect docs that point at missing code or tests | **Implemented: deterministic link and inline-path check** |
 | Reviewer prompt schema | Makes verdicts parseable and auditable | **Implemented: JSON verdict and findings** |
 | Skill trigger tests for `/aperio` | Proves the skill activates on the right requests | Low |
 | Optional EGM trial in a separate profile | Evaluate the full method without contaminating Aperio | Later |

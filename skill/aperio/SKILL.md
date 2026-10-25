@@ -23,6 +23,7 @@ aperio review <task-id> --host claude
 aperio done <task-id>
 aperio rollback <task-id> --yes
 aperio handoff <task-id> --print
+aperio drift
 aperio status --json
 aperio hosts
 ```

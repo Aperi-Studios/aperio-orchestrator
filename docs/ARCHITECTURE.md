@@ -13,6 +13,7 @@ src/aperio/
   paths.py      relative-path validation and symlink checks
   policy.py     allowed paths, protected paths, review separation
   adapter.py    disposable-workspace host dispatch and change validation
+  drift.py      deterministic documentation link and path checks
   runner.py     apply, detect changes, verify, review, finish, rollback
   handoff.py    owner-facing markdown from actual state
   hosts.py      read-only host detection

@@ -11,6 +11,8 @@ from typing import Any
 
 from . import __version__
 from .adapter import HostError, run_host_review
+from .drift import check as drift_check
+from .drift import format_findings as format_drift
 from .handoff import write_handoff
 from .hosts import detect_hosts
 from .model import Acceptance, Approval, ModelError, Plan, Step, Task, new_id
@@ -240,6 +242,15 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def cmd_drift(args: argparse.Namespace) -> int:
+    findings = drift_check(args.project)
+    if args.json:
+        print(json.dumps([finding.to_dict() for finding in findings], indent=2, sort_keys=True))
+    else:
+        print(format_drift(findings))
+    return 1 if findings else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aperio",
@@ -314,6 +325,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("doctor", help="check the project state")
     p.set_defaults(func=cmd_doctor)
+
+    p = sub.add_parser("drift", help="check docs for links and paths that do not exist")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_drift)
     return parser
 
 
