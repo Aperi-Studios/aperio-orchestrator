@@ -101,6 +101,26 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((self.skill_home / "aperio").exists())
         self.assertFalse(command.exists())
 
+    def test_prefix_with_spaces(self) -> None:
+        prefix = self.root / "prefix with spaces"
+        install = subprocess.run(
+            ["bash", str(ROOT / "install.sh"), "--prefix", str(prefix), "--no-skill"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(install.returncode, 0, install.stderr)
+        version = subprocess.run(
+            [str(prefix / "bin" / "aperio"), "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(version.returncode, 0, version.stderr)
+        self.assertIn("aperio", version.stdout.lower())
+
     def test_powershell_installer(self) -> None:
         if not shutil.which("pwsh"):
             self.skipTest("pwsh is not installed")

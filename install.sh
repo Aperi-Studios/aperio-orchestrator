@@ -105,11 +105,12 @@ run chmod 755 "$PREFIX/bin"
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "would: write $BIN"
 else
-  cat > "$PREFIX/bin/.aperio-wrapper.tmp" <<EOF
+  cat > "$PREFIX/bin/.aperio-wrapper.tmp" <<'EOF'
 #!/usr/bin/env python3
 """Aperio v2 launcher. Installed by install.sh."""
 import sys
-sys.path.insert(0, "$LIB")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "share" / "aperio"))
 from aperio.cli import main
 raise SystemExit(main())
 EOF
