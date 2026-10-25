@@ -51,6 +51,15 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((self.home / ".claude" / "commands" / "aperio.md").exists())
         self.assertFalse((self.skill_home / "aperio").exists())
 
+    def test_dry_run_uninstall_removes_nothing(self) -> None:
+        install = self.run_install()
+        self.assertEqual(install.returncode, 0, install.stderr)
+        result = self.run_install("--uninstall", "--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.prefix / "bin" / "aperio").is_file())
+        self.assertTrue((self.skill_home / "aperio" / "SKILL.md").is_file())
+        self.assertIn("would remove", result.stdout)
+
     def test_install_is_idempotent_and_uninstalls(self) -> None:
         first = self.run_install()
         self.assertEqual(first.returncode, 0, first.stderr)

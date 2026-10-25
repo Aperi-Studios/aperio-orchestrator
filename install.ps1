@@ -56,23 +56,23 @@ function Write-Text([string]$Path, [string]$Value) {
 if ($Uninstall) {
     if (Test-Path (Join-Path $Lib $Marker)) {
         Invoke-Step { Remove-Item -Recurse -Force $Lib } "remove $Lib"
-        Write-Host "removed $Lib"
+        if ($DryRun) { Write-Host "would remove $Lib" } else { Write-Host "removed $Lib" }
     } else { Write-Host "not removing $Lib`: marker missing" }
     if ((Test-Path $Cmd) -and (Select-String -Path $Cmd -Pattern "Aperio v2" -Quiet)) {
         Invoke-Step { Remove-Item -Force $Cmd } "remove $Cmd"
-        Write-Host "removed $Cmd"
+        if ($DryRun) { Write-Host "would remove $Cmd" } else { Write-Host "removed $Cmd" }
     }
     if ((Test-Path $Launcher) -and (Select-String -Path $Launcher -Pattern "Aperio v2" -Quiet)) {
         Invoke-Step { Remove-Item -Force $Launcher } "remove $Launcher"
-        Write-Host "removed $Launcher"
+        if ($DryRun) { Write-Host "would remove $Launcher" } else { Write-Host "removed $Launcher" }
     }
     if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir $Marker))) {
         Invoke-Step { Remove-Item -Recurse -Force $SkillDir } "remove $SkillDir"
-        Write-Host "removed $SkillDir"
+        if ($DryRun) { Write-Host "would remove $SkillDir" } else { Write-Host "removed $SkillDir" }
     }
     if (-not $NoSkill -and (Test-Path $CommandFile) -and (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
         Invoke-Step { Remove-Item -Force $CommandFile } "remove $CommandFile"
-        Write-Host "removed $CommandFile"
+        if ($DryRun) { Write-Host "would remove $CommandFile" } else { Write-Host "removed $CommandFile" }
     }
     exit 0
 }

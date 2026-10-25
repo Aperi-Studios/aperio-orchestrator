@@ -363,6 +363,21 @@ class CoreTests(unittest.TestCase):
                 }
             )
 
+    def test_finish_requires_review_evidence(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        review(self.project, task.id, "qa", "confirmed")
+        stored = self.project.get_task(task.id)
+        for path in stored.evidence:
+            if "review-" in Path(path).name:
+                Path(path).unlink()
+        with self.assertRaises(RunError):
+            finish(self.project, task.id)
+
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))
         self.assertTrue(path_allowed("site/a/b.txt", ["site"]))

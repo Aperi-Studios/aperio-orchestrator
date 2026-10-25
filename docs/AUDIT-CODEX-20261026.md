@@ -121,5 +121,17 @@ issues:
 | P2 | Host review could record a stale verification. | **Fixed.** It compares the current artifact and plan digests before running. |
 | P2 | The PowerShell installer overwrote an existing command file. | **Fixed.** It now refuses unless the file is an Aperio v2 command. |
 
-Test count: 68. A final static pass and the owner's approval are still required.
+Test count: 70. A final static pass and the owner's approval are still required.
+
+## Seventh pass
+
+A seventh fresh Codex audit on HEAD `3b9b9f7` found no P0 and two P1s:
+
+| Severity | Finding | Disposition |
+|---|---|---|
+| P1 | `done` could succeed after the review evidence file was deleted because it trusted the task's review fields. | **Fixed.** `done` now requires a matching review evidence record; test `test_finish_requires_review_evidence`. |
+| P1 | Dry-run uninstall printed "removed" even though nothing was removed. | **Fixed in Bash and PowerShell.** Dry-run prints would-remove and leaves files; test `test_dry_run_uninstall_removes_nothing`. |
+
+Test count: 70. The owner's approval and Claude's independent audit remain pending.
+
 

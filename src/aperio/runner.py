@@ -223,6 +223,21 @@ def _current_verification(project: Project, task: Task) -> dict[str, Any]:
     return record
 
 
+def _current_review(project: Project, task: Task) -> dict[str, Any]:
+    if not task.review:
+        raise RunError("task has no review")
+    rows = [
+        row
+        for row in project.evidence(task.id)
+        if row.get("review_id")
+        and str(row.get("reviewer", "")).strip().lower() == task.review.reviewer.strip().lower()
+        and str(row.get("verdict", "")).lower() == task.review.verdict
+    ]
+    if not rows:
+        raise RunError("review evidence is missing")
+    return max(rows, key=lambda row: str(row.get("at") or row.get("created_at") or ""))
+
+
 def _run_shell_command(
     command: str,
     *,
@@ -593,6 +608,7 @@ def finish(project: Project, task_id: str) -> dict[str, Any]:
     if not plan.acceptance:
         raise RunError("task has no acceptance checks")
     _current_verification(project, task)
+    _current_review(project, task)
     task.status = "done"
     project.put_task(task)
     project.append_event("task.done", {"task_id": task_id})

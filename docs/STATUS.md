@@ -8,15 +8,15 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 27 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | 28 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | 15 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 5 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
-| Installer tests | 7 passed | same command; `tests/test_installer.py` |
+| Installer tests | 8 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 68 passed | same command |
+| Total test suite | 70 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -32,6 +32,8 @@
 | Undeclared shell write | detected and failed | `tests/test_core.py::test_command_outside_write_is_detected` |
 | Verification timeout | cannot pass, even with `expected_exit: 124` | `tests/test_core.py::test_verification_timeout_cannot_pass` |
 | Artifact binding | review and done refuse if the project changes after verification | `tests/test_core.py::test_review_refuses_a_project_changed_after_verification`; `test_finish_refuses...` |
+| Review evidence | done refuses if the review evidence file is missing | `tests/test_core.py::test_finish_requires_review_evidence` |
+| Installer dry-run uninstall | reports would-remove and keeps files | `tests/test_installer.py::test_dry_run_uninstall_removes_nothing` |
 | Acceptance mutation | a check that changes a project file fails verification | `tests/test_core.py::test_acceptance_check_cannot_mutate_the_project` |
 | Installer dry run | no files written | `tests/test_installer.py::test_dry_run_writes_nothing` |
 | Installer idempotency | second run leaves one skill | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
@@ -70,7 +72,7 @@
 
 ## Known limits
 
-- Six external Codex passes found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 68-test suite is not a whole-repository audit. Claude's independent audit and the owner's approval are still pending. See `docs/AUDIT-CODEX-20261026.md`.
+- Seven external Codex passes found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 70-test suite is not a whole-repository audit. Claude's independent audit and the owner's approval are still pending. See `docs/AUDIT-CODEX-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.

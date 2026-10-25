@@ -77,21 +77,21 @@ write_text() {
 if [ "$UNINSTALL" -eq 1 ]; then
   if [ -f "$LIB/$MARKER" ]; then
     run rm -rf "$LIB"
-    echo "removed $LIB"
+    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$LIB"; else echo "removed $LIB"; fi
   else
     echo "not removing $LIB: marker missing"
   fi
   if [ -f "$BIN" ] && grep -q "Aperio v2" "$BIN" 2>/dev/null; then
     run rm -f "$BIN"
-    echo "removed $BIN"
+    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$BIN"; else echo "removed $BIN"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$SKILL_DIR/$MARKER" ]; then
     run rm -rf "$SKILL_DIR"
-    echo "removed $SKILL_DIR"
+    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$SKILL_DIR"; else echo "removed $SKILL_DIR"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
     run rm -f "$COMMAND_FILE"
-    echo "removed $COMMAND_FILE"
+    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$COMMAND_FILE"; else echo "removed $COMMAND_FILE"; fi
   fi
   exit 0
 fi
