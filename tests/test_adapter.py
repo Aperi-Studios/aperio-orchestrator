@@ -192,6 +192,40 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(RunError):
             verify(self.project, task.id)
 
+    def test_host_change_outside_step_writes_is_rejected(self) -> None:
+        self.host.write_text(
+            "#!/usr/bin/env python3\n"
+            "from pathlib import Path\n"
+            "Path('site').mkdir(exist_ok=True)\n"
+            "Path('site/index.html').write_text('<h1>ok</h1>')\n"
+            "Path('site/extra.html').write_text('undeclared')\n"
+            "print('wrote extra')\n",
+            encoding="utf-8",
+        )
+        self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)
+        _task, plan = make_plan(self.project, prompt="Write one page.", writes=["site/index.html"])
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(any("site/extra.html" in v for v in result["violations"]))
+        self.assertFalse((self.root / "site/extra.html").exists())
+        self.assertFalse((self.root / "site/index.html").exists())
+
+    def test_host_symlink_is_rejected(self) -> None:
+        self.host.write_text(
+            "#!/usr/bin/env python3\n"
+            "from pathlib import Path\n"
+            "Path('site').mkdir(exist_ok=True)\n"
+            "Path('site/link').symlink_to('/etc/passwd')\n"
+            "print('made link')\n",
+            encoding="utf-8",
+        )
+        self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)
+        _task, plan = make_plan(self.project, prompt="Make a link.", writes=["site/link"])
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(any("symlink" in v for v in result["violations"]))
+        self.assertFalse((self.root / "site/link").exists())
+
     def test_host_without_changes_fails(self) -> None:
         self.host.write_text("#!/usr/bin/env python3\nprint('no change')\n", encoding="utf-8")
         self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)

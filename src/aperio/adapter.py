@@ -23,7 +23,7 @@ from typing import Any
 from .hosts import resolve_host
 from .model import Plan, Review, Step
 from .paths import PathSafetyError
-from .policy import PolicyError, assert_reviewer, assert_writable
+from .policy import PolicyError, assert_reviewer, step_allows
 from .store import Project
 
 
@@ -304,15 +304,18 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
         return result
     changes: list[HostChange] = []
     for rel, op in diff:
+        path = workspace / rel
+        if before.get(rel, ("", ""))[0] == "symlink" or path.is_symlink():
+            result.violations.append(f"{rel}: symlink changes are not accepted")
+            continue
         try:
-            normalized = assert_writable(rel, plan)
+            normalized = step_allows(rel, step, plan)
         except (PolicyError, PathSafetyError) as exc:
             result.violations.append(f"{rel}: {exc}")
             continue
         if op == "delete":
             changes.append(HostChange(path=normalized, op="delete"))
             continue
-        path = workspace / rel
         data = path.read_bytes()
         if len(data) > MAX_FILE_BYTES:
             result.violations.append(f"{rel}: file exceeds {MAX_FILE_BYTES} bytes")

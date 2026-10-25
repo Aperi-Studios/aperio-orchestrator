@@ -59,11 +59,11 @@ State files are written to a temporary file in the same directory, flushed, and 
    - validates every declared path;
    - snapshots files that may change;
    - applies `write` steps and runs `run` steps with a timeout;
-   - for a `host` step, copies the project into a disposable workspace, runs the host there, rejects changes outside the declared paths, and only then applies text changes to the real project;
+   - for a `host` step, copies the project into a disposable workspace, runs the host there, rejects changes outside the plan and the step's declared writes, rejects symlink changes, and only then applies text changes to the real project;
    - hashes the project before and after;
    - records changed files and any change outside the declared writes;
    - saves evidence and moves the task to `applied` or `failed`.
-6. `verify` runs the plan's acceptance commands and records pass or fail.
+6. `verify` runs the plan's acceptance commands, rejects a timed-out check, and fails if a check changes a project file; it records pass or fail.
 7. `review` records a named reviewer's `confirmed` or `refuted` verdict. With `--host`, it builds a brief-only workspace containing the plan, changed files, acceptance results, and handoff; the fresh host reviewer has no builder conversation and cannot edit. The reviewer must differ from the builder.
 8. `done` requires a verified task and a confirmed review.
 9. `handoff` writes a markdown report from the actual task, plan, evidence, and review.
@@ -102,7 +102,7 @@ Run evidence includes:
 - changed files and violations;
 - backup manifest and limits.
 
-Verification evidence includes every acceptance command, expected and actual exit code, stdout condition, pass or fail, and duration.
+Verification evidence includes every acceptance command, expected and actual exit code, whether it timed out, stdout condition, pass or fail, duration, and any project files it changed.
 
 Review evidence includes reviewer, verdict, notes, and time.
 

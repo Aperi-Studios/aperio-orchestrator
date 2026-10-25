@@ -68,7 +68,7 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 
 ## Proof
 
-See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and output recorded on 2026-10-26.
+See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and output recorded on 2026-10-26. The first external Codex audit and its dispositions are in [docs/AUDIT-CODEX-20261026.md](docs/AUDIT-CODEX-20261026.md).
 
 ## What works now
 

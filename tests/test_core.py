@@ -247,6 +247,31 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertEqual(self.project.get_task(task.id).status, "failed")
 
+    def test_verification_timeout_cannot_pass(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+            acceptance=[Acceptance(id="slow", command="sleep 2", expected_exit=124, timeout_s=1)],
+        )
+        apply_plan(self.project, plan)
+        result = verify(self.project, task.id)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["checks"][0]["timed_out"])
+        self.assertFalse(result["checks"][0]["ok"])
+        self.assertEqual(self.project.get_task(task.id).status, "failed")
+
+    def test_acceptance_check_cannot_mutate_the_project(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+            acceptance=[Acceptance(id="writes", command="printf bad > site/extra.txt")],
+        )
+        apply_plan(self.project, plan)
+        result = verify(self.project, task.id)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("site/extra.txt", result["mutated_files"])
+        self.assertEqual(self.project.get_task(task.id).status, "failed")
+
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))
         self.assertTrue(path_allowed("site/a/b.txt", ["site"]))

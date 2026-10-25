@@ -78,6 +78,15 @@ def assert_writable(path: str, plan: Plan, protected_paths: list[str] | None = N
     return normalized
 
 
+def step_allows(path: str, step: Step, plan: Plan, protected_paths: list[str] | None = None) -> str:
+    """Normalize a path and require it to match this step's declared writes."""
+    normalized = assert_writable(path, plan, protected_paths)
+    for target in step.writes:
+        if _matches(normalized, normalize_allowed(target)):
+            return normalized
+    raise PolicyError(f"path is outside this step's declared writes: {path}")
+
+
 def assert_command(command: str, step: Step) -> None:
     if not command or not command.strip():
         raise PolicyError(f"step {step.id}: empty command")

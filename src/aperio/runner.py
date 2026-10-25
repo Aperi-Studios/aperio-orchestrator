@@ -378,8 +378,10 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
         "status": "running",
     }
     all_ok = True
+    before_hashes = _hash_project(project)
     for check in plan.acceptance:
         started = time.monotonic()
+        timed_out = False
         try:
             completed = subprocess.run(
                 check.command,
@@ -395,10 +397,11 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
             stdout = completed.stdout or ""
             stderr = completed.stderr or ""
         except subprocess.TimeoutExpired as exc:
+            timed_out = True
             exit_code = 124
             stdout = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
             stderr = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
-        ok = exit_code == check.expected_exit
+        ok = not timed_out and exit_code == check.expected_exit
         if check.stdout_contains is not None and check.stdout_contains not in stdout:
             ok = False
         all_ok = all_ok and ok
@@ -408,6 +411,7 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
                 "command": check.command,
                 "exit_code": exit_code,
                 "expected_exit": check.expected_exit,
+                "timed_out": timed_out,
                 "stdout_contains": check.stdout_contains,
                 "ok": ok,
                 "duration_s": round(time.monotonic() - started, 3),
@@ -415,6 +419,10 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
                 "stderr": stderr[-MAX_CAPTURE:],
             }
         )
+    mutated = _changed_files(project, before_hashes)
+    if mutated:
+        all_ok = False
+        evidence["mutated_files"] = mutated
     evidence["status"] = "passed" if all_ok else "failed"
     evidence["finished_at"] = utc_now()
     path = project.save_evidence(task_id, check_id, evidence)

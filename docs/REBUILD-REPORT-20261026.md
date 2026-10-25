@@ -40,7 +40,7 @@ A small standard-library core:
 - PowerShell installer tested under `pwsh` on macOS;
 - read-only host detection.
 
-The v2 documentation set is `README.md`, `START-HERE.md`, and the files in `docs/`. There are 18 Markdown files in the repository, not 1,241.
+The v2 documentation set is `README.md`, `START-HERE.md`, and the files in `docs/`. There are 19 Markdown files in the repository, not 1,241.
 
 ## Verification
 
@@ -48,7 +48,7 @@ Run on the final public tree:
 
 | Check | Result |
 |---|---|
-| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 51 tests pass |
+| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 55 tests pass |
 | `ruff check src tests` | pass |
 | `shellcheck install.sh` | pass |
 | GitHub Actions, Python 3.10 / 3.12 / 3.14 | pass |

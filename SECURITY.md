@@ -17,14 +17,16 @@ Aperio v2 is a local project tool. It:
 - does not store credentials;
 - does not claim an OS sandbox for shell steps.
 
-A shell step in an approved plan can change files before the runner detects the change. Treat plans from untrusted sources as code. Review every plan before approval.
+A shell step in an approved plan can change files before the runner detects the change. Treat plans from untrusted sources as code. Review every plan before approval. An acceptance check is intended to inspect the result, not change it; if it changes a project file, verification fails.
 
 ## Known security boundaries
 
-- Path checks stop traversal and symlink escapes.
-- Protected paths such as `.git` and `.aperio` are refused.
-- Undeclared writes are detected after execution and recorded as violations.
-- A task cannot be marked done without a confirmed independent review.
+- Path checks refuse lexical traversal, absolute paths, and symlinked components for paths resolved through the project path helper.
+- Host changes are rejected if they are outside the plan, outside the host step's declared writes, or are symlinks. The adapter reads only regular files after that check.
+- Protected paths such as `.git` and `.aperio` are refused for plan writes.
+- Undeclared writes are detected after execution inside the scanned project tree. Writes to excluded directories, outside the project, or to paths the scanner cannot read are not observed.
+- A task cannot be marked done without a confirmed review whose reviewer label differs from the builder label. Labels are self-reported; this is not authenticated identity.
+- Acceptance checks that mutate a project file fail verification.
 - Host detection does not authenticate a host or prove model access.
 
 See `docs/ARCHITECTURE.md` for the full boundary.
