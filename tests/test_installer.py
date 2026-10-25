@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -99,6 +100,38 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse(binary.exists())
         self.assertFalse((self.skill_home / "aperio").exists())
         self.assertFalse(command.exists())
+
+    def test_powershell_installer(self) -> None:
+        if not shutil.which("pwsh"):
+            self.skipTest("pwsh is not installed")
+        prefix = self.root / "ps-prefix"
+        install = subprocess.run(
+            ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(prefix), "-NoSkill"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(install.returncode, 0, install.stderr)
+        launcher = prefix / "bin" / "aperio_launcher.py"
+        self.assertTrue(launcher.is_file())
+        version = subprocess.run(
+            [sys.executable, str(launcher), "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(version.returncode, 0, version.stderr)
+        remove = subprocess.run(
+            ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(prefix), "-NoSkill", "-Uninstall"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(remove.returncode, 0, remove.stderr)
+        self.assertFalse((prefix / "bin" / "aperio.cmd").exists())
 
     def test_unsafe_prefix_is_refused(self) -> None:
         result = subprocess.run(

@@ -1,0 +1,113 @@
+<#
+.SYNOPSIS
+  Aperio v2 installer for PowerShell.
+.DESCRIPTION
+  Copies the package, creates a launcher, and optionally installs the skill and
+  /aperio command. No network access, no administrator rights, no settings edits.
+#>
+[CmdletBinding()]
+param(
+    [string]$Prefix = $(if ($env:APERIO_PREFIX) { $env:APERIO_PREFIX } else { Join-Path $HOME ".local" }),
+    [switch]$NoSkill,
+    [switch]$DryRun,
+    [switch]$Uninstall
+)
+
+$ErrorActionPreference = "Stop"
+$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Version = (Select-String -Path (Join-Path $Root "src/aperio/__init__.py") -Pattern '__version__ = "([^"]+)"').Matches[0].Groups[1].Value
+$Marker = "aperio-v2-managed"
+$SkillHome = if ($env:APERIO_SKILL_HOME) { $env:APERIO_SKILL_HOME } else { Join-Path $HOME ".claude/skills" }
+$SkillDir = Join-Path $SkillHome "aperio"
+$CommandDir = Join-Path $HOME ".claude/commands"
+$CommandFile = Join-Path $CommandDir "aperio.md"
+
+function Test-UnsafePrefix([string]$Value) {
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $true }
+    $full = [IO.Path]::GetFullPath($Value)
+    $root = [IO.Path]::GetPathRoot($full)
+    return ($full -eq $root -or $full -eq "." -or $full -eq "")
+}
+
+if (Test-UnsafePrefix $Prefix) {
+    Write-Error "install.ps1: refusing unsafe prefix: $Prefix"
+    exit 2
+}
+if (-not $DryRun) {
+    New-Item -ItemType Directory -Force -Path $Prefix | Out-Null
+    $Prefix = (Resolve-Path $Prefix).Path
+}
+$Lib = Join-Path $Prefix "share/aperio"
+$Bin = Join-Path $Prefix "bin"
+$Launcher = Join-Path $Bin "aperio_launcher.py"
+$Cmd = Join-Path $Bin "aperio.cmd"
+
+function Invoke-Step([scriptblock]$Action, [string]$Label) {
+    if ($DryRun) { Write-Host "would: $Label" } else { & $Action }
+}
+function Write-Text([string]$Path, [string]$Value) {
+    if ($DryRun) { Write-Host "would: write $Path" }
+    else {
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
+        Set-Content -Path $Path -Value $Value -Encoding utf8
+    }
+}
+
+if ($Uninstall) {
+    if (Test-Path (Join-Path $Lib $Marker)) {
+        Invoke-Step { Remove-Item -Recurse -Force $Lib } "remove $Lib"
+        Write-Host "removed $Lib"
+    } else { Write-Host "not removing $Lib`: marker missing" }
+    if ((Test-Path $Cmd) -and (Select-String -Path $Cmd -Pattern "Aperio v2" -Quiet)) {
+        Invoke-Step { Remove-Item -Force $Cmd } "remove $Cmd"
+        Write-Host "removed $Cmd"
+    }
+    if ((Test-Path $Launcher) -and (Select-String -Path $Launcher -Pattern "Aperio v2" -Quiet)) {
+        Invoke-Step { Remove-Item -Force $Launcher } "remove $Launcher"
+        Write-Host "removed $Launcher"
+    }
+    if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir $Marker))) {
+        Invoke-Step { Remove-Item -Recurse -Force $SkillDir } "remove $SkillDir"
+        Write-Host "removed $SkillDir"
+    }
+    if (-not $NoSkill -and (Test-Path $CommandFile) -and (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
+        Invoke-Step { Remove-Item -Force $CommandFile } "remove $CommandFile"
+        Write-Host "removed $CommandFile"
+    }
+    exit 0
+}
+
+Invoke-Step { New-Item -ItemType Directory -Force -Path $Lib, $Bin | Out-Null } "create $Lib and $Bin"
+Invoke-Step { Remove-Item -Recurse -Force (Join-Path $Lib "aperio") -ErrorAction SilentlyContinue } "clear $Lib/aperio"
+Invoke-Step { Copy-Item -Recurse -Force (Join-Path $Root "src/aperio") (Join-Path $Lib "aperio") } "copy package to $Lib"
+Write-Text (Join-Path $Lib "VERSION") $Version
+Write-Text (Join-Path $Lib $Marker) $Marker
+
+$launcherText = @"
+#!/usr/bin/env python3
+"""Aperio v2 launcher. Installed by install.ps1."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "share" / "aperio"))
+from aperio.cli import main
+raise SystemExit(main())
+"@
+Write-Text $Launcher $launcherText
+
+$cmdText = @"
+@echo off
+rem Aperio v2 launcher
+python "%~dp0aperio_launcher.py" %*
+"@
+Write-Text $Cmd $cmdText
+
+if (-not $NoSkill) {
+    Invoke-Step { New-Item -ItemType Directory -Force -Path $SkillDir, $CommandDir | Out-Null } "create $SkillDir and $CommandDir"
+    Invoke-Step { Copy-Item -Force (Join-Path $Root "skill/aperio/SKILL.md") (Join-Path $SkillDir "SKILL.md") } "copy skill to $SkillDir"
+    Write-Text (Join-Path $SkillDir "VERSION") $Version
+    Write-Text (Join-Path $SkillDir $Marker) $Marker
+    Invoke-Step { Copy-Item -Force (Join-Path $Root "commands/aperio.md") $CommandFile } "copy command to $CommandFile"
+}
+
+if (-not $DryRun) { Write-Host "installed Aperio $Version"; Write-Host "  binary: $Cmd"; if (-not $NoSkill) { Write-Host "  skill:  $SkillDir" } }
+else { Write-Host "dry run: no files changed" }

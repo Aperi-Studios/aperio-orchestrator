@@ -17,6 +17,12 @@ cd aperio-orchestrator
 aperio --version
 ```
 
+PowerShell 7:
+
+```sh
+pwsh -File install.ps1
+```
+
 The installer copies the package to `~/.local/share/aperio`, creates `~/.local/bin/aperio`, installs the skill under `~/.claude/skills/aperio`, and installs the `/aperio` command under `~/.claude/commands/aperio.md`. It does not edit host settings, use sudo, or download anything. The command file is installed, but the host's ability to load it is not yet verified.
 
 To test without installing:
@@ -75,6 +81,7 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 - Local durable message store with send, read, reply, ack, filters, and restart persistence.
 - Mediator disposition from run, verify, and review evidence: `CONFIRMED`, `REFUTED`, or `BLOCKED`.
 - Installer, idempotent reinstall, dry run, and uninstall.
+- PowerShell installer tested under `pwsh` 7.6.7 on macOS; native Windows `.cmd` execution is not tested.
 - Read-only host detection.
 
 ## What is not built
@@ -85,6 +92,7 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 - A web dashboard.
 - OS-level sandboxing. Host steps and shell steps are detected, not jailed.
 - Remote deployment.
+- Native Windows execution of `aperio.cmd`; the PowerShell installer is tested under `pwsh` on macOS.
 - Automatic public release.
 
 ## Safety model

@@ -621,8 +621,8 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **3 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
-| Installer tests | **4 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **48 passed** | same command |
+| Installer tests | **5 passed** | same command; `tests/test_installer.py` |
+| Total test suite | **49 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -644,7 +644,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Distributed/live two-host mesh | **not built**; local durable message store and mediator are implemented | `src/aperio/mesh.py`, `src/aperio/mediator.py` |
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
 | OS sandbox for host or shell steps | **not built**; undeclared writes are detected after execution | `docs/ARCHITECTURE.md` limits |
-| Windows installer parity | **not built** | no PowerShell installer in v2 |
+| Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
 | External audit of the whole repo | **pending** | assigned to a different host; not returned |

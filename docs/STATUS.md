@@ -14,8 +14,9 @@
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 3 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
-| Installer tests | 4 passed | same command; `tests/test_installer.py` |
-| Total test suite | 48 passed | same command |
+| Installer tests | 5 passed | same command; `tests/test_installer.py` |
+| PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
+| Total test suite | 49 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -49,7 +50,7 @@
 - Web dashboard.
 - OS sandbox for host or shell steps.
 - Remote deployment.
-- Windows installer parity.
+- Native Windows execution of `aperio.cmd`; the PowerShell installer passes under `pwsh` on macOS.
 
 ## Known limits
 

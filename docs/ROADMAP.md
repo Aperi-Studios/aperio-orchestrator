@@ -47,12 +47,14 @@ The order is deliberate. Do not build a large feature surface on an unproven loo
 
 ## M4: Installer and portability
 
-- Add PowerShell parity or explicitly mark Windows unsupported.
+- PowerShell installer is implemented and tested under `pwsh` on macOS; native Windows `.cmd` execution is not tested.
 - Add update and recovery behavior.
 - Test fresh clone, different home, spaces in paths, read-only prefix failure, and interrupted install.
 - Remove any hard-coded home, checkout, or model path.
 
 **Exit criteria:** documented pass, fail, or unsupported status per platform. No destructive test on the owner's machine.
+
+**Status:** Bash installer verified; PowerShell install, launcher version, and uninstall verified under `pwsh` 7.6.7 on macOS. Update/recovery and native Windows execution are not built.
 
 ## M5: Public beta
 
