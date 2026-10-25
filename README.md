@@ -11,7 +11,7 @@ The previous repository accumulated a large layer of reports, audits, generated 
 ## Quick start
 
 ```bash
-git clone https://github.com/Aperi-Studios/aperio-orchestrator.git
+git clone https://github.com/Aperio-Studios-Private/Aperio-Orchestrator.git
 cd aperio-orchestrator
 ./install.sh
 aperio --version

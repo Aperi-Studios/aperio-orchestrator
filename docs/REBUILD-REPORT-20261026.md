@@ -8,7 +8,7 @@ The owner asked for the documentation to be cleaned up before further work, and 
 
 The rebuild is a fresh public repository with a new history:
 
-`https://github.com/Aperi-Studios/aperio-orchestrator`
+`https://github.com/Aperio-Studios-Private/Aperio-Orchestrator`
 
 The old repository is preserved as a private archive. It is not the product, and it was not force-pushed or made public. Its history contained client identifiers, and old Git objects can remain reachable on a remote even after a history rewrite.
 

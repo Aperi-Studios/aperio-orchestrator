@@ -31,8 +31,8 @@
 | Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |
 | Real-home install | binary, skill, and command present; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |
 | Static checks | ruff and shellcheck pass | `ruff check src tests`; `shellcheck install.sh` |
-| Public repository | public at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
-| GitHub Actions | tests pass on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperi-Studios/aperio-orchestrator/actions/workflows/tests.yml) |
+| Public repository | public at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
+| GitHub Actions | tests pass on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
 
 ## Not built
 

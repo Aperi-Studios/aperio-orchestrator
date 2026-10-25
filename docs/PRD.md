@@ -639,8 +639,8 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
 | OS sandbox for host or shell steps | **not built**; undeclared writes are detected after execution | `docs/ARCHITECTURE.md` limits |
 | Windows installer parity | **not built** | no PowerShell installer in v2 |
-| Public repository | **public** at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
-| GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperi-Studios/aperio-orchestrator/actions/workflows/tests.yml) |
+| Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
+| GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
 | External audit of the whole repo | **pending** | assigned to a different host; not returned |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
