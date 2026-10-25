@@ -40,7 +40,7 @@ A small standard-library core:
 - PowerShell installer tested under `pwsh` on macOS;
 - read-only host detection.
 
-The v2 documentation set is `README.md`, `START-HERE.md`, and the files in `docs/`. There are 14 Markdown files, not 1,241.
+The v2 documentation set is `README.md`, `START-HERE.md`, and the files in `docs/`. There are 18 Markdown files in the repository, not 1,241.
 
 ## Verification
 
