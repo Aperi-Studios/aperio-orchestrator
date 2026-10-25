@@ -33,7 +33,7 @@ The order is deliberate. Do not build a large feature surface on an unproven loo
 
 **Exit criteria:** a real fresh-context review is recorded, a bidirectional message test passes, restart persistence passes, and the mediator records a disposition.
 
-**Status:** fresh-context review, local messaging, restart persistence, and mediator disposition met. A live two-host exchange over a distributed transport is not built.
+**Status:** fresh-context review, local messaging, restart persistence, and mediator disposition met. Real Claude and Codex processes each used the store in separate exchanges. A direct two-host thread over a distributed transport is not built.
 
 ## M3: CMS and delivery slice
 

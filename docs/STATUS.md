@@ -30,10 +30,11 @@
 | Goose host adapter | command path tested with a fake binary; live Goose call failed with HTTP 500 from the local bridge | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command`; live probe output |
 | Host change outside the plan | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
 | Codex host adapter | real Codex built `site/index.html`; fresh Claude review confirmed; task done | task `task-116b1d078e`, run `run-d86056766a`, review `review-5fcf72b5e9` |
+| Codex host review | real Codex reviewer confirmed a verified task with no findings | review `review-138f0f9a9f`, task `task-1b8dcd0ca2` |
 | Fresh-context host review | real Claude reviewer saw only the brief, changed files, acceptance, and evidence; verdict confirmed | review `review-973d3a5fb8` in the temporary goldfish project |
 | Self-review refusal | a host cannot review its own build | `tests/test_adapter.py::test_host_cannot_review_its_own_build` |
 | Documentation drift | Docs links and inline paths resolve; repo check clean | `aperio drift`; `tests/test_drift.py` |
-| Local message store | send, read, reply, ack, filters, restart persistence | `tests/test_mesh.py` |
+| Local message store | send, read, reply, ack, filters, restart persistence; real Claude and Codex processes each used it | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
 | Mediator disposition | records CONFIRMED, REFUTED, or BLOCKED from run, verify, and review evidence | `tests/test_mediator.py`; `aperio mediate` |
 | `/aperio` command file | installed by the installer | `~/.claude/commands/aperio.md`; host load not verified |
 | Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |

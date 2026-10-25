@@ -75,14 +75,14 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Project initialization and append-only owner asks.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
 - Host dispatch through a disposable project copy for the Claude, Codex, and Goose adapters. Claude and Codex were proven end to end; Goose's command path is tested, but its local bridge returned HTTP 500 during this run.
-- Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. A real Claude reviewer confirmed verified work built by Claude and by Codex.
+- Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude and Codex reviewers both confirmed verified work.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
 - Independent review enforcement by reviewer name.
 - Rollback of files captured before a run.
 - Handoff generation from actual state.
 - Deterministic documentation drift checks: links and inline paths that do not exist fail `aperio drift`.
-- Local durable message store with send, read, reply, ack, filters, and restart persistence.
+- Local durable message store with send, read, reply, ack, filters, and restart persistence. Real Claude and Codex processes both read and replied through it.
 - Mediator disposition from run, verify, and review evidence: `CONFIRMED`, `REFUTED`, or `BLOCKED`.
 - Installer, idempotent reinstall, dry run, and uninstall.
 - PowerShell installer tested under `pwsh` 7.6.7 on macOS; native Windows `.cmd` execution is not tested.

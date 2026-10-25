@@ -56,8 +56,9 @@ Run on the final public tree:
 | Real-home install | binary, skill, and command present |
 | Real Claude host dispatch | file written, acceptance passed, review confirmed, done |
 | Real Claude fresh-context review | brief-only reviewer confirmed a verified task |
+| Real Codex fresh-context review | read-only reviewer confirmed a verified task |
 | `aperio drift` | clean: docs links and inline paths resolve |
-| Local message store | send, read, reply, ack, filters, restart persistence |
+| Local message store | send, read, reply, ack, filters, restart persistence; Claude and Codex each used it |
 | Mediator | records CONFIRMED, REFUTED, or BLOCKED from evidence |
 | PowerShell installer | install, launcher version, uninstall under `pwsh` 7.6.7 |
 

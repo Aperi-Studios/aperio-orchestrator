@@ -637,9 +637,10 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Claude host adapter | **real dispatch proven**: produced `site/index.html`, acceptance passed, review confirmed, done | real-host proof 3; evidence in the temporary project |
 | Goose host adapter | **command path tested** with a fake binary; live call blocked by local bridge HTTP 500 | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command` |
 | Codex host adapter | **real Codex built a page**; fresh Claude review confirmed and the task finished | task `task-116b1d078e`, run `run-d86056766a`, review `review-5fcf72b5e9` |
+| Codex host review | **real Codex reviewer confirmed** a verified task | review `review-138f0f9a9f` |
 | Fresh-context host review | **real Claude review confirmed** a verified task from a brief-only workspace | review `review-973d3a5fb8` in the temporary goldfish project |
 | Documentation drift | **clean**: links and inline paths resolve | `aperio drift` |
-| Local message store | **implemented**: send, read, reply, ack, filters, restart persistence | `tests/test_mesh.py` |
+| Local message store | **implemented**; real Claude and Codex processes read and replied | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
 | Mediator disposition | **implemented**: CONFIRMED, REFUTED, or BLOCKED from evidence | `tests/test_mediator.py` |
 | Host dispatch beyond Claude/Codex/Goose | **not built** | no adapter in `src/aperio/adapter.py` for other hosts |
 | Distributed/live two-host mesh | **not built**; local durable message store and mediator are implemented | `src/aperio/mesh.py`, `src/aperio/mediator.py` |

@@ -40,7 +40,7 @@ The first attempt failed honestly with
 resolve the bundled Codex application path, and the successful run above
 followed.
 
-## Proof B: Claude reads and writes the local message store
+## Proof B: Claude and Codex use the local message store
 
 A real Claude process was given a task message in the local store. It ran the
 installed Aperio command, read the message, and sent a reply.
@@ -52,15 +52,41 @@ claude-builder -> owner: ACK from claude-builder
 ```
 
 The reply was stored as message `2`, with `reply_to: 1` and the same task id.
-The owner inbox query returned that reply. This proves a real host can use the
-local store. It does not prove a distributed transport or a second host
-product.
+
+A separate real Codex process did the same in another project:
+
+```text
+1  thread-82dd870518  owner -> codex-builder: Please acknowledge ...
+codex-builder -> owner: ACK from codex-builder
+```
+
+The Codex reply was stored as message `2` in that project, with `reply_to: 1`.
+The owner inbox query returned it.
+
+This proves two host products can use the durable local store in separate
+exchanges. It does not prove a direct two-host thread or a distributed
+transport.
 
 ## Proof C: Claude builds through the same bounded path
 
 An earlier real Claude host run produced `site/index.html`, passed acceptance,
 was reviewed by a fresh Claude process, and finished with `done`. The run id
 recorded in the project docs is `run-2d57f0f091`.
+
+## Proof D: Codex reviews a verified task
+
+A one-file task was applied and verified through the normal path, then reviewed
+by a fresh Codex process with a read-only sandbox and only the brief plus the
+changed file.
+
+```text
+task-1b8dcd0ca2  review confirmed by codex
+task-1b8dcd0ca2  done
+```
+
+Evidence: review `review-138f0f9a9f`, verdict `confirmed`, findings `[]`. The
+reviewer saw `tree/site/index.html` and the brief; it did not see a builder
+conversation.
 
 ## What these proofs do not cover
 
