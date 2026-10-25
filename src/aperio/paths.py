@@ -90,12 +90,17 @@ def relative_posix(root: Path, path: Path) -> str:
 
 def replace_text_atomic(path: Path, text: str, *, newline: str = "\n") -> None:
     """Write text through a temporary file in the same directory, then replace."""
+    replace_bytes_atomic(path, text.encode("utf-8"), newline=newline)
+
+
+def replace_bytes_atomic(path: Path, data: bytes, *, newline: str | None = None) -> None:
+    """Write bytes through a temporary file in the same directory, then replace."""
     path = path.resolve(strict=False)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile_in_dir(path.parent)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline=newline) as handle:
-            handle.write(text)
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp_name, path)

@@ -1,0 +1,25 @@
+{
+  "title": "Use a real host to build one page",
+  "request": "Use the installed Claude host to create a bounded static page through the approved plan path.",
+  "builder": "hermes",
+  "allowed_paths": ["site/"],
+  "steps": [
+    {
+      "id": "host-build",
+      "kind": "host",
+      "host": "claude",
+      "prompt": "Create a single static page at site/index.html. It must be a complete HTML document with an <html> element and a short heading. Do not create any other files. Do not use the network.",
+      "writes": ["site/index.html"],
+      "timeout_s": 300,
+      "max_budget_usd": 1.50
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "check",
+      "command": "python3 -c \"from pathlib import Path; p=Path('site/index.html'); assert p.is_file(); t=p.read_text(); assert '<html' in t.lower(); assert len(t)>100; print('host file ok', len(t))\"",
+      "expected_exit": 0,
+      "stdout_contains": "host file ok"
+    }
+  ]
+}

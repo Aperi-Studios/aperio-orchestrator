@@ -51,7 +51,9 @@ class Step:
     """One bounded operation in an approved plan.
 
     kind="write" writes exact content. kind="run" executes a command and declares
-    which paths it may change. There is no third kind that silently edits files.
+    which paths it may change. kind="host" asks an installed coding host to work
+    in a disposable copy of the project and returns only changes inside the
+    declared paths. There is no fourth kind that silently edits files.
     """
 
     id: str
@@ -60,8 +62,11 @@ class Step:
     path: str | None = None
     content: str | None = None
     command: str | None = None
+    host: str | None = None
+    prompt: str | None = None
     cwd: str = "."
     timeout_s: int = 120
+    max_budget_usd: float = 1.00
     writes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -70,14 +75,17 @@ class Step:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Step:
         kind = str(data.get("kind", "")).strip()
-        if kind not in {"write", "run"}:
-            raise ModelError(f"step {data.get('id', '?')}: kind must be write or run")
+        if kind not in {"write", "run", "host"}:
+            raise ModelError(f"step {data.get('id', '?')}: kind must be write, run, or host")
         timeout = int(data.get("timeout_s", 120))
         if timeout < 1 or timeout > 3600:
             raise ModelError(f"step {data.get('id', '?')}: timeout_s must be 1..3600")
         writes = data.get("writes", [])
         if not isinstance(writes, list) or not all(isinstance(w, str) for w in writes):
             raise ModelError(f"step {data.get('id', '?')}: writes must be a list of strings")
+        budget = float(data.get("max_budget_usd", 1.00))
+        if budget < 0 or budget > 10:
+            raise ModelError(f"step {data.get('id', '?')}: max_budget_usd must be 0..10")
         return cls(
             id=str(data["id"]),
             kind=kind,
@@ -85,8 +93,11 @@ class Step:
             path=data.get("path"),
             content=data.get("content"),
             command=data.get("command"),
+            host=data.get("host"),
+            prompt=data.get("prompt"),
             cwd=str(data.get("cwd", ".")),
             timeout_s=timeout,
+            max_budget_usd=budget,
             writes=list(writes),
         )
 
@@ -96,13 +107,20 @@ class Step:
         if self.kind == "write":
             if not self.path or self.content is None:
                 raise ModelError(f"step {self.id}: write needs path and content")
-            if self.command:
-                raise ModelError(f"step {self.id}: write cannot also have a command")
+            if self.command or self.host or self.prompt:
+                raise ModelError(f"step {self.id}: write cannot also have a command, host, or prompt")
         elif self.kind == "run":
             if not self.command:
                 raise ModelError(f"step {self.id}: run needs a command")
-            if self.path or self.content is not None:
-                raise ModelError(f"step {self.id}: run cannot also write fixed content")
+            if self.path or self.content is not None or self.host or self.prompt:
+                raise ModelError(f"step {self.id}: run cannot also write fixed content or use a host")
+        elif self.kind == "host":
+            if not self.host or not self.prompt:
+                raise ModelError(f"step {self.id}: host needs host and prompt")
+            if not self.writes:
+                raise ModelError(f"step {self.id}: host needs at least one declared write")
+            if self.path or self.content is not None or self.command:
+                raise ModelError(f"step {self.id}: host cannot also write fixed content or run a command")
 
 
 @dataclass

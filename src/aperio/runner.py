@@ -11,10 +11,12 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from .adapter import HostError, run_host_step
 from .model import Plan, Step, utc_now
 from .paths import (
     PathSafetyError,
     relative_posix,
+    replace_bytes_atomic,
     replace_text_atomic,
     sha256_file,
     sha256_text,
@@ -72,7 +74,7 @@ def _expand_targets(project: Project, plan: Plan) -> list[str]:
     for step in plan.steps:
         if step.kind == "write" and step.path:
             targets.add(assert_writable(step.path, plan))
-        elif step.kind == "run":
+        elif step.kind in {"run", "host"}:
             for item in step.writes:
                 normalized = assert_writable(item, plan)
                 candidate = project.root / normalized
@@ -283,9 +285,29 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
                     failed = True
                     evidence["violations"].append(f"step {step.id} exited {result['exit_code']}")
                     break
+            elif step.kind == "host":
+                host_result = run_host_step(project, plan, step, run_id)
+                host_evidence = host_result.evidence()
+                host_evidence["step_id"] = step.id
+                host_evidence["kind"] = "host"
+                evidence["steps"].append(host_evidence)
+                if host_result.status != "ok":
+                    failed = True
+                    evidence["violations"].append(
+                        f"step {step.id}: {host_result.error or 'host dispatch failed'}"
+                    )
+                    evidence["violations"].extend(host_result.violations)
+                    break
+                for change in host_result.changes:
+                    target = project.resolve_project_path(change.path, create_parents=True)
+                    if change.op == "delete":
+                        if target.exists():
+                            target.unlink()
+                    else:
+                        replace_bytes_atomic(target, change.content or b"")
             else:
                 raise RunError(f"unsupported step kind: {step.kind}")
-    except (OSError, PathSafetyError, PolicyError, RunError) as exc:
+    except (OSError, PathSafetyError, PolicyError, HostError, RunError) as exc:
         failed = True
         evidence["violations"].append(str(exc))
         # Restore only files captured before execution. Commands may have made

@@ -6,15 +6,28 @@
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-Expected on a clean v2 tree: 25 tests pass.
+Expected on a clean v2 tree: 31 tests pass.
 
 ## Run one module
 
 ```bash
 PYTHONPATH=src python3 -m unittest tests.test_core -v
+PYTHONPATH=src python3 -m unittest tests.test_adapter -v
 PYTHONPATH=src python3 -m unittest tests.test_cli -v
 PYTHONPATH=src python3 -m unittest tests.test_installer -v
 ```
+
+## Real host proof
+
+The adapter tests use a fake host binary so CI does not spend money. A real Claude run was performed separately:
+
+```bash
+# create a project, plan a host step, approve it, then:
+aperio run <task-id> --actor hermes
+aperio verify <task-id>
+```
+
+The real run produced `site/index.html`, passed the acceptance check, and completed review and done. A live Goose run failed with HTTP 500 from its local bridge; the Goose command path is tested with a fake binary only.
 
 ## Run the demo loop by hand
 

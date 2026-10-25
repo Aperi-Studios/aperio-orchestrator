@@ -11,15 +11,17 @@ The order is deliberate. Do not build a large feature surface on an unproven loo
 
 **Exit criteria:** all tests pass; install, initialize, run, verify, review, and handoff work from a clean temporary home.
 
-## M1: Host adapter and real work dispatch
+## M1: Host adapter and real work dispatch (implemented for Claude; Goose partial)
 
-- Add a host capability record: binary, version, models, permissions, cost status, health.
-- Add one adapter that accepts a plan and returns a bounded patch or a command result.
-- Keep approval and execution in the core. The adapter does not get its own write path.
-- Record host, model, prompt, output digest, and failure reason.
-- Prove one real task on a disposable project, with a different reviewer.
+- Host step in the plan schema: host, prompt, declared writes, timeout, budget.
+- The host works in a disposable project copy; changes outside declared paths are rejected before they reach the real project.
+- Claude adapter proven end to end on a disposable project: file written, acceptance passed, review confirmed, done.
+- Goose adapter command path tested with a fake binary. A live Goose call returned HTTP 500 from its local bridge, so it is not claimed as working.
+- Evidence records host, command, prompt digest, exit code, duration, stdout/stderr, changes, and violations.
 
 **Exit criteria:** one host completes one bounded task through the same plan and evidence path; no self-review; no credential in logs.
+
+**Status:** Claude met the criterion. Goose did not, because of an external bridge failure. Other hosts are not connected.
 
 ## M2: Independent review and mesh
 

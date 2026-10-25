@@ -40,7 +40,7 @@ aperio done <task-id>
 aperio handoff <task-id> --print
 ```
 
-A plan is JSON. It declares allowed paths, exact write steps, bounded run steps, and acceptance checks.
+A plan is JSON. It declares allowed paths, exact write steps, bounded run steps, host steps, and acceptance checks. A host step is shown in `examples/host-plan.json`.
 
 ```json
 {
@@ -61,6 +61,7 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 
 - Project initialization and append-only owner asks.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
+- Host dispatch through a disposable project copy for the Claude and Goose adapters. Claude was proven end to end; Goose's command path is tested, but its local bridge returned HTTP 500 during this run.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
 - Independent review enforcement by reviewer name.
@@ -71,11 +72,11 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 
 ## What is not built
 
-- Dispatch to Claude, Codex, Goose, or other hosts.
-- Live mesh messaging.
+- Dispatch to hosts beyond the Claude and Goose adapters.
+- Live mesh messaging and multi-host mediator comparison.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - A web dashboard.
-- OS-level sandboxing. Shell steps are detected, not jailed.
+- OS-level sandboxing. Host steps and shell steps are detected, not jailed.
 - Remote deployment.
 - Automatic public release.
 

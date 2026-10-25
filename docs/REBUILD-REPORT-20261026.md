@@ -26,6 +26,7 @@ A small standard-library core:
 
 - project initialization and append-only asks;
 - plan creation, explicit owner approval, bounded writes, and shell steps;
+- host dispatch through a disposable project copy for Claude and Goose; Claude proven end to end, Goose's command path tested but its local bridge returned HTTP 500;
 - path traversal, absolute path, symlink, and protected-path refusal;
 - change detection for writes outside the declared plan;
 - acceptance checks and evidence records;
@@ -44,22 +45,23 @@ Run on the final public tree:
 
 | Check | Result |
 |---|---|
-| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 25 tests pass |
+| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 31 tests pass |
 | `ruff check src tests` | pass |
 | `shellcheck install.sh` | pass |
 | GitHub Actions, Python 3.10 / 3.12 / 3.14 | pass |
 | Fresh public clone, `./install.sh`, `aperio --version`, demo plan | pass |
 | Real-home install | binary, skill, and command present |
+| Real Claude host dispatch | file written, acceptance passed, review confirmed, done |
 
 The demo was run through the full loop: unapproved run refused, approved run applied, acceptance passed, review confirmed, task done.
 
 ## What is not built
 
-- Dispatch to Claude, Codex, Goose, or other hosts.
+- Dispatch to hosts beyond the Claude and Goose adapters.
 - Mesh chat and mediator message comparison.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - Web dashboard.
-- OS sandbox for shell steps.
+- OS sandbox for host or shell steps.
 - Remote deployment.
 - Windows installer parity.
 

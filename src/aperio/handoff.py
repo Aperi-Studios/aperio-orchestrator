@@ -22,6 +22,11 @@ def _evidence_summary(evidence: dict[str, Any]) -> list[str]:
                 rows.append(
                     f"`{step.get('step_id')}` exit {step.get('exit_code')} in {step.get('duration_s')}s"
                 )
+            elif step.get("kind") == "host":
+                rows.append(
+                    f"`{step.get('step_id')}` host {step.get('host')} exit {step.get('exit_code')} "
+                    f"changed {len(step.get('changes', []))} file(s)"
+                )
             else:
                 rows.append(f"`{step.get('step_id')}` wrote `{step.get('path')}`")
     if "checks" in evidence:
@@ -70,6 +75,8 @@ def build_handoff(project: Project, task_id: str) -> str:
         for step in plan.steps:
             if step.kind == "write":
                 lines.append(f"- `{step.id}` write `{step.path}`")
+            elif step.kind == "host":
+                lines.append(f"- `{step.id}` host `{step.host}` writes: {', '.join(step.writes)}")
             else:
                 lines.append(f"- `{step.id}` run `{step.command}` in `{step.cwd}`")
         lines.extend(["", "### Acceptance checks", ""])

@@ -60,7 +60,7 @@ def validate_plan_paths(plan: Plan, protected_paths: list[str] | None = None) ->
     for step in plan.steps:
         if step.kind == "write":
             assert_writable(step.path or "", plan, protected_paths)
-        elif step.kind == "run":
+        elif step.kind in {"run", "host"}:
             for target in step.writes:
                 assert_writable(target, plan, protected_paths)
 

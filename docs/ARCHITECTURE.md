@@ -12,6 +12,7 @@ src/aperio/
   store.py      project state, atomic JSON, append-only events
   paths.py      relative-path validation and symlink checks
   policy.py     allowed paths, protected paths, review separation
+  adapter.py    disposable-workspace host dispatch and change validation
   runner.py     apply, detect changes, verify, review, finish, rollback
   handoff.py    owner-facing markdown from actual state
   hosts.py      read-only host detection
@@ -33,6 +34,7 @@ A project initializes `.aperio/`:
   plans/<id>.json   approved or draft plans
   evidence/<task>/  run, verification, and review records
   runs/<id>/        run manifest
+  dispatch/<id>/    disposable host workspace and host evidence
   backups/<id>/     file snapshots for rollback
   handoff.md        most recent handoff
   lock              best-effort exclusive lock
@@ -51,6 +53,7 @@ State files are written to a temporary file in the same directory, flushed, and 
    - validates every declared path;
    - snapshots files that may change;
    - applies `write` steps and runs `run` steps with a timeout;
+   - for a `host` step, copies the project into a disposable workspace, runs the host there, rejects changes outside the declared paths, and only then applies text changes to the real project;
    - hashes the project before and after;
    - records changed files and any change outside the declared writes;
    - saves evidence and moves the task to `applied` or `failed`.
@@ -95,6 +98,18 @@ Verification evidence includes every acceptance command, expected and actual exi
 
 Review evidence includes reviewer, verdict, notes, and time.
 
+## Host adapter
+
+A `host` step names a host, a prompt, and the paths the host may change. The adapter:
+
+1. copies the project into `.aperio/dispatch/<run-id>/workspace`, excluding `.git`, `.aperio`, dependency and cache directories;
+2. runs the host in that copy with a bounded timeout and budget;
+3. compares the copy before and after;
+4. rejects any change outside the plan's allowed paths, binary files, or files over 1 MB;
+5. applies only the accepted text changes to the real project, through the same snapshot and evidence path as other steps.
+
+Supported adapters are `claude` (print mode, accept-edits, budget cap) and `goose` (`goose run --no-session --max-turns 8 --quiet`). Tests can point `APERIO_HOST_CLAUDE` or `APERIO_HOST_GOOSE` at a fake binary. The adapter does not get its own write path.
+
 ## Extension points
 
 - **Host adapters:** add a read-only detector first, then a dispatcher that receives a plan and returns a patch or command result. Do not let an adapter bypass plan approval.
@@ -104,8 +119,10 @@ Review evidence includes reviewer, verdict, notes, and time.
 
 ## Limits
 
-- Shell steps are not confined by the operating system.
+- Host steps and shell steps are not confined by the operating system. Host prompts ask the host to stay in the workspace and avoid network access, but this is instruction-level, not a sandbox.
+- The host runs with its own authentication and can read accessible files outside the workspace. Use a disposable project and a host account with the least privilege available.
 - The change detector hashes project files and excludes `.git`, `.aperio`, dependency directories, and cache directories.
 - Snapshot limits are 5,000 files and 50 MB. A larger plan must narrow its scope.
+- Host dispatch is text-only. Binary changes are rejected.
 - The lock is best-effort on Unix and a no-op where `fcntl` is unavailable.
 - Host detection reports presence and version, not authentication, permission, or model access.
