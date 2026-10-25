@@ -19,6 +19,9 @@
 | Installer idempotency | second run leaves one skill | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
 | Installer uninstall | removes binary, library, and skill | same test |
 | Host detection | reads installed host names and versions | `aperio hosts`; presence is not permission |
+| `/aperio` command file | installed by the installer | `~/.claude/commands/aperio.md`; host load not verified |
+| Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |
+| Real-home install | binary, skill, and command present; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |
 | Public repository | public at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
 | GitHub Actions | tests passed on Python 3.10, 3.12, and 3.14 | [run 40237671369](https://github.com/Aperi-Studios/aperio-orchestrator/actions/runs/40237671369) |
 

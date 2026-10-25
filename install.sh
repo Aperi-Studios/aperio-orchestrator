@@ -45,7 +45,15 @@ fi
 LIB="$PREFIX/share/aperio"
 BIN="$PREFIX/bin/aperio"
 SKILL_DIR="$SKILL_HOME/aperio"
+COMMAND_DIR="$HOME/.claude/commands"
+COMMAND_FILE="$COMMAND_DIR/aperio.md"
 MARKER="aperio-v2-managed"
+
+if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && ! grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
+  echo "install.sh: refusing to overwrite existing $COMMAND_FILE" >&2
+  echo "Move it aside or use --no-skill." >&2
+  exit 2
+fi
 
 run() {
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -80,6 +88,10 @@ if [ "$UNINSTALL" -eq 1 ]; then
     run rm -rf "$SKILL_DIR"
     echo "removed $SKILL_DIR"
   fi
+  if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
+    run rm -f "$COMMAND_FILE"
+    echo "removed $COMMAND_FILE"
+  fi
   exit 0
 fi
 
@@ -110,6 +122,8 @@ if [ "$DO_SKILL" -eq 1 ]; then
   run cp "$ROOT/skill/aperio/SKILL.md" "$SKILL_DIR/SKILL.md"
   write_text "$SKILL_DIR/VERSION" "$VERSION"
   write_text "$SKILL_DIR/$MARKER" "$MARKER"
+  run mkdir -p "$COMMAND_DIR"
+  run cp "$ROOT/commands/aperio.md" "$COMMAND_FILE"
   if [ -d "$HOME/.codex" ]; then
     CODEX_DIR="$HOME/.codex/skills/aperio"
     run mkdir -p "$CODEX_DIR"

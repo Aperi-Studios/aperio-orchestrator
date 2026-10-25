@@ -48,8 +48,11 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         binary = self.prefix / "bin" / "aperio"
         skill = self.skill_home / "aperio" / "SKILL.md"
+        command = self.home / ".claude" / "commands" / "aperio.md"
         self.assertTrue(binary.is_file())
         self.assertTrue(skill.is_file())
+        self.assertTrue(command.is_file())
+        self.assertIn("Aperio v2", command.read_text())
         self.assertEqual((self.skill_home / "aperio" / "VERSION").read_text().strip(), "2.0.0.dev0")
 
         version = subprocess.run([str(binary), "--version"], capture_output=True, text=True, timeout=30)
@@ -80,6 +83,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(removed.returncode, 0, removed.stderr)
         self.assertFalse(binary.exists())
         self.assertFalse((self.skill_home / "aperio").exists())
+        self.assertFalse(command.exists())
 
     def test_unsafe_prefix_is_refused(self) -> None:
         result = subprocess.run(

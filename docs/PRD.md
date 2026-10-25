@@ -627,6 +627,8 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Installer idempotency | **second run leaves one skill** | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
 | Installer uninstall | **removes binary, library, and skill** | same test |
 | Host detection | **reports installed names and versions** | `aperio hosts`; presence is not permission |
+| `/aperio` command file | **installed**; host load not verified | `~/.claude/commands/aperio.md` |
+| Skill file | **installed**; host load not verified | `~/.claude/skills/aperio/SKILL.md` |
 | Host dispatch | **not built** | no adapter in `src/aperio/` |
 | Mesh chat | **not built** | no message store in `src/aperio/` |
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
@@ -666,7 +668,7 @@ The v2 tree is intentionally small. It does not inherit the old repository's tes
 ### 16.4 What must be corrected in the APERIO PRD
 
 - At 962 lines and 119 KB, it is too long to be the daily working contract. This document keeps the normative core and moves inventory detail to the repository map.
-- Several snapshot counts are stale: it cites 2,973 tests and 102 pins; the measured baseline is 3,039 tests and 106 pins.
+- Several snapshot counts are stale: it cites 2,973 tests and 102 pins; the old repository's measured baseline at the time was 3,039 tests and 106 pins. V2 does not inherit those counts; its measured baseline is in `docs/STATUS.md`.
 - It repeats open owner questions that already have recorded defaults; this document resolves them unless the owner objects.
 - It leaves the real target project undefined. E2E-1 must use an owner-selected target; the Aperio repository cannot substitute for it.
 - It sometimes states design constraints as universal. They remain conditional on the approved project contract.

@@ -17,7 +17,7 @@ cd aperio-orchestrator
 aperio --version
 ```
 
-The installer copies the package to `~/.local/share/aperio`, creates `~/.local/bin/aperio`, and installs the skill under `~/.claude/skills/aperio`. It does not edit host settings, use sudo, or download anything.
+The installer copies the package to `~/.local/share/aperio`, creates `~/.local/bin/aperio`, installs the skill under `~/.claude/skills/aperio`, and installs the `/aperio` command under `~/.claude/commands/aperio.md`. It does not edit host settings, use sudo, or download anything. The command file is installed, but the host's ability to load it is not yet verified.
 
 To test without installing:
 
