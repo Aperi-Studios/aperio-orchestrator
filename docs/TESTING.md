@@ -1,0 +1,61 @@
+# Testing
+
+## Run everything
+
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
+
+Expected on a clean v2 tree: 20 tests pass.
+
+## Run one module
+
+```bash
+PYTHONPATH=src python3 -m unittest tests.test_core -v
+PYTHONPATH=src python3 -m unittest tests.test_cli -v
+PYTHONPATH=src python3 -m unittest tests.test_installer -v
+```
+
+## Run the demo loop by hand
+
+```bash
+T="$(mktemp -d)"
+export PYTHONPATH=src
+python3 -m aperio --project "$T" init "$T" --name demo
+python3 -m aperio --project "$T" ask "Build the demo site" --source owner
+OUT="$(python3 -m aperio --project "$T" plan examples/demo-site-plan.json)"
+TASK="$(printf '%s\n' "$OUT" | awk 'NR==1{print $1}')"
+PLAN="$(printf '%s\n' "$OUT" | awk 'NR==1{print $2}')"
+python3 -m aperio --project "$T" approve "$PLAN" --by owner --confirm "I approve this plan"
+python3 -m aperio --project "$T" run "$TASK"
+python3 -m aperio --project "$T" verify "$TASK"
+python3 -m aperio --project "$T" review "$TASK" --reviewer qa --verdict confirmed
+python3 -m aperio --project "$T" done "$TASK"
+python3 -m aperio --project "$T" handoff "$TASK" --print
+```
+
+## What the tests actually cover
+
+- state initialization and reinitialization refusal;
+- append-only asks;
+- plan approval requirement;
+- allowed-path enforcement;
+- path traversal and symlink refusal;
+- write steps, shell steps, and timeout behavior;
+- undeclared file changes detected as violations;
+- verification pass and failure;
+- independent reviewer enforcement;
+- rollback of modified and created files;
+- CLI end-to-end flow;
+- installer dry run, install, reinstall, and uninstall.
+
+## What the tests do not cover
+
+- Host authentication, model access, or dispatch.
+- CMS persistence, publishing, permissions, or rollback.
+- SEO against built output.
+- Real browser, mobile, or accessibility inspection.
+- Deployment.
+- Windows PowerShell behavior.
+
+Do not cite a passing test suite as proof of any item in that list.

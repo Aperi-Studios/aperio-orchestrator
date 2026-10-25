@@ -1,0 +1,37 @@
+{
+  "title": "Build a one-page demo site",
+  "request": "Create a small static site with a heading, a paragraph, and a build step that writes dist/index.html.",
+  "builder": "agent",
+  "allowed_paths": ["site/"],
+  "steps": [
+    {
+      "id": "write-content",
+      "kind": "write",
+      "path": "site/content.json",
+      "content": "{\n  \"title\": \"Aperio demo\",\n  \"body\": \"This page was produced by an approved Aperio plan.\"\n}\n"
+    },
+    {
+      "id": "write-build",
+      "kind": "write",
+      "path": "site/build.py",
+      "content": "import json\nfrom pathlib import Path\n\nroot = Path(__file__).parent\ncontent = json.loads((root / 'content.json').read_text())\nhtml = f'''<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{content['title']}</title></head>\n<body><main><h1>{content['title']}</h1><p>{content['body']}</p></main></body>\n</html>'''\n(root / 'dist').mkdir(exist_ok=True)\n(root / 'dist' / 'index.html').write_text(html)\nprint('built', root / 'dist' / 'index.html')\n"
+    },
+    {
+      "id": "build-site",
+      "kind": "run",
+      "command": "python3 build.py",
+      "cwd": "site",
+      "writes": ["site/dist/index.html"],
+      "timeout_s": 30
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "html-exists",
+      "command": "python3 -c \"from pathlib import Path; p=Path('site/dist/index.html'); assert p.is_file(), 'missing'; print(p.read_text())\"",
+      "expected_exit": 0,
+      "stdout_contains": "Aperio demo",
+      "timeout_s": 30
+    }
+  ]
+}

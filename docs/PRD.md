@@ -1,0 +1,787 @@
+# Aperio Orchestrator: Product Requirements
+
+**Version:** 2.0
+**Date:** 2026-10-26
+**Status:** Product contract for the v2 rebuild. It describes required behavior, not achieved behavior. The current implementation subset is recorded in `docs/STATUS.md`.
+**Supersedes:** `Shahid/APERIO-PRD.md` v1.0 and `Shahid/PRD MADE BY gemini argon.md` v5.0 as the working contract. The two source drafts remain historical inputs.
+**Owner:** Shahid
+**Mediator and main agent:** Hermes
+**Change control:** only the owner approves changes to this document. Agents propose changes in a report; they do not silently rewrite it.
+
+---
+
+## 0. How to read this document
+
+Every requirement has four separate states:
+
+| State | Meaning |
+|---|---|
+| **Implemented** | Source code or a document exists. |
+| **Wired** | The normal product workflow calls it. |
+| **Verified** | A reproducible test, live run, or inspected artifact proves the behavior. |
+| **Approved** | The owner has authorized the relevant scope, gate, or external action. |
+
+These states are not interchangeable. A file is not a feature. A test is not a delivered project. A green validator is not owner acceptance.
+
+The authority order is:
+
+1. The owner's explicit instruction.
+2. This PRD.
+3. The approved plan for the active task.
+4. Current source, tests, and measured evidence.
+5. Historical reports and handoffs.
+
+When a lower layer contradicts a higher one, the higher layer wins, and the contradiction is recorded rather than hidden.
+
+This PRD does **not** authorize a public release, history rewrite, force-push, branch deletion, deployment, paid service, credential change, destructive cleanup, or copying client data into this repository.
+
+---
+
+## 1. Product definition
+
+Aperio is a private, project-scoped engineering foreman and delivery system for coding agents. It sits between the owner's request and the agents' hands. It must:
+
+- capture the request without losing amendments;
+- establish the real project and its constraints;
+- research before choosing an approach;
+- require an approved written plan before code;
+- route work to available hosts and models by capability;
+- keep work moving through approved tasks;
+- require independent verification rather than self-review;
+- deliver the actual requested artifact in the actual target repository;
+- leave a current, readable state that another host can resume.
+
+Aperio has two connected layers.
+
+**Workflow layer:** intake, research, planning, approval gates, project memory, task queue, host/model selection, fan-out, peer communication, independent review, recovery, evidence, handoff.
+
+**Delivery layer:** design research, frontend implementation, CMS and backend integration, SEO, responsive and accessibility checks, tests, assets, release preparation, client handover.
+
+Neither layer substitutes for the other. Governance without delivery is failure. A pretty page without working controls, data, or proof is also failure.
+
+---
+
+## 2. Users and roles
+
+### 2.1 Owner
+
+Sets goals, scope, quality expectations, budgets, approvals, and protected boundaries. The owner is not required to read code or reconstruct logs to know what happened.
+
+### 2.2 Mediator and main agent
+
+Owns the canonical queue, assigns tasks, reconciles reports, decides when evidence is sufficient, serializes shared-state writes, and writes the final handoff. The mediator does not accept a builder's self-review as independent proof.
+
+### 2.3 Builder
+
+Implements one bounded task in the assigned repository and path set. Reports exact files, behavior, commands, results, and limitations.
+
+### 2.4 Independent auditor
+
+Reviews the builder's diff and evidence, reruns decisive checks, and classifies findings as `CONFIRMED`, `REFUTED`, or `NOT REPRODUCED`. The auditor is a different host, CLI, or model when available. If no independent reviewer is available, the task is `NEEDS_REVIEW`, not done.
+
+### 2.5 Specialist roles
+
+Research, UX and visual design, frontend architecture, backend and CMS, SEO, security, test engineering, content review, release engineering. Roles are assigned by capability, not by a fixed host name. A host name in a roster is not proof that the host is alive, permitted, or suitable.
+
+---
+
+## 3. Goals
+
+1. Close the gap between what the owner asked for and what was delivered.
+2. Deliver real, working artifacts in the target repository, not plans or templates about them.
+3. Preserve intent across sessions, hosts, and model changes.
+4. Use multiple agents only when it improves coverage, quality, or time, and prove that it did.
+5. Make critical rules executable where feasible, with negative tests proving they can fail.
+6. Produce domain-appropriate design and content, not generic template output.
+7. Ship CMS-backed experiences only when the project requires a CMS, and then ship the public surface and admin controls together.
+8. Make SEO, accessibility, performance, and security claims testable and scoped to the approved project contract.
+9. Protect client data, credentials, private history, and owner work.
+10. Keep the product portable across hosts, stacks, operating systems, and installation paths.
+11. Keep the owner informed with plain-language status and exact evidence.
+12. Leave maintainable state: one current handoff, one queue, one active plan, one requirement matrix, and archived history.
+
+## 4. Non-goals
+
+- A public multi-tenant SaaS product at this stage.
+- Automatic public release or repository visibility changes.
+- Unrestricted agent autonomy or unrestricted shell access.
+- Automatic spending on models, APIs, hosting, dependencies, or services.
+- A guarantee that every host has the same tools, context, permissions, or browser.
+- A claim that a site is secure, production-ready, or Lighthouse 90+ without a real run.
+- A forced universal frontend stack. Astro and Lumos are options, not laws.
+- Replacing objective evidence with agent opinion.
+- Treating this repository as a client project or copying client material into it.
+
+---
+
+## 5. Operating principles
+
+1. **Owner intent over agent habit.** An explicit request beats a familiar pattern.
+2. **Request, then plan, then code.** No production code before the applicable plan approval.
+3. **Research before irreversible choices.** Record sources and dates for facts that can change.
+4. **Known, assumed, unverified.** Label each claim. Do not turn an assumption into a fact.
+5. **Keep working.** Continue all approved, unblocked tasks. Mark a real blocker and move to the next task.
+6. **No self-audit.** A builder is not the sole verifier of its own work.
+7. **Feature means behavior.** A registry row, template, button, or test name is not a feature.
+8. **Evidence before done.** Use commands, exit codes, rendered output, screenshots, database effects, or live host runs as appropriate.
+9. **No scope freelancing.** Do not add unrequested features or refactor unrelated code.
+10. **No destructive shortcut.** Preserve user work and use backups, leases, and rollback.
+11. **Private by default.** No publication without explicit owner approval after privacy checks.
+12. **Portable paths.** No hard-coded home directory, checkout path, shell, or model path.
+13. **One canonical source per artifact.** Do not create competing state files, queues, or plans.
+14. **No paper gate.** A rule described as enforced must have a call path and a negative test.
+15. **Respect exclusions.** Never use Kimi. Do not dispatch OpenCode until the recorded conflict is resolved. Use `codexx` when that is the intended host.
+
+---
+
+## 6. End-to-end workflow
+
+### Stage 0: Resume and establish reality
+
+1. Identify the target repository and whether it is Aperio itself or a separate client project.
+2. Read the current handoff, queue, active plan, PRD, owner ledger, and applicable laws. Do not read every archive by default.
+3. Verify host, model, tools, permissions, branch, HEAD, dirty state, CI state, and concurrent work.
+4. Prove the intended skill or entrypoint is actually loaded. A stub or missing install is a boot failure.
+5. Compare the new request with the ask ledger. Do not ask for an answer already recorded unless it is stale or contradictory.
+6. Record the baseline before writing: branch, HEAD, changed files, protected paths, test baseline, and blockers.
+
+### Stage 0.5: Discovery and research dossier (Gate 0)
+
+For a new build or material redesign, create a dossier in the target project. It must include:
+
+- purpose and measurable business outcome;
+- audience and trust questions;
+- content and feature inventory, including a do-not-change list;
+- stack options and compatibility research;
+- at least three real competitor teardowns;
+- at least three source-backed design references with dates and lessons;
+- a project-specific visual direction, token draft, type pairing with licensing, layout and spacing rules, motion guidance, and asset strategy;
+- a negative brief of patterns that are wrong for the domain;
+- CMS, backend, auth, data, privacy, SEO, accessibility, hosting, and cost constraints;
+- assumptions, open questions, and a plain-language how-and-why summary.
+
+`_Pending._`, generic filler, or a reference that was never opened fails the gate. Unknown items are `N/A: reason` or `Assumed: reason`, with the consequence stated.
+
+### Gate 1: Scope and stack confirmation
+
+Present the recommended stack, pages, features, CMS needs, SEO needs, design direction, risks, cost, and assumptions. The owner approves, amends, or asks questions. Scope is frozen after approval unless the owner changes it or a documented critical issue requires a change request.
+
+Do not force Astro or Lumos. If Lumos is selected, determine whether the project uses the upstream framework or this repository's custom implementation, and never mix their token APIs.
+
+### Gate 2: Written plan approval
+
+The plan names requirement IDs, files and modules, acceptance criteria, verification commands, builder and independent auditor, dependencies, parallelizable work, risks, rollback, and owner decisions. No implementation before approval. Ordinary reversible choices inside the plan do not need repeated approval.
+
+### Stage 3: Bounded vertical slices
+
+Split work into independent chunks with scoped briefs, paths, inputs, outputs, acceptance commands, and ownership leases. A slice is done only when its visible surface, data, controls, error states, responsive behavior, and tests are integrated as required. Update the queue at every state change.
+
+### Stage 4: Independent verification
+
+The auditor receives the requirement, acceptance criteria, diff, source, and evidence. The auditor reruns the decisive checks. UI work is inspected at required viewports. CMS work includes real edit, save, publish, permission, and rollback checks. SEO work runs against built output. Report each finding as `CONFIRMED`, `REFUTED`, or `NOT REPRODUCED`.
+
+### Gate 3: Section or release packet
+
+Show what was built, what changed, which acceptance criteria passed or failed, the evidence, known limits, and the exact approval requested. Approval of one slice does not approve deployment or unrelated changes.
+
+### Stage 5: Pre-delivery gate
+
+Run the relevant full battery. Confirm the app builds, tests actually execute, mobile and desktop behavior work, accessibility and SEO results are real, CMS actions work, secrets are absent, and evidence matches its manifest. Recheck the owner requirements against the deliverable.
+
+### Gate 4: Delivery and deployment
+
+Produce a handoff with setup and run commands, environment variable names only, architecture, data model, CMS guide, deployment steps, test results, known limits, backup and rollback steps, and an ask-to-result matrix. Deployment, publication, protected-branch pushes, visibility changes, and destructive remote operations require explicit approval.
+
+### Stage 6: Post-delivery support
+
+For client work covered by the company policy, define the support window and SEO support period in the client's own project record. Keep client material out of Aperio's repository.
+
+---
+
+## 7. Functional requirements
+
+Priority: **P0** is required for a trustworthy core loop; **P1** is required for quality project delivery; **P2** is later expansion.
+
+### FR-01: Entrypoint and boot proof (P0)
+
+The installed `/aperio` entrypoint must load the canonical `skill/aperio/SKILL.md` and its required rule files on every supported host. The product must not claim a governed run when the skill is missing, a plugin stub points at absent files, or the host loaded a different workflow.
+
+**Acceptance:** a boot check prints the resolved skill path, version, and required-file status; a missing file fails closed with recovery steps; README, installer, plugin, and runtime agree.
+
+### FR-02: Canonical state and cold-start resume (P0)
+
+Maintain one current-state handoff, one active queue, one active plan, one decision ledger, and one archive policy. A cold-start host must reconstruct the task, state, blockers, approvals, baseline, and next action without private chat memory.
+
+**Acceptance:** a fresh host reads the repository and resumes without asking answered questions; contradictory state is reported, not silently resolved.
+
+### FR-03: Owner request ledger (P0)
+
+Record every substantive owner instruction, amendment, constraint, rejection, and decision with a stable ID, source, date, scope, priority, status, dependency, and verification pointer. Keep raw and grouped records distinguishable. Repeated asks are grouped without losing the source trail.
+
+**Acceptance:** a checker detects a missing or altered quoted ask; counts are reconciled against the raw corpus; no high-priority ask disappears silently.
+
+### FR-04: Adaptive intake (P0)
+
+Ask one question at a time and branch on the answer. The first branch distinguishes new build, redesign, migration, repair, audit, or another task. Collect purpose, audience, features, content, stack, CMS, auth, data, integrations, hosting, budget, localization, accessibility, SEO, maintenance, and deployment constraints. Do not use a form when a conversation is enough.
+
+**Acceptance:** every required answer is answered or explicitly marked `N/A` or `Assumed` with a reason; placeholders fail.
+
+### FR-05: Research-first Gate 0 (P1)
+
+Produce the dossier in Section 6. It must be specific to the domain and project, sourced, and actionable. Store it in the target project.
+
+**Acceptance:** absent sections, placeholder text, unsourced references, generic negative briefs, or tokens not derived from the dossier fail.
+
+### FR-06: Stack and skill selection (P0)
+
+Choose the stack from the owner's requirements and current research, not from habit. The bundled skill map is a fallback, not a lock. Research current framework APIs, licenses, versions, and integrations before a significant choice. A missing skill or package is explained with purpose, source, version, license, permissions, and cost before installation. On refusal or failure, use a documented fallback and disclose the limitation.
+
+**Acceptance:** the plan records the chosen stack and skills with reasons; no unavailable model or package is dispatched as ready; no duplicate orchestrator competes for control.
+
+### FR-07: Plan and scope lock (P0)
+
+Write an ordered plan with requirement IDs, files, dependencies, owners, acceptance commands, evidence, rollback, and approval points. State what is out of scope and which files are protected.
+
+**Acceptance:** production-code writes are blocked without a valid approved plan; post-approval scope changes produce a visible change request.
+
+### FR-08: Queue and keep-working behavior (P0)
+
+Continue all approved, unblocked tasks. Mark blocked work with a specific reason and continue unrelated work. Do not bypass approval, security, or destructive-operation gates.
+
+**Acceptance:** the queue has no unexplained missing task; a blocked task is not a reason to stop unrelated approved work; `DONE` requires evidence.
+
+### FR-09: Requirement traceability (P0)
+
+Map every owner ask to one or more requirements, implementation paths, tests, and evidence. Preserve chronology when a later ask changes an earlier one. Produce a coverage report before handoff.
+
+**Acceptance:** every in-scope item is `DELIVERED+VERIFIED`, `DELIVERED+NOT VERIFIED`, `PARTIAL`, `NOT IMPLEMENTED`, `BLOCKED`, or `EXCLUDED WITH OWNER REASON`; zero silent high-priority omissions.
+
+### FR-10: Live host and model registry (P0)
+
+Maintain one registry with each host's adapter, launcher, models, context capability, cost status, permissions, filesystem reach, tools, health, and known failures. Probe liveness before dispatch. Choose models by task class and current availability. Honor Kimi exclusion and the OpenCode conflict. Do not silently substitute `codex` for `codexx`.
+
+**Acceptance:** each routing decision records host, model, reason, capability evidence, and fallback; an unavailable host is skipped with a visible reason.
+
+### FR-11: Safe parallel fan-out (P0)
+
+Split work into genuinely independent chunks with scoped briefs, paths, inputs, outputs, acceptance commands, and ownership leases. Parallelize only when safe and useful. Keep the mediator's context clean by delegating large reading, implementation, and review.
+
+**Acceptance:** a run record shows chunks, hosts, duration, outputs, integration status, conflicts, and failures; failed agents trigger a bounded fallback; fan-out is not called working until a real run used it to complete work.
+
+### FR-12: Bidirectional mesh communication (P0)
+
+Agents must send, read, reply, and retrieve messages across hosts. Messages need IDs, sender, recipient, role, model, task, thread, time, type, status, acknowledgments, and evidence links. The UI must read the same store the agents write. Persistence and migration must preserve SQLite WAL data. Use compact records with retention rules.
+
+**Acceptance:** at least two real hosts exchange messages in both directions; replies land in the correct thread; restart and migration retain messages; a missing store fails clearly instead of returning an empty success.
+
+### FR-13: Executable mediator (P0)
+
+The mediator reads peer responses, checks claims against source and tests, reruns decisive checks, records dispositions, and serializes shared-state writes. A protocol document is not an implementation.
+
+**Acceptance:** given conflicting builder and auditor reports, the mediator produces an evidence-based decision and records `CONFIRMED`, `REFUTED`, or `NOT REPRODUCED`.
+
+### FR-14: Independent audit (P0)
+
+Use a different host, CLI, or model for meaningful reviews when available. The auditor reviews the actual diff and reruns decisive tests. Check requirement omissions, regressions, security, false-green tests, and unrelated changes.
+
+**Acceptance:** a task cannot reach `DONE` without the configured independent review, or the missing review is explicitly `NEEDS_REVIEW` or `BLOCKED_EXTERNAL` and policy permits the alternative.
+
+### FR-15: Objective evidence (P0)
+
+Evidence includes task and requirement IDs, plan revision, source revision, commands, environment, timestamps, exit codes, result summaries, screenshots or previews where relevant, transcript digests, reviewer identity, and known limits. Keep secrets out.
+
+**Acceptance:** absent, malformed, stale, mismatched, or fabricated evidence fails closed. Reports distinguish unit tests, integration tests, simulations, browser checks, and live deployment.
+
+### FR-16: Deliver the real target work (P0)
+
+After approval, apply the work to the actual target repository and complete the requested changes. A prototype, template, demo, or report is not a substitute unless the owner asked for one.
+
+**Acceptance:** the target project builds and runs as approved; the handoff contains working commands and artifacts in that repository; if the target is unavailable, the deliverable is `BLOCKED`, not claimed complete.
+
+### FR-17: Design research and quality (P1)
+
+Produce an intentional design system for the domain: references, type licensing, spacing, grid, surfaces, contrast, motion, imagery, negative brief, and section composition. Studio archetypes are starting points, not mandatory templates.
+
+**Acceptance:** major design choices trace to the dossier and tokens. Full-canvas choreography, negative-space budgets, type locks, and section rhythm apply only when the approved design contract requires them. No generic three-column icon cards, default gradients, or unapproved stock placeholders.
+
+### FR-18: Mobile-first and accessibility (P1)
+
+Verify at 390x844 before desktop approval, then at 1440x900 or the project's approved desktop viewport. Require no horizontal overflow, touch targets at least 44x44 CSS pixels where applicable, keyboard navigation, visible focus, semantic HTML, labels, alt text, contrast, reduced motion, accessible dialogs, and meaningful validation errors.
+
+**Acceptance:** automated checks and real browser inspection prove the selected breakpoints; failures are fixed or explicitly accepted by the owner. Do not claim an accessibility score without a real test.
+
+### FR-19: Real CMS coupling (P0 for CMS projects)
+
+Every CMS-managed frontend section ships with connected admin controls, persisted content, authorization, validation, output safety, draft and publish behavior, and tests in the same slice. No "CMS later."
+
+**Acceptance:** edit a real field, save it, refresh the public route, and show the change; verify permission denial, validation errors, draft and publish, media, and rollback. Exclusions outside approved scope are stated.
+
+### FR-20: Design-locked visual editor and blocks (P1)
+
+For applicable CMS projects, provide a split-screen editor with a control sidebar and interactive preview. Selecting a preview element focuses its field. Owners can add, toggle, and reorder approved blocks without breaking tokens or layout.
+
+**Acceptance:** preview-to-field mapping is correct; edits persist; controls work on desktop and mobile; unauthorized users cannot edit; design constraints hold.
+
+### FR-21: Media studio (P1)
+
+Support safe uploads, WebP or AVIF conversion when available, responsive `srcset`, asset budgets, and focal-point positioning. Avoid unlicensed hotlinks and make assets replaceable.
+
+**Acceptance:** tests validate MIME, size, permissions, variants, focal data, and budget failures; generated assets are inspected on target viewports.
+
+### FR-22: CMS SEO assistant (P1)
+
+Provide a live search snippet preview, Open Graph and messaging-card preview, and checks for title, description, alt text, and keyphrase presence, integrated with the SEO engine. Scores reflect real field state.
+
+**Acceptance:** changing a field changes its preview and check; missing data warns meaningfully; structured data matches real entities.
+
+### FR-23: Drafts, revisions, and rollback (P1)
+
+CMS projects need explicit draft, published, scheduled if in scope, and archived states. Keep revision history and an understandable undo or restore workflow. Rollback must not delete unrelated content.
+
+**Acceptance:** create, edit, publish, compare, restore, and verify against the database and public output; failure paths are tested.
+
+### FR-24: Domain blueprints (P1)
+
+Provide reusable, tested patterns for service clinics, news portals, custom e-commerce, and ERP or CRM, selected only when applicable.
+
+**Acceptance:** each blueprint has schema, validation, roles, API or service surface, admin expectations, fixtures, and end-to-end tests. A catalogue entry is not production readiness.
+
+### FR-25: SEO audit and growth pack (P1)
+
+Audit the actual target build across technical, on-page, schema, indexing, media, and Core Web Vitals dimensions. Generate metadata, canonicals, Open Graph, robots, sitemap, and applicable JSON-LD. For an approved client package, produce a 30-day plan and four researched draft articles left in draft for human review.
+
+**Acceptance:** run the audit against built output; validate files and schema; draft claims are sourced; no ranking or Lighthouse guarantee without measurement. A 90+ mobile Lighthouse gate applies only when the approved contract says so.
+
+### FR-26: Prompt modifier transparency (P1)
+
+Report whether a rewrite used a deterministic template, the current host, or a configured external model. Show the original prompt, rewritten text, additions, removals, structure changes, rationale, skipped items, and the exact proposed command on every surface. Never present a template as a model rewrite.
+
+**Acceptance:** mode labels are truthful; missing providers are visible; no key or provider is invented; dry-run executes nothing.
+
+### FR-27: Learning from repeated mistakes (P1)
+
+Capture a repeated defect as a candidate lesson with evidence. Promotion requires review and, where policy requires, owner approval. A generated regression test is not automatically approved or committed.
+
+**Acceptance:** each promoted lesson traces to evidence, a test, and an enforcement path; no silent rule change.
+
+### FR-28: Progress and status UI (P1)
+
+Expose current tasks, assigned hosts and models, live progress, last heartbeat, recent events, failures, blocked reasons, pending approvals, branch and CI status, and evidence links. A roster entry is not a heartbeat.
+
+**Acceptance:** status updates from real events; stale hosts are visibly stale; disconnected hosts are not green; state recovers after restart; each owner directive is ingested once and acknowledged.
+
+### FR-29: Git, CI, and merge (P0 for repository work)
+
+Capture baseline, protect concurrent work, run focused tests and the relevant battery, inspect the diff, wait for required CI, and report exact branch, commit, and check status. Merge only after required checks pass and with the required approval.
+
+**Acceptance:** CI status comes from the actual remote or workflow source; if unavailable, report `UNKNOWN` or `BLOCKED_EXTERNAL`; a local green suite is not permission to merge or push.
+
+### FR-30: Install, update, and uninstall (P0 for distribution)
+
+Installer and updater must be reproducible, conservative, cross-platform, and honest about network operations. Support dry-run, selection, backups, rollback, and clear logs. Do not delete user data or overwrite customizations without consent and a verified restore path. Bash and PowerShell behavior must agree or state the difference.
+
+**Acceptance:** fresh install, update, failure and retry, rollback, uninstall, dirty-tree refusal, path traversal, symlink or reparse refusal, malformed manifest, and user-data preservation pass in the appropriate environments. Do not use the owner's machine as a destructive test.
+
+### FR-31: Portability (P0)
+
+The core must not depend on one absolute path, home directory, shell, model, provider, or host. New dependencies require a stated reason, license, portability, and cost.
+
+**Acceptance:** a clean clone in a different path, another home, and a clean environment behaves predictably; missing optional tools produce a safe fallback, not a crash or false success.
+
+### FR-32: Reports and handover (P0)
+
+Every substantial audit, plan, verification, incident, or delivery has a Markdown report in the documented location. Reports are readable on mobile, state evidence and limits, and avoid dumping raw transcripts into active context. Archive old communications rather than deleting them.
+
+**Acceptance:** a final report exists, lists exact work and evidence, has no fabricated claims, is linked from the handoff and queue, and says what is true now.
+
+### FR-33: Directory and artifact hygiene (P0)
+
+One documented canonical location per artifact class: owner input, current state, queue, plans, reports, communications, evidence, raw asks, grouped asks, source, generated output, archive, quarantine. Do not modify owner-authored input without permission. Do not use deletion as cleanup. Use the approved temp-root helper.
+
+**Acceptance:** a directory audit detects orphaned or duplicate authoritative files, wrong references, oversized active communications, and test artifacts in source. Cleanup is reviewed before moving high-value data.
+
+### FR-34: Image and video prompts (P2)
+
+When the owner requests prompts for an external image or video platform, produce a structured prompt with subject, composition, camera, motion, style, lighting, continuity, exclusions, aspect ratio, and purpose. Historical ratios: images 1:1, 3:4, 4:3, 9:16, 16:9; video 9:16 and 16:9. Use licensed or owner-provided media and replaceable slots.
+
+### FR-35: P17 local task runner (P0 architecture, gated execution)
+
+P17 may accept a task, plan, discover authorized CLIs, choose deterministically, execute with bounded inputs and timeouts, verify, and record evidence. Real-agent execution remains disabled until a separately approved preventive isolation strategy passes review. Executable pinning is not OS confinement.
+
+**Acceptance:** no gate means no probing or spawn; executable resolution is pinned or confined to trusted roots; digest rechecked before spawn; invalid configuration fails closed; timeouts terminate the intended process tree where supported; evidence reflects every result; limitations are disclosed.
+
+---
+
+## 8. Non-functional requirements
+
+### NFR-01: Reliability
+
+Critical commands fail closed on malformed input, unreadable files, missing dependencies, stale state, invalid evidence, interrupted writes, and unavailable hosts. No checker prints pass when it skipped all checks, ran zero tests, or could not read its target.
+
+### NFR-02: Portability
+
+No hard-coded `/Users/...`, `/Volumes/...`, `/private/var/...`, home, cache, model, or checkout path. Test from a clean clone in another directory. Cover Bash and PowerShell where both are claimed.
+
+### NFR-03: Security and privacy
+
+Least privilege, default-deny write boundaries, no secrets in logs, client separation, explicit consent for sensitive tools, input validation, output safety, authentication and authorization, path and symlink protections, and safe subprocess invocation. A path helper is not an OS sandbox.
+
+### NFR-04: Auditability
+
+Every significant action has a task ID, actor, reason, timestamp, plan revision, paths, result, and evidence pointer. History is append-only where policy requires; corrections are explained.
+
+### NFR-05: Performance and cost
+
+Keep context compact. Delegate broad reading. Parallelize only safe independent work. Prefer free or already-paid tools. Do not create a new spend without approval. Measure wall-clock time and rework, not subagent count.
+
+### NFR-06: Usability
+
+Owner-facing gates and reports use plain language, show the decision, the reason, the evidence, and the next action. The owner should not need to inspect fifty files to know what happened.
+
+### NFR-07: Maintainability
+
+One canonical source should generate or validate duplicate registries and docs where feasible. Avoid giant modules with mixed responsibilities. Do not refactor stable code for style during a delivery task.
+
+### NFR-08: Accessibility and design quality
+
+Accounts for mobile, keyboard, contrast, reduced motion, touch targets, loading, error and empty states, and asset performance. Design gates are conditional on the approved stack and design contract.
+
+---
+
+## 9. Security and approvals
+
+### 9.1 An agent may decide inside an approved plan
+
+- internal module layout, test names, ordinary data structures, and CLI flags;
+- choice among previously approved free tools and models, based on verified availability;
+- fixes to code-owned defects inside authorized paths, with tests retained or strengthened;
+- bounded retries for transient failures, with a record;
+- marking a blocked task and continuing unrelated approved work;
+- proposing new work for the queue without widening the active task.
+
+### 9.2 Only the owner may approve
+
+- public visibility, history rewrite, force-push, remote branch deletion, release, deployment, or publication;
+- destructive data changes or actions that can overwrite user content, client data, global installs, uncommitted work, or protected files;
+- spending money, creating paid accounts, obtaining credentials, or adding a paid provider;
+- weakening, relabeling, or bypassing a security, approval, CI, or governance gate;
+- enabling P17 real-agent execution while its security gates are open;
+- changing client scope beyond the accepted plan or treating an assumption as an owner decision.
+
+### 9.3 Keep-working boundary
+
+Continue all authorized, unblocked work. Do not stop for routine choices already covered by the plan. Do not bypass explicit approval, security, or protected remote operations.
+
+---
+
+## 10. Definition of Done
+
+A task is `DONE` only when all applicable statements are true:
+
+1. The requirement is recorded and mapped to the approved plan.
+2. The implementation exists in the intended repository and path.
+3. The normal workflow calls it; no dead module is presented as a feature.
+4. Happy path and relevant failure paths pass objective tests.
+5. The test exercised the required behavior; no no-op, vacuous, stale, zero-test, or mock-only result is called full verification.
+6. A separate reviewer inspected the diff and reproduced the decisive behavior, or the review blocker is recorded and policy permits the alternative.
+7. Documentation and commands match actual behavior.
+8. For a client site, the target project renders and runs; routes, forms, auth, data, and CMS actions work; mobile and desktop were inspected; SEO ran against built output; the result is maintainable.
+9. Evidence is saved with commands, exit codes, environment, results, screenshots where relevant, and limits.
+10. No open P0 or P1 blocker is disguised as complete; no approval-required action was performed without approval.
+11. Current state, queue, and handoff are updated so a cold-start host can resume.
+12. The owner summary states what is delivered, verified, not verified, blocked, deferred, and what still needs owner action.
+
+---
+
+## 11. Acceptance scenarios
+
+### E2E-1: Real project from ask to delivery
+
+Use an owner-selected real project, separate from Aperio. Start from the actual entrypoint, capture the ask, research the project, produce Gate 0, get scope and plan approval, build the slices, verify independently, and deliver the target project. Use the owner's acceptance checklist, not a generic demo. Do not mark complete if the target is unchanged or uses the wrong stack.
+
+Evidence: initial state, accepted scope, plan, diff, running build, mobile and desktop screenshots, tests, CMS edit/publish/rollback if required, SEO output if required, independent review, and ask-to-result matrix.
+
+### E2E-2: Cold-start continuity
+
+Stop one host after a plan and partial implementation. A different host resumes from repository state without re-asking answered questions, changing unrelated files, or losing approvals. It reports stale or contradictory state.
+
+### E2E-3: Live mesh
+
+Two actual hosts exchange a task and reply in both directions. The mediator records the result. Restart does not lose messages. An inaccessible host or database produces a truthful failure.
+
+### E2E-4: Parallel build and independent audit
+
+Split an approved task into at least two safe independent chunks, run them on available permitted hosts or models, integrate, and use a different host as reviewer. Show chunks, duration, conflicts, and integration. If parallelism is not beneficial, record why.
+
+### E2E-5: Prompt rewrite transparency
+
+Invoke the prompt modifier through every supported surface. Prove whether it used a template, the host, or an external model. Show original, rewrite, additions, removals, and the exact command. Dry-run executes nothing.
+
+### E2E-6: Gate fails when broken
+
+For each critical gate, break its checking path in a fixture and prove the gate fails. Restore it and prove pass. Do not alter protected baselines or weaken security.
+
+### E2E-7: Fresh clone and new machine
+
+Clone into a different path with a clean environment and no optional agents. Run setup, doctor, and core tests. Verify no absolute-path assumptions. Unsupported hosts are reported as unsupported, not green.
+
+### E2E-8: Privacy before publication
+
+Scan worktree, tracked content, reachable history, branches, and retained artifacts with the approved identity and secret tools. Confirm remote branch history and worktrees are clean. A clean scan is not publication approval.
+
+---
+
+## 12. Roadmap
+
+### P0: Make the current product work
+
+1. Prove the installed entrypoint and required rule files on the owner's host.
+2. Reconcile current state, queue, plan, owner ledger, and archived handoffs.
+3. Build the ask-to-requirement-to-code-to-test-to-evidence matrix.
+4. Repair the core loop: intake, plan, approval, bounded execution, independent verification, evidence, handoff.
+5. Prove host and model routing and a real multi-host fan-out without Kimi; resolve OpenCode before dispatch.
+6. Prove bidirectional mesh with real hosts, restart, and migration.
+7. Complete prompt rewrite transparency and model mode labeling.
+8. Deliver one real selected project end to end.
+9. Re-run tests and validators from the current checkout; label sandbox denials and stale checks.
+10. Keep privacy and release operations blocked until the owner approves after evidence.
+
+### P1: Make specialist code useful
+
+1. Gate 0 and the Studio Council in the real project lifecycle.
+2. Stack- and domain-aware design policy; Lumos opt-in; verify the chosen framework.
+3. CMS editor, media, blocks, roles, persistence, revisions, publishing, rollback in real projects.
+4. SEO audits and growth packs against built output and CMS drafts.
+5. Design, viewport, mobile, accessibility, and product-proof gates in the delivery path.
+6. Progress dashboard, heartbeat, status, cross-host handoff.
+7. Installer, updater, uninstaller, recovery, and cross-platform parity.
+8. Registry freshness and model selection by capability and cost.
+
+### P2: Expand
+
+1. More domain blueprints and CMS features after the real-project loop passes.
+2. Asset and video workflow expansion.
+3. Learning factory and approved regression generation.
+4. Performance and parallel speed measurement.
+5. Broader packaging or public distribution only after security, privacy, install, portability, and release gates pass with owner approval.
+
+---
+
+## 13. Metrics
+
+Track from actual runs, not estimates:
+
+- ask coverage: in-scope requirements mapped to delivered behavior and evidence; target 100% before project completion;
+- false-done rate: items marked done without current evidence; target 0%;
+- gate integrity: declared hard gates with a call path and positive and negative tests; target 100% for gates described as enforced;
+- real-project acceptance: project-specific criteria satisfied or owner-approved exclusions; target 100% of approved scope;
+- independent review coverage: meaningful slices reviewed by a separate verifier; target 100% unless a documented policy exception exists;
+- continuity: cold-start hosts resume without re-asking answered questions; target 100% in acceptance runs;
+- mesh reliability: successful send, read, reply, restart retrieval per host pairing; never generalize beyond tested cells;
+- fan-out: chunks parallelized, completed, failed, wall-clock, conflicts, integration overhead; not subagent count;
+- prompt transparency: every rewrite shows mode and a full diff; target 100%;
+- CMS functional coverage: edit, persist, render, publish, deny, media, revision, rollback; target 100% for required CMS scope;
+- test discovery integrity: no zero-test pass, no omitted module without a decision, counts match actual discovery;
+- portability: explicit pass, fail, or unavailable per OS and shell;
+- privacy: zero unauthorized identifiers or secrets in the required scan scope before publication; a clean scan is not approval;
+- owner clarity: the final report answers what works, what does not, and how to verify it without reconstructing logs.
+
+---
+
+## 14. Source of truth
+
+| Artifact | Purpose | Canonical path | Rule |
+|---|---|---|---|
+| Product requirements | What Aperio must do | `docs/PRD.md` | One current specification; amendments through a decision record |
+| Start page | Minimal boot guide | `START-HERE.md` | Links to current state and queue; no stale install claims |
+| Current state | What is true now | `.sps/handoff.md` | One authoritative snapshot; older snapshots archived |
+| Active queue | Tasks, status, blockers | `.sps/task-queue.md` | `DONE` only with evidence; history retained |
+| Active plan | Approved scope and sequence | `.sps/plan.md` or documented plans directory | One active plan; changes are traceable |
+| Owner input | Original instructions | `Shahid/INSTRUCTIONS-*.md`, `Shahid/asks-raw/`, `Shahid/asks-grouped/` | Owner-authored; agents do not rewrite without permission |
+| Decisions and approvals | Owner-authorized actions | `.sps/approvals/`, `framework/sps2/decisions/` | Agent reports are not approval |
+| Laws and enforcement | Rule, enforcement path, negative test | `skill/aperio/` and `framework/sps2/` | A hard law requires a working check |
+| Reports | Historical findings and evidence | `reports/` | Timestamped; state whether current or historical |
+| Communications | Live peer messages | `.sps/comms/` and mesh store | One canonical store readable by all authorized hosts |
+| Tests | Required modules and counts | `.github/expected-test-modules.txt`, `.github/test-count-high-water.txt` | Count actual execution; do not weaken the baseline |
+| Source | Implementation | `skill/`, `framework/`, `scripts/` | No duplicate implementation unless mirroring is mechanically checked |
+| Evidence | Requirement-specific proof | `.sps/evidence/`, target project evidence | Each claim maps to a real file or output |
+| Archive | Retired artifacts | `.sps/archive/`, `.sps/comms/archive/` | Preserve auditability; no casual deletion |
+
+---
+
+## 15. Current v2 evidence baseline
+
+Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any row.
+
+| Item | Result | Command or evidence |
+|---|---|---|
+| Core unit tests | **17 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Installer tests | **3 passed** | same command; `tests/test_installer.py` |
+| Total test suite | **20 passed** | same command |
+| CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
+| Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
+| Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
+| Path traversal / symlink escape | **refused** | `tests/test_core.py` |
+| Undeclared shell write | **detected and failed** | `tests/test_core.py::test_command_outside_write_is_detected` |
+| Installer dry run | **no files written** | `tests/test_installer.py::test_dry_run_writes_nothing` |
+| Installer idempotency | **second run leaves one skill** | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
+| Installer uninstall | **removes binary, library, and skill** | same test |
+| Host detection | **reports installed names and versions** | `aperio hosts`; presence is not permission |
+| Host dispatch | **not built** | no adapter in `src/aperio/` |
+| Mesh chat | **not built** | no message store in `src/aperio/` |
+| CMS / SEO / Astro delivery | **not built** | no delivery adapter |
+| OS sandbox for shell steps | **not built**; undeclared writes are detected after execution | `docs/ARCHITECTURE.md` limits |
+| Windows installer parity | **not built** | no PowerShell installer in v2 |
+| Public repository | **pending at document creation**; see `docs/STATUS.md` for the live URL | remote status |
+
+The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
+
+## 16. Review of the two source PRDs
+
+### 16.1 What the Gemini v5.0 draft contributes
+
+- A clear product vision and owner persona.
+- Specific niches and negative briefs for clinic, e-commerce, news, ERP/CRM, portfolio, and desktop.
+- Concrete installer, host bootstrapper, Lumos, CMS, SEO, and prompt-interceptor requirements.
+- Useful detail on the anti-slop design problem.
+
+### 16.2 What must be corrected in the Gemini draft
+
+- It presents target-state claims as achieved: "100% idempotent", "beats WordPress", "30+ supported hosts". These are requirements, not evidence.
+- It makes design rules universal: mandatory `100dvh`, 30% negative space, no Inter/Roboto, hard 90+ Lighthouse. The canonical contract makes them project-specific unless the approved design and performance contract says otherwise.
+- It fixes hosts to roles (`agy` research, `claude` visual, `codexx` backend, `goose` QA). Hosts change; roles must be capability-based.
+- It attributes Lumos to a person and assumes one API. The repository has a custom Lumos variant that is not compatible with the external framework. The project must record which implementation it uses and never mix them.
+- It says every site or app must ship a CMS. CMS is conditional on the project.
+- It treats "never WordPress or Shopify" as a product law. That is an owner preference for Aperio-built projects, not a universal product requirement.
+- It specifies a Python TUI file `scripts/aperio_installer_tui.py` that may not be the current implementation. The canonical contract requires the behavior, not a particular filename.
+
+### 16.3 What the APERIO PRD v1.0 contributes
+
+- Rigorous separation of implemented, wired, verified, and approved.
+- Strong acceptance, negative-test, evidence, privacy, and release-boundary language.
+- A complete requirement inventory and end-to-end scenarios.
+- Honest treatment of stale reports and missing client targets.
+
+### 16.4 What must be corrected in the APERIO PRD
+
+- At 962 lines and 119 KB, it is too long to be the daily working contract. This document keeps the normative core and moves inventory detail to the repository map.
+- Several snapshot counts are stale: it cites 2,973 tests and 102 pins; the measured baseline is 3,039 tests and 106 pins.
+- It repeats open owner questions that already have recorded defaults; this document resolves them unless the owner objects.
+- It leaves the real target project undefined. E2E-1 must use an owner-selected target; the Aperio repository cannot substitute for it.
+- It sometimes states design constraints as universal. They remain conditional on the approved project contract.
+
+### 16.5 Canonical decisions
+
+- One PRD is the contract. The two drafts are historical inputs.
+- Roles are capability-based; host names are assignments, not definitions.
+- CMS, Lumos, Lighthouse 90+, full-canvas design, and type locks are conditional on the approved project contract.
+- No status is inherited from a document. Current evidence is re-measured.
+- The mediator owns the queue and integration. Builders and auditors own their assigned slices and evidence.
+
+---
+
+## 17. Requirement traceability
+
+Every completion report includes this table, filled from actual work:
+
+| Requirement | Owner ask | Implementation path | Wired call site | Test or live evidence | Status | Reviewer |
+|---|---|---|---|---|---|---|
+| FR-01 | entrypoint | | | | | |
+| FR-02 | resume | | | | | |
+| FR-03 | ask ledger | | | | | |
+| FR-04 | intake | | | | | |
+| FR-05 | research | | | | | |
+| FR-06 | stack | | | | | |
+| FR-07 | plan gate | | | | | |
+| FR-08 | queue | | | | | |
+| FR-09 | traceability | | | | | |
+| FR-10 | hosts/models | | | | | |
+| FR-11 | fan-out | | | | | |
+| FR-12 | mesh | | | | | |
+| FR-13 | mediator | | | | | |
+| FR-14 | audit | | | | | |
+| FR-15 | evidence | | | | | |
+| FR-16 | real delivery | | | | | |
+| FR-17 | design | | | | | |
+| FR-18 | mobile/a11y | | | | | |
+| FR-19 | CMS | | | | | |
+| FR-20 | visual editor | | | | | |
+| FR-21 | media | | | | | |
+| FR-22 | CMS SEO | | | | | |
+| FR-23 | revisions | | | | | |
+| FR-24 | blueprints | | | | | |
+| FR-25 | SEO pack | | | | | |
+| FR-26 | prompt | | | | | |
+| FR-27 | learning | | | | | |
+| FR-28 | status | | | | | |
+| FR-29 | git/CI | | | | | |
+| FR-30 | install | | | | | |
+| FR-31 | portability | | | | | |
+| FR-32 | reports | | | | | |
+| FR-33 | hygiene | | | | | |
+| FR-34 | assets | | | | | |
+| FR-35 | P17 | | | | | |
+
+Allowed status values: `IMPLEMENTED`, `WIRED`, `VERIFIED`, `DELIVERED+VERIFIED`, `DELIVERED+NOT VERIFIED`, `PARTIAL`, `NOT IMPLEMENTED`, `BLOCKED`, `EXCLUDED WITH OWNER REASON`.
+
+---
+
+## 18. Completion report format
+
+Every substantive report has these headings:
+
+1. Requested outcome, quoted or precisely summarized.
+2. Scope and constraints: target repository, allowed paths, out-of-scope items, approvals.
+3. What changed: exact files and user-visible behavior.
+4. Implementation details: entrypoint, call path, data flow, failure handling.
+5. Verification: commands, exit codes, counts, environment, screenshots or links, independent reviewer and verdict.
+6. Ask-to-result matrix.
+7. Known limitations: untested areas, environmental limits, open defects.
+8. Recovery and rollback.
+9. Next tasks with IDs and priority.
+10. Owner action required, with a recommendation and consequence.
+
+A report without the delivered code and verified behavior is not a successful build.
+
+---
+
+## 19. Immediate execution sequence
+
+1. Rebaseline the checkout: root, status, HEAD, changed files, concurrent leases, Python and OS, test discovery.
+2. Prove the installed entrypoint on the owner's host. Fix or document the boot failure before claiming a governed build.
+3. Build the requirement coverage table from the owner ledger and current directives.
+4. Recompute the law and gate matrix: runtime block, CLI validator, CI check, instruction only, or not implemented; include a negative test.
+5. Reproduce the primary delivery failure on an owner-selected target, without copying client data.
+6. Fix the smallest set of issues that prevents the normal entrypoint from fulfilling a request.
+7. Run one vertical slice through the full path: request, dossier, approved plan, implementation, running product, tests, independent review, evidence, handoff.
+8. Fan out independent work only after host availability and permission are verified. Never Kimi. Resolve OpenCode before dispatch.
+9. Run the relevant full battery and real CI where available. Label sandbox denials, skips, unknowns, and stale results.
+10. Write the report, update canonical state and queue, and state the next unblocked task and blockers.
+
+Do not begin with a broad audit or a new feature. The first priority is a working core loop with evidence.
+
+---
+
+## 20. Open owner decisions
+
+These are recorded with defaults so work can continue. The owner can override any of them.
+
+1. **First real target project.** Needed for E2E-1. Default: use the owner's selected project, keep its code and data outside this repository, and capture only sanitized acceptance criteria here.
+2. **Lumos implementation.** Default: use whichever implementation the target project's approved stack requires; never mix upstream and custom APIs.
+3. **OpenCode.** Default: do not dispatch until the conflict between older "do not use" and newer allowlist entries is resolved by the owner.
+4. **Public release.** Default: stay private until the owner approves after a clean history and branch audit. No force-push without explicit approval.
+5. **Budget.** Default: zero new spend on models, APIs, hosting, or dependencies unless the owner approves an exception.
+
+---
+
+## 21. Final acceptance statement
+
+Aperio succeeds when the owner can state a concrete outcome, leave the system to carry out approved work, return to a real artifact that matches the requirements, inspect what changed, see actual tests and independent review, and hand the work to another host without repeating himself.
+
+Aperio must be able to explain any gap between the ask and the result. It must not say "done" while that gap remains.
+
+The north-star question for every agent is:
+
+> Does the delivered behavior in the intended repository satisfy what the owner actually asked for, and can another party reproduce the proof?
+
+If the answer is no or unknown, Aperio is not done.

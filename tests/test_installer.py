@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@unittest.skipUnless(shutil.which("bash") and os.name != "nt", "bash installer test")
+class InstallerTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory(prefix="aperio-installer-")
+        self.root = Path(self.temp.name)
+        self.prefix = self.root / "prefix"
+        self.home = self.root / "home"
+        self.skill_home = self.root / "skills"
+        self.home.mkdir()
+        self.env = os.environ.copy()
+        self.env["HOME"] = str(self.home)
+        self.env["APERIO_SKILL_HOME"] = str(self.skill_home)
+        self.env.pop("APERIO_PREFIX", None)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def run_install(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(ROOT / "install.sh"), "--prefix", str(self.prefix), *args],
+            capture_output=True,
+            text=True,
+            env=self.env,
+            cwd=str(ROOT),
+            timeout=60,
+        )
+
+    def test_dry_run_writes_nothing(self) -> None:
+        result = self.run_install("--no-skill", "--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.prefix.exists())
+        self.assertIn("dry run", result.stdout)
+
+    def test_install_is_idempotent_and_uninstalls(self) -> None:
+        first = self.run_install()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        binary = self.prefix / "bin" / "aperio"
+        skill = self.skill_home / "aperio" / "SKILL.md"
+        self.assertTrue(binary.is_file())
+        self.assertTrue(skill.is_file())
+        self.assertEqual((self.skill_home / "aperio" / "VERSION").read_text().strip(), "2.0.0.dev0")
+
+        version = subprocess.run([str(binary), "--version"], capture_output=True, text=True, timeout=30)
+        self.assertEqual(version.returncode, 0, version.stderr)
+        self.assertIn("aperio 2.0.0.dev0", version.stdout)
+
+        project = self.root / "project"
+        init = subprocess.run(
+            [str(binary), "--project", str(project), "init", str(project), "--name", "installed"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(init.returncode, 0, init.stderr)
+        doctor = subprocess.run(
+            [str(binary), "--project", str(project), "doctor"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
+
+        second = self.run_install()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(len(list((self.skill_home).glob("aperio*"))), 1)
+
+        removed = self.run_install("--uninstall")
+        self.assertEqual(removed.returncode, 0, removed.stderr)
+        self.assertFalse(binary.exists())
+        self.assertFalse((self.skill_home / "aperio").exists())
+
+    def test_unsafe_prefix_is_refused(self) -> None:
+        result = subprocess.run(
+            ["bash", str(ROOT / "install.sh"), "--prefix", "/", "--dry-run"],
+            capture_output=True,
+            text=True,
+            env=self.env,
+            cwd=str(ROOT),
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("unsafe prefix", result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()
