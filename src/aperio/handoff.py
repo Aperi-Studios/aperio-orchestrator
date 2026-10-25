@@ -84,6 +84,9 @@ def build_handoff(project: Project, task_id: str) -> str:
         changes.extend(record.get("changed_files", []))
     if changes:
         lines.append(_bullets(sorted(set(changes))))
+        if task.status == "rolled_back":
+            lines.append("")
+            lines.append("These files were changed by the run and then restored by rollback.")
     else:
         lines.append("- No successful changed-file evidence recorded.")
     lines.append("")

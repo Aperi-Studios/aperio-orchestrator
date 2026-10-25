@@ -20,6 +20,7 @@
 | Installer uninstall | removes binary, library, and skill | same test |
 | Host detection | reads installed host names and versions | `aperio hosts`; presence is not permission |
 | Public repository | public at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
+| GitHub Actions | tests passed on Python 3.10, 3.12, and 3.14 | [run 40237671369](https://github.com/Aperi-Studios/aperio-orchestrator/actions/runs/40237671369) |
 
 ## Not built
 
