@@ -2,6 +2,7 @@
 
 **Measured:** 2026-10-26, on the v2 rebuild tree.
 **Rule:** this page reports what was run. It is not a roadmap and not a promise.
+**Context:** `docs/REBUILD-REPORT-20261026.md` explains the rebuild and the archive.
 
 ## Verified
 

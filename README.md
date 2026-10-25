@@ -103,6 +103,7 @@ The shell limitation is real. A command can change a file before Aperio detects 
 - `docs/AGENTS.md`: roles and task handover.
 - `docs/DECISIONS.md`: decisions that shaped v2.
 - `docs/ARCHIVE.md`: where the old repository and documents live.
+- `docs/REBUILD-REPORT-20261026.md`: what changed in the rebuild and what remains.
 
 ## License
 
