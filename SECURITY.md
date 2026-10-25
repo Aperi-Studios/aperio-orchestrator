@@ -28,7 +28,10 @@ A shell step in an approved plan can change files before the runner detects the 
 - Undeclared writes are detected after execution inside the scanned project tree. Writes to excluded directories, outside the project, or to paths the scanner cannot read are not observed.
 - Steps that change the project state used for approval, queue, plans, or evidence fail the run or verification.
 - A task cannot be marked done without a confirmed review whose reviewer label differs from the builder label. Labels are self-reported; this is not authenticated identity.
+- A review host is asked not to edit. The review runner fingerprints the project before and after and refuses a verdict if anything changed; this is detection, not an OS sandbox.
+- A new run or verification clears the previous review, so old evidence cannot confirm a later run.
 - Acceptance checks that mutate a project file fail verification. Newly created files are removed; modified or deleted files are reported but not restored.
+- A timed-out shell command's descendants may outlive the timeout; the runner does not manage a process group.
 - Host detection does not authenticate a host or prove model access.
 
 See `docs/ARCHITECTURE.md` for the full boundary.

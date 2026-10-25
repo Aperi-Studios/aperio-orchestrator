@@ -8,20 +8,22 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 21 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 13 passed | same command; `tests/test_adapter.py` |
+| Core unit tests | 22 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Adapter tests | 14 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 4 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Installer tests | 6 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 58 passed | same command |
+| Total test suite | 60 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
 | Path traversal and symlink escape | refused, including dangling symlink components | `tests/test_core.py` |
 | Project state symlink | opening a project whose `.aperio` is a symlink is refused | `tests/test_core.py::test_state_symlink_is_refused` |
+| State file symlink | a symlinked queue file is refused and the external file is untouched | `tests/test_core.py::test_state_file_symlink_is_refused` |
+| Review tamper | a reviewer that changes the project is refused | `tests/test_adapter.py::test_reviewer_cannot_change_the_project` |
 | Control-state change | a step that alters project, queue, plan, or evidence fails | `_hash_control_state`; `tests/test_core.py` |
 | Undeclared shell write | detected and failed | `tests/test_core.py::test_command_outside_write_is_detected` |
 | Verification timeout | cannot pass, even with `expected_exit: 124` | `tests/test_core.py::test_verification_timeout_cannot_pass` |
@@ -63,7 +65,7 @@
 
 ## Known limits
 
-- A third external audit of the whole repository is still pending. Two Codex passes returned findings; the concrete P1s were fixed or narrowed, and the 58-test suite is not a whole-repository audit. See `docs/AUDIT-CODEX-20261026.md`.
+- A fourth external audit of the whole repository is still pending. Three Codex passes returned findings; concrete P1s were fixed or narrowed, and the 60-test suite is not a whole-repository audit. See `docs/AUDIT-CODEX-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.

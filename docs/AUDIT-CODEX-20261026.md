@@ -48,5 +48,23 @@ these additional findings:
 | P2 | Acceptance mutations were reported but not cleaned. | **Partly fixed.** Newly created files are removed; modified or deleted files are reported but not restored. |
 | P2 | Security docs overstated mutation detection. | **Fixed.** `SECURITY.md` states the scanner's exclusions and the state limits. |
 
-The current test count is 58. A third independent pass is still required after
+The current test count is 60. A third independent pass is still required after
 these changes.
+
+## Third pass
+
+A third fresh Codex audit on HEAD `cd927b8` found no P0 and returned **refuted**
+with these remaining issues:
+
+| Severity | Finding | Disposition |
+|---|---|---|
+| P1 | State files such as the queue could be symlinks, and the atomic writer followed them. | **Fixed.** State reads, writes, and appends reject symlinks; `replace_bytes_atomic` refuses a symlink target. Test: `test_state_file_symlink_is_refused`. |
+| P1 | A direct host write to the original project could remain after the failed run. | **Partly fixed.** The runner restores snapshot targets on a host delta; files outside the snapshot are still not restored. The no-sandbox limit remains. |
+| P1 | A review host could change the project and still confirm it. | **Fixed for detection.** The review runner fingerprints the whole project before and after and refuses a verdict on any change. Goose still has no OS read-only sandbox; the change is detected, not prevented. Test: `test_reviewer_cannot_change_the_project`. |
+| P1 | An old review could confirm a later run. | **Fixed.** A new run or a new verification clears the previous review before proceeding. |
+| P2 | Control-state hashing omitted asks and events. | **Fixed.** Both are included. |
+| P2 | Acceptance mutation cleanup was partial. | **Documented and partly fixed.** Newly created files are removed; modified or deleted files are reported but not restored. |
+| P2 | A timed-out shell's descendants could outlive the timeout. | **Not fixed.** The runner does not manage a process group. This is a known limit. |
+
+The fourth pass is still required. The known limits are recorded in
+`SECURITY.md` and `docs/STATUS.md`.

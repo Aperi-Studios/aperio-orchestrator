@@ -77,9 +77,13 @@ class Project:
     # ---- low-level JSON -------------------------------------------------
 
     def _write_json(self, path: Path, data: Any) -> None:
+        if path.is_symlink():
+            raise StoreError(f"refusing to write through a state symlink: {path}")
         replace_text_atomic(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
 
     def _read_json(self, path: Path, default: Any = None) -> Any:
+        if path.is_symlink():
+            raise StoreError(f"refusing to read a state symlink: {path}")
         if not path.is_file():
             if default is not None:
                 return default
@@ -90,6 +94,8 @@ class Project:
             raise StoreError(f"unreadable state file: {path}: {exc}") from exc
 
     def _append_jsonl(self, path: Path, data: dict[str, Any]) -> None:
+        if path.is_symlink():
+            raise StoreError(f"refusing to append through a state symlink: {path}")
         path.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps(data, sort_keys=True) + "\n"
         with path.open("a", encoding="utf-8") as handle:
@@ -98,6 +104,8 @@ class Project:
             os.fsync(handle.fileno())
 
     def _read_jsonl(self, path: Path) -> list[dict[str, Any]]:
+        if path.is_symlink():
+            raise StoreError(f"refusing to read a state symlink: {path}")
         if not path.is_file():
             return []
         rows: list[dict[str, Any]] = []

@@ -64,7 +64,7 @@ State files are written to a temporary file in the same directory, flushed, and 
    - records changed files and any change outside the declared writes;
    - saves evidence and moves the task to `applied` or `failed`.
 6. `verify` runs the plan's acceptance commands, rejects a timed-out check, and fails if a check changes a project file; it records pass or fail.
-7. `review` records a named reviewer's `confirmed` or `refuted` verdict. With `--host`, it builds a brief-only workspace containing the plan, changed files, acceptance results, and handoff; the fresh host reviewer has no builder conversation and cannot edit. The reviewer must differ from the builder.
+7. `review` records a named reviewer's `confirmed` or `refuted` verdict. With `--host`, it builds a brief-only workspace containing the plan, changed files, acceptance results, and handoff; the fresh host reviewer has no builder conversation and is asked not to edit. The runner fingerprints the project before and after the review and refuses a verdict if the project changed. The reviewer must differ from the builder.
 8. `done` requires a verified task and a confirmed review.
 9. `handoff` writes a markdown report from the actual task, plan, evidence, and review.
 10. `rollback` restores files captured before a run and removes files the run created.

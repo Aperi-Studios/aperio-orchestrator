@@ -175,7 +175,12 @@ def _hash_project(project: Project) -> dict[str, str]:
 
 def _hash_control_state(project: Project) -> dict[str, str]:
     """Hash the files that define the approved plan and evidence."""
-    paths: list[Path] = [project.state / "project.json", project.state / "queue.json"]
+    paths: list[Path] = [
+        project.state / "project.json",
+        project.state / "queue.json",
+        project.state / "asks.jsonl",
+        project.state / "events.jsonl",
+    ]
     for directory in (project.state / "plans", project.state / "evidence"):
         if directory.is_dir():
             paths.extend(path for path in directory.rglob("*") if path.is_file())
@@ -249,6 +254,10 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
     task = project.get_task(plan.task_id)
     if task.status not in {"approved", "applied", "failed"}:
         raise RunError(f"task is {task.status}; create or approve a runnable plan before running")
+    if task.review is not None:
+        task.review = None
+        task.notes.append("previous review cleared by a new run")
+        project.put_task(task)
     if plan.approval.approved_by.strip().lower() == actor.strip().lower():
         # An owner may also be the actor in a tiny project; record it rather than
         # pretending it is independent review. Verification still needs a reviewer.
@@ -317,6 +326,12 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
                         "host changed the real project outside its disposable workspace: "
                         + ", ".join(host_delta)
                     )
+                    try:
+                        _restore(project, run_id)
+                        evidence["restored"] = True
+                    except (OSError, RunError) as restore_exc:
+                        evidence["restored"] = False
+                        evidence["restore_error"] = str(restore_exc)
                     break
                 if host_result.status != "ok":
                     failed = True
@@ -398,6 +413,10 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
         run_records = [row for row in project.evidence(task_id) if row.get("run_id") == task.run_id]
         if not run_records or run_records[-1].get("status") != "applied":
             raise RunError("the last run did not apply cleanly; fix the violation and rerun the plan")
+    if task.review is not None:
+        task.review = None
+        task.notes.append("previous review cleared by a new verification")
+        project.put_task(task)
     check_id = f"verify-{uuid.uuid4().hex[:10]}"
     evidence: dict[str, Any] = {
         "check_id": check_id,

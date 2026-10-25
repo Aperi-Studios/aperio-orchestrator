@@ -293,6 +293,18 @@ class CoreTests(unittest.TestCase):
         finally:
             shutil.rmtree(external, ignore_errors=True)
 
+    def test_state_file_symlink_is_refused(self) -> None:
+        external = self.root.parent / f"{self.root.name}-queue.json"
+        external.write_text("external\n", encoding="utf-8")
+        try:
+            (self.root / ".aperio" / "queue.json").unlink()
+            (self.root / ".aperio" / "queue.json").symlink_to(external)
+            with self.assertRaises(StoreError):
+                self.project.save_tasks([])
+            self.assertEqual(external.read_text(), "external\n")
+        finally:
+            external.unlink(missing_ok=True)
+
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))
         self.assertTrue(path_allowed("site/a/b.txt", ["site"]))

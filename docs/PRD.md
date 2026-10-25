@@ -615,19 +615,21 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **21 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | **13 passed** | same command; `tests/test_adapter.py` |
+| Core unit tests | **22 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Adapter tests | **14 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **4 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
 | Installer tests | **6 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **58 passed** | same command |
+| Total test suite | **60 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
 | Path traversal / symlink escape | **refused**, including dangling symlink components | `tests/test_core.py` |
 | Project state symlink | **refused** when opening a project | `tests/test_core.py::test_state_symlink_is_refused` |
+| State file symlink | **refused**; external file untouched | `tests/test_core.py::test_state_file_symlink_is_refused` |
+| Review tamper | **refused** if the reviewer changes the project | `tests/test_adapter.py::test_reviewer_cannot_change_the_project` |
 | Control-state change | **fails** if a step alters project, queue, plan, or evidence | `_hash_control_state` |
 | Undeclared shell write | **detected and failed** | `tests/test_core.py::test_command_outside_write_is_detected` |
 | Verification timeout | **cannot pass**, even with `expected_exit: 124` | `tests/test_core.py::test_verification_timeout_cannot_pass` |
@@ -656,7 +658,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
-| External audit of the whole repo | **two Codex passes returned findings; concrete P1 fixes applied; third pass pending** | `docs/AUDIT-CODEX-20261026.md`; Claude audit still pending |
+| External audit of the whole repo | **three Codex passes returned findings; concrete P1 fixes applied; fourth pass pending** | `docs/AUDIT-CODEX-20261026.md`; Claude audit still pending |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
 

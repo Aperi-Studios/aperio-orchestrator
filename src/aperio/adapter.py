@@ -231,6 +231,23 @@ def _diff(before: dict[str, tuple[str, str]], after: dict[str, tuple[str, str]])
     return sorted(changes)
 
 
+def _fingerprint(root: Path) -> dict[str, str]:
+    """Hash every file and symlink under root for review tamper detection."""
+    result: dict[str, str] = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        for name in list(dirnames) + list(filenames):
+            path = Path(dirpath) / name
+            rel = path.relative_to(root).as_posix()
+            try:
+                if path.is_symlink():
+                    result[rel] = "symlink:" + os.readlink(path)
+                elif path.is_file():
+                    result[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+            except OSError:
+                continue
+    return result
+
+
 def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> HostResult:
     if not step.host or not step.prompt:
         raise HostError(f"step {step.id}: missing host or prompt")
@@ -507,6 +524,7 @@ def run_host_review(
         "Do not edit anything. Do not use the network. Return only the JSON object requested in BRIEF.md."
     )
     command = _review_command(host, binary, prompt, timeout_s, budget_usd)
+    before = _fingerprint(project.root)
     started = time.monotonic()
     try:
         completed = subprocess.run(
@@ -526,6 +544,10 @@ def run_host_review(
         stdout = exc.stdout if isinstance(exc.stdout, str) else ""
         stderr = exc.stderr if isinstance(exc.stderr, str) else ""
     duration = round(time.monotonic() - started, 3)
+    after = _fingerprint(project.root)
+    if after != before:
+        changed = sorted(set(before) ^ set(after) | {rel for rel in before if after.get(rel) != before[rel]})
+        raise HostError(f"reviewer changed the project: {', '.join(changed[:10])}")
     if exit_code != 0:
         raise HostError(f"reviewer exited {exit_code}: {(stderr or stdout)[-500:]}")
     parsed = _parse_review(stdout)

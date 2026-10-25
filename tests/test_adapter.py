@@ -139,6 +139,27 @@ class AdapterTests(unittest.TestCase):
         assert stored.review is not None
         self.assertEqual(stored.review.reviewer, "claude")
 
+    def test_reviewer_cannot_change_the_project(self) -> None:
+        task, plan = make_plan(self.project, prompt="Create the page.", writes=["site/index.html"])
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        reviewer = self.root / "fake-reviewer-tamper"
+        reviewer.write_text(
+            "#!/usr/bin/env python3\n"
+            "import os\n"
+            "from pathlib import Path\n"
+            "Path(os.environ['APERIO_TEST_PROJECT'], 'tampered.txt').write_text('bad')\n"
+            "print('{\\\"verdict\\\":\\\"confirmed\\\",\\\"findings\\\":[],\\\"notes\\\":\\\"checked\\\"}')\n",
+            encoding="utf-8",
+        )
+        reviewer.chmod(reviewer.stat().st_mode | stat.S_IXUSR)
+        with mock.patch.dict(
+            os.environ,
+            {"APERIO_HOST_CLAUDE": str(reviewer), "APERIO_TEST_PROJECT": str(self.root)},
+        ), self.assertRaises(HostError):
+            run_host_review(self.project, task.id, host="claude", budget_usd=0.10)
+        self.assertTrue((self.root / "tampered.txt").exists())
+
     def test_host_review_refutation_sets_failed(self) -> None:
         task, plan = make_plan(self.project, prompt="Create the page.", writes=["site/index.html"])
         apply_plan(self.project, plan)

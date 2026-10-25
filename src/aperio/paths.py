@@ -95,6 +95,8 @@ def replace_text_atomic(path: Path, text: str, *, newline: str = "\n") -> None:
 
 def replace_bytes_atomic(path: Path, data: bytes, *, newline: str | None = None) -> None:
     """Write bytes through a temporary file in the same directory, then replace."""
+    if path.is_symlink():
+        raise PathSafetyError(f"refusing to write through a symlink: {path}")
     path = path.resolve(strict=False)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile_in_dir(path.parent)
