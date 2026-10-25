@@ -44,6 +44,12 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse(self.prefix.exists())
         self.assertIn("dry run", result.stdout)
 
+    def test_dry_run_does_not_create_the_command(self) -> None:
+        result = self.run_install("--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / ".claude" / "commands" / "aperio.md").exists())
+        self.assertFalse((self.skill_home / "aperio").exists())
+
     def test_install_is_idempotent_and_uninstalls(self) -> None:
         first = self.run_install()
         self.assertEqual(first.returncode, 0, first.stderr)

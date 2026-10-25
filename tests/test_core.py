@@ -145,6 +145,37 @@ class CoreTests(unittest.TestCase):
             apply_plan(self.project, plan)
         self.assertFalse((self.root / "other/index.html").exists())
 
+    def test_protected_path_is_refused(self) -> None:
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="git", kind="write", path=".git/config", content="bad")],
+            allowed=["*"],
+        )
+        with self.assertRaises(RunError):
+            apply_plan(self.project, plan)
+        self.assertFalse((self.root / ".git/config").exists())
+
+    def test_absolute_write_is_refused(self) -> None:
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="abs", kind="write", path="/tmp/aperio-absolute.txt", content="bad")],
+            allowed=["*"],
+        )
+        with self.assertRaises(RunError):
+            apply_plan(self.project, plan)
+
+    def test_refuted_review_blocks_finish(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        review(self.project, task.id, reviewer="qa", verdict="refuted", notes="not acceptable")
+        with self.assertRaises(RunError):
+            finish(self.project, task.id)
+        self.assertEqual(self.project.get_task(task.id).status, "failed")
+
     def test_command_outside_write_is_detected(self) -> None:
         task, plan = make_plan(
             self.project,
