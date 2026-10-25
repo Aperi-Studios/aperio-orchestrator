@@ -86,7 +86,22 @@ nested state-symlink path and a timeout descendant risk.
 | P2 | Control-state hashing omitted asks and events. | **Fixed.** Both are included. |
 | P2 | Manual reviewer identity is self-reported. | **Documented.** The check prevents an equal label, not an impersonated person. |
 
-The test count is 63. A fifth independent pass is still required. Remaining
-known limits are no OS sandbox, no restoration of a reviewer's edit, no
-restoration of modified files changed by an acceptance check, and no defense
-against a deliberately detached process.
+The test count is 64. A fifth independent pass found the following.
+
+## Fifth pass
+
+A fifth fresh Codex audit on HEAD `04cb80f` found no P0 and returned **confirmed**
+for these remaining P1s:
+
+| Severity | Finding | Disposition |
+|---|---|---|
+| P1 | A changed plan could reuse a stale verification digest because the plan lives under `.aperio`. | **Fixed.** Verification records a plan digest; review and `done` compare the current plan. Test: `test_review_refuses_a_plan_changed_after_verification`. |
+| P1 | The `dispatch` or `reviews` directory itself could be a symlink. | **Fixed.** Only symlinks *inside* those disposable workspaces are ignored; the directory entries themselves are rejected. |
+| P1 | Changes under excluded project directories (`.git`, `node_modules`) evade the scan. | **Documented, not fixed.** `SECURITY.md` states that excluded directories are not observed. |
+| P1 | Host and reviewer timeouts did not kill descendants. | **Fixed on POSIX** with a new process group. Windows still kills only the direct process; documented. |
+| P2 | Control-state hashing omitted rollback/dispatch state. | **Partly fixed.** The critical control files are hashed; disposable workspace state is not. |
+
+Remaining known limits: no OS sandbox, changes in excluded or outside-project
+paths are not observed, a reviewer's detected edit is not restored, a modified
+file changed by an acceptance check is not restored, and Windows process
+cleanup is direct-process only.

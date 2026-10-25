@@ -328,6 +328,18 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(RunError):
             finish(self.project, task.id)
 
+    def test_review_refuses_a_plan_changed_after_verification(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        plan.acceptance = [Acceptance(id="changed", command="false")]
+        self.project.save_plan(plan)
+        with self.assertRaises(RunError):
+            review(self.project, task.id, "qa", "confirmed")
+
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))
         self.assertTrue(path_allowed("site/a/b.txt", ["site"]))

@@ -8,7 +8,7 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 24 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | 25 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | 14 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
@@ -16,7 +16,7 @@
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Installer tests | 6 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 63 passed | same command |
+| Total test suite | 64 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -66,7 +66,7 @@
 
 ## Known limits
 
-- A fifth external audit of the whole repository is still pending. Four Codex passes returned findings; concrete P1s were fixed or narrowed, and the 63-test suite is not a whole-repository audit. See `docs/AUDIT-CODEX-20261026.md`.
+- Five external Codex passes found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 64-test suite is not a whole-repository audit. Claude's independent audit and the owner's approval are still pending. See `docs/AUDIT-CODEX-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.

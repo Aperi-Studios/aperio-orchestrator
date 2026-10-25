@@ -200,6 +200,10 @@ def _artifact_digest(project: Project) -> str:
     return sha256_text(json.dumps(sorted(_hash_project(project).items()), separators=(",", ":")))
 
 
+def _plan_digest(plan: Plan) -> str:
+    return sha256_text(json.dumps(plan.to_dict(), sort_keys=True, separators=(",", ":")))
+
+
 def _current_verification(project: Project, task: Task) -> dict[str, Any]:
     if not task.verify_id:
         raise RunError("task has no current verification")
@@ -209,6 +213,10 @@ def _current_verification(project: Project, task: Task) -> dict[str, Any]:
     record = rows[-1]
     if record.get("status") != "passed":
         raise RunError("current verification did not pass")
+    if task.plan_id:
+        plan = project.get_plan(task.plan_id)
+        if record.get("plan_digest") != _plan_digest(plan):
+            raise RunError("plan changed after verification; verify again")
     if record.get("artifact_digest") != _artifact_digest(project):
         raise RunError("project changed after verification; verify again")
     return record
@@ -521,6 +529,7 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
         all_ok = False
         evidence["state_mutated"] = True
     evidence["artifact_digest"] = _artifact_digest(project)
+    evidence["plan_digest"] = _plan_digest(plan)
     evidence["status"] = "passed" if all_ok else "failed"
     evidence["finished_at"] = utc_now()
     path = project.save_evidence(task_id, check_id, evidence)

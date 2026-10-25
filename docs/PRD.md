@@ -615,14 +615,14 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **24 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | **25 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | **14 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **5 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
 | Installer tests | **6 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **63 passed** | same command |
+| Total test suite | **64 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -659,7 +659,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
-| External audit of the whole repo | **four Codex passes returned findings; concrete P1 fixes applied; fifth pass pending** | `docs/AUDIT-CODEX-20261026.md`; Claude audit still pending |
+| External audit of the whole repo | **five Codex passes; P1s fixed or documented; Claude audit and owner approval pending** | `docs/AUDIT-CODEX-20261026.md` |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
 

@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import shutil
+import signal
 import subprocess
 import time
 import uuid
@@ -248,6 +249,35 @@ def _fingerprint(root: Path) -> dict[str, str]:
     return result
 
 
+def _run_bounded(command: list[str], *, cwd: Path, env: dict[str, str], timeout: int) -> tuple[int, str, str, bool]:
+    kwargs: dict[str, Any] = {
+        "cwd": str(cwd),
+        "env": env,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "errors": "replace",
+    }
+    if os.name != "nt":
+        kwargs["start_new_session"] = True
+    process = subprocess.Popen(command, **kwargs)
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+        return int(process.returncode), stdout or "", stderr or "", False
+    except subprocess.TimeoutExpired:
+        if os.name != "nt":
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+        try:
+            stdout, stderr = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout, stderr = process.communicate()
+        return 124, stdout or "", stderr or "", True
+
+
 def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> HostResult:
     if not step.host or not step.prompt:
         raise HostError(f"step {step.id}: missing host or prompt")
@@ -271,31 +301,12 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
         }
     )
     started = time.monotonic()
-    stdout = ""
-    stderr = ""
-    timed_out = False
-    try:
-        completed = subprocess.run(
-            command,
-            check=False,
-            cwd=str(workspace),
-            env=env,
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=step.timeout_s,
-        )
-        exit_code = completed.returncode
-        stdout = completed.stdout or ""
-        stderr = completed.stderr or ""
-    except subprocess.TimeoutExpired as exc:
-        exit_code = 124
-        timed_out = True
-        stdout = exc.stdout if isinstance(exc.stdout, str) else (exc.stdout or b"").decode("utf-8", errors="replace")
-        stderr = exc.stderr if isinstance(exc.stderr, str) else (exc.stderr or b"").decode("utf-8", errors="replace")
-    except OSError as exc:
-        exit_code = 127
-        stderr = str(exc)
+    exit_code, stdout, stderr, timed_out = _run_bounded(
+        command,
+        cwd=workspace,
+        env=env,
+        timeout=step.timeout_s,
+    )
     duration = round(time.monotonic() - started, 3)
     after = _scan(workspace)
     diff = _diff(before, after)
@@ -531,23 +542,12 @@ def run_host_review(
     command = _review_command(host, binary, prompt, timeout_s, budget_usd)
     before = _fingerprint(project.root)
     started = time.monotonic()
-    try:
-        completed = subprocess.run(
-            command,
-            check=False,
-            cwd=str(workspace),
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=timeout_s,
-        )
-        exit_code = completed.returncode
-        stdout = completed.stdout or ""
-        stderr = completed.stderr or ""
-    except subprocess.TimeoutExpired as exc:
-        exit_code = 124
-        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
-        stderr = exc.stderr if isinstance(exc.stderr, str) else ""
+    exit_code, stdout, stderr, timed_out = _run_bounded(
+        command,
+        cwd=workspace,
+        env=os.environ.copy(),
+        timeout=timeout_s,
+    )
     duration = round(time.monotonic() - started, 3)
     after = _fingerprint(project.root)
     if after != before:
@@ -566,6 +566,7 @@ def run_host_review(
         "notes": parsed["notes"],
         "command": command,
         "exit_code": exit_code,
+        "timed_out": timed_out,
         "duration_s": duration,
         "stdout": stdout[-MAX_CAPTURE:],
         "stderr": stderr[-MAX_CAPTURE:],

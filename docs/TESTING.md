@@ -6,7 +6,7 @@
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-Expected on a clean v2 tree: 63 tests pass.
+Expected on a clean v2 tree: 64 tests pass.
 
 ## Run one module
 

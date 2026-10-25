@@ -34,8 +34,12 @@ class Project:
                 raise StoreError(f"project state escapes the project: {state}") from exc
             for child in state.rglob("*"):
                 rel = child.relative_to(state)
-                if child.is_symlink() and not any(part in {"dispatch", "reviews"} for part in rel.parts):
-                    raise StoreError(f"project state contains a symlink: {child}")
+                if not child.is_symlink():
+                    continue
+                parts = rel.parts
+                if parts and parts[0] in {"dispatch", "reviews"} and len(parts) > 1:
+                    continue
+                raise StoreError(f"project state contains a symlink: {child}")
         self.state = state
 
     @classmethod
