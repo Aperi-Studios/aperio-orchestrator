@@ -56,6 +56,17 @@ def _iter_project_files(root: Path) -> list[Path]:
     return files
 
 
+def _iter_project_symlinks(root: Path) -> list[Path]:
+    links: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIRS]
+        for name in list(dirnames) + list(filenames):
+            path = Path(dirpath) / name
+            if path.is_symlink():
+                links.append(path)
+    return links
+
+
 def _expand_targets(project: Project, plan: Plan) -> list[str]:
     targets: set[str] = set()
     for step in plan.steps:
@@ -129,16 +140,26 @@ def _restore(project: Project, run_id: str) -> list[str]:
     return restored
 
 
-def _changed_files(project: Project, before: dict[str, str]) -> list[str]:
-    changed: set[str] = set()
+def _current_hashes(project: Project) -> dict[str, str]:
     current: dict[str, str] = {}
     for path in _iter_project_files(project.root):
-        rel = relative_posix(project.root, path)
         try:
-            current[rel] = sha256_file(path)
+            current[relative_posix(project.root, path)] = sha256_file(path)
         except OSError:
             continue
-        if before.get(rel) != current[rel]:
+    for path in _iter_project_symlinks(project.root):
+        try:
+            current[path.relative_to(project.root).as_posix()] = "symlink:" + os.readlink(path)
+        except OSError:
+            continue
+    return current
+
+
+def _changed_files(project: Project, before: dict[str, str]) -> list[str]:
+    changed: set[str] = set()
+    current = _current_hashes(project)
+    for rel, digest in current.items():
+        if before.get(rel) != digest:
             changed.add(rel)
     for rel in before:
         if rel not in current:
@@ -147,13 +168,7 @@ def _changed_files(project: Project, before: dict[str, str]) -> list[str]:
 
 
 def _hash_project(project: Project) -> dict[str, str]:
-    result: dict[str, str] = {}
-    for path in _iter_project_files(project.root):
-        try:
-            result[relative_posix(project.root, path)] = sha256_file(path)
-        except OSError:
-            continue
-    return result
+    return _current_hashes(project)
 
 
 def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[str, Any]:
@@ -212,6 +227,9 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
     """Apply an approved plan. Returns the evidence record."""
     if not plan.approval:
         raise RunError("plan is not approved")
+    task = project.get_task(plan.task_id)
+    if task.status not in {"approved", "applied", "failed"}:
+        raise RunError(f"task is {task.status}; create or approve a runnable plan before running")
     if plan.approval.approved_by.strip().lower() == actor.strip().lower():
         # An owner may also be the actor in a tiny project; record it rather than
         # pretending it is independent review. Verification still needs a reviewer.

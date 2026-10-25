@@ -96,6 +96,8 @@ def cmd_approve(args: argparse.Namespace) -> int:
         raise ModelError('approval requires --confirm "I approve this plan"')
     plan = project.get_plan(args.plan_id)
     task = project.get_task(plan.task_id)
+    if task.status not in {"planned", "approved", "failed"}:
+        raise ModelError(f"task is {task.status}; an approved, verified, or done task cannot be re-approved")
     plan.approval = Approval(approved_by=args.by, note=args.note)
     task.status = "approved"
     with project.lock():

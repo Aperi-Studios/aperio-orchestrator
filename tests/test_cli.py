@@ -82,6 +82,9 @@ class CliTests(unittest.TestCase):
         result = self.cli("done", task_id)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+        result = self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+
         result = self.cli("status", task_id, "--json")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "done")

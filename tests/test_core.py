@@ -101,6 +101,8 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(reviewed["verdict"], "confirmed")
         done = finish(self.project, task.id)
         self.assertEqual(done["status"], "done")
+        with self.assertRaises(RunError):
+            apply_plan(self.project, plan)
 
     def test_reviewer_must_differ_from_builder(self) -> None:
         with self.assertRaises(PolicyError):
@@ -195,6 +197,26 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.project.get_task(task.id).status, "failed")
         with self.assertRaises(RunError):
             verify(self.project, task.id)
+
+    def test_created_symlink_is_detected(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[
+                Step(id="seed", kind="write", path="site/index.html", content="hello"),
+                Step(
+                    id="link",
+                    kind="run",
+                    command=f'{sys.executable} -c "import os; os.symlink(\'/etc/hosts\', \'site/link\')"',
+                    cwd=".",
+                    writes=[],
+                ),
+            ],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("site/link", result["changed_files"])
+        self.assertTrue((self.root / "site/link").is_symlink())
+        self.assertEqual(self.project.get_task(task.id).status, "failed")
 
     def test_rollback_restores_modified_and_removes_created(self) -> None:
         (self.root / "site").mkdir()

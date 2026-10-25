@@ -8,9 +8,9 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 20 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | 21 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Installer tests | 4 passed | same command; `tests/test_installer.py` |
-| Total test suite | 24 passed | same command |
+| Total test suite | 25 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
