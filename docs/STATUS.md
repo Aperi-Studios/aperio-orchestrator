@@ -23,7 +23,7 @@
 | Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |
 | Real-home install | binary, skill, and command present; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |
 | Public repository | public at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
-| GitHub Actions | tests passed on Python 3.10, 3.12, and 3.14 | [run 40237671369](https://github.com/Aperi-Studios/aperio-orchestrator/actions/runs/40237671369) |
+| GitHub Actions | tests passed on Python 3.10, 3.12, and 3.14 | [run 40237985613](https://github.com/Aperi-Studios/aperio-orchestrator/actions/runs/40237985613) |
 
 ## Not built
 
