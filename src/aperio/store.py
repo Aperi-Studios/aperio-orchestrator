@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from pathlib import Path
-from typing import Any, Iterator
 import json
 import os
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any
 
 from .model import Ask, ModelError, Plan, Task, utc_now
 from .paths import PathSafetyError, normalize_rel, replace_text_atomic, resolve_inside
-
 
 STATE_DIR = ".aperio"
 SCHEMA_VERSION = 1
@@ -27,7 +27,7 @@ class Project:
         self.state = self.root / STATE_DIR
 
     @classmethod
-    def init(cls, root: str | Path, name: str = "") -> "Project":
+    def init(cls, root: str | Path, name: str = "") -> Project:
         root_path = Path(root).expanduser().resolve()
         if root_path.exists() and not root_path.is_dir():
             raise StoreError(f"project root is not a directory: {root_path}")
@@ -60,7 +60,7 @@ class Project:
         return project
 
     @classmethod
-    def open(cls, root: str | Path) -> "Project":
+    def open(cls, root: str | Path) -> Project:
         project = cls(Path(root).expanduser())
         if not (project.state / "project.json").is_file():
             raise StoreError(f"not an Aperio project: {project.root} (run aperio init)")

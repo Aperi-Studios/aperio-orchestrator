@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import json
-import os
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -139,7 +136,7 @@ class CoreTests(unittest.TestCase):
         outside.rmdir()
 
     def test_write_outside_allowed_plan_is_refused(self) -> None:
-        task, plan = make_plan(
+        _task, plan = make_plan(
             self.project,
             steps=[Step(id="write", kind="write", path="other/index.html", content="bad")],
             allowed=["site/"],

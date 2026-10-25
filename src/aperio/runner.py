@@ -2,28 +2,32 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 import json
 import os
 import shutil
 import subprocess
 import time
 import uuid
+from pathlib import Path
+from typing import Any
 
 from .model import Plan, Step, utc_now
-from .paths import PathSafetyError, relative_posix, replace_text_atomic, sha256_file, sha256_text
+from .paths import (
+    PathSafetyError,
+    relative_posix,
+    replace_text_atomic,
+    sha256_file,
+    sha256_text,
+)
 from .policy import (
     PolicyError,
     assert_command,
     assert_reviewer,
     assert_writable,
-    path_allowed,
     resolve_command_cwd,
     validate_plan_paths,
 )
-from .store import Project, StoreError
+from .store import Project
 
 
 class RunError(RuntimeError):
@@ -171,6 +175,7 @@ def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[
         completed = subprocess.run(
             step.command or "",
             shell=True,
+            check=False,
             cwd=str(cwd),
             env=env,
             capture_output=True,
@@ -339,6 +344,7 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
             completed = subprocess.run(
                 check.command,
                 shell=True,
+                check=False,
                 cwd=str(project.root),
                 capture_output=True,
                 text=True,

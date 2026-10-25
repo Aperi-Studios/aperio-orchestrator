@@ -6,10 +6,10 @@ to run a task. This module reports presence and version only.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from pathlib import Path
 import shutil
 import subprocess
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -40,6 +40,7 @@ def _version(binary: str, timeout: int = 5) -> str:
     try:
         result = subprocess.run(
             [binary, "--version"],
+            check=False,
             capture_output=True,
             text=True,
             errors="replace",

@@ -25,6 +25,7 @@ class CliTests(unittest.TestCase):
     def cli(self, *args: str, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, "-m", "aperio", "--project", str(self.root), *args],
+            check=False,
             input=input_text,
             capture_output=True,
             text=True,

@@ -6,10 +6,10 @@ and resumed without a database or a proprietary service.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
-from typing import Any, Optional
 import uuid
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from typing import Any, ClassVar
 
 
 def utc_now() -> str:
@@ -36,7 +36,7 @@ class Ask:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Ask":
+    def from_dict(cls, data: dict[str, Any]) -> Ask:
         return cls(
             id=str(data["id"]),
             text=str(data["text"]),
@@ -57,9 +57,9 @@ class Step:
     id: str
     kind: str
     description: str = ""
-    path: Optional[str] = None
-    content: Optional[str] = None
-    command: Optional[str] = None
+    path: str | None = None
+    content: str | None = None
+    command: str | None = None
     cwd: str = "."
     timeout_s: int = 120
     writes: list[str] = field(default_factory=list)
@@ -68,7 +68,7 @@ class Step:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Step":
+    def from_dict(cls, data: dict[str, Any]) -> Step:
         kind = str(data.get("kind", "")).strip()
         if kind not in {"write", "run"}:
             raise ModelError(f"step {data.get('id', '?')}: kind must be write or run")
@@ -110,14 +110,14 @@ class Acceptance:
     id: str
     command: str
     expected_exit: int = 0
-    stdout_contains: Optional[str] = None
+    stdout_contains: str | None = None
     timeout_s: int = 120
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Acceptance":
+    def from_dict(cls, data: dict[str, Any]) -> Acceptance:
         timeout = int(data.get("timeout_s", 120))
         if timeout < 1 or timeout > 3600:
             raise ModelError(f"acceptance {data.get('id', '?')}: invalid timeout")
@@ -144,7 +144,7 @@ class Approval:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Approval":
+    def from_dict(cls, data: dict[str, Any]) -> Approval:
         return cls(
             approved_by=str(data["approved_by"]),
             approved_at=str(data.get("approved_at", utc_now())),
@@ -163,7 +163,7 @@ class Review:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Review":
+    def from_dict(cls, data: dict[str, Any]) -> Review:
         verdict = str(data.get("verdict", "")).lower()
         if verdict not in {"confirmed", "refuted"}:
             raise ModelError("review verdict must be confirmed or refuted")
@@ -185,7 +185,7 @@ class Plan:
     steps: list[Step]
     acceptance: list[Acceptance]
     created_at: str = field(default_factory=utc_now)
-    approval: Optional[Approval] = None
+    approval: Approval | None = None
     builder: str = "agent"
 
     def to_dict(self) -> dict[str, Any]:
@@ -196,7 +196,7 @@ class Plan:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Plan":
+    def from_dict(cls, data: dict[str, Any]) -> Plan:
         steps = [Step.from_dict(s) for s in data.get("steps", [])]
         acceptance = [Acceptance.from_dict(a) for a in data.get("acceptance", [])]
         approval_data = data.get("approval")
@@ -240,15 +240,15 @@ class Task:
     title: str
     request: str
     status: str = "planned"
-    plan_id: Optional[str] = None
+    plan_id: str | None = None
     created_at: str = field(default_factory=utc_now)
     updated_at: str = field(default_factory=utc_now)
-    run_id: Optional[str] = None
-    review: Optional[Review] = None
+    run_id: str | None = None
+    review: Review | None = None
     evidence: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
-    ALLOWED = {
+    ALLOWED: ClassVar[set[str]] = {
         "planned",
         "approved",
         "applied",
@@ -266,7 +266,7 @@ class Task:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Task":
+    def from_dict(cls, data: dict[str, Any]) -> Task:
         review_data = data.get("review")
         task = cls(
             id=str(data["id"]),

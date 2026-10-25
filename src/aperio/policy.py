@@ -31,9 +31,7 @@ def _matches(path: str, allowed: str) -> bool:
         if fnmatchcase(path, allowed):
             return True
         # Treat **/ as zero or more directories, matching common glob intent.
-        if "**/" in allowed and fnmatchcase(path, allowed.replace("**/", "")):
-            return True
-        return False
+        return bool("**/" in allowed and fnmatchcase(path, allowed.replace("**/", "")))
     return path == allowed or path.startswith(allowed.rstrip("/") + "/")
 
 

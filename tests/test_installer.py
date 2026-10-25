@@ -30,6 +30,7 @@ class InstallerTests(unittest.TestCase):
     def run_install(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["bash", str(ROOT / "install.sh"), "--prefix", str(self.prefix), *args],
+            check=False,
             capture_output=True,
             text=True,
             env=self.env,
@@ -55,13 +56,20 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("Aperio v2", command.read_text())
         self.assertEqual((self.skill_home / "aperio" / "VERSION").read_text().strip(), "2.0.0.dev0")
 
-        version = subprocess.run([str(binary), "--version"], capture_output=True, text=True, timeout=30)
+        version = subprocess.run(
+            [str(binary), "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
         self.assertEqual(version.returncode, 0, version.stderr)
         self.assertIn("aperio 2.0.0.dev0", version.stdout)
 
         project = self.root / "project"
         init = subprocess.run(
             [str(binary), "--project", str(project), "init", str(project), "--name", "installed"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,
@@ -69,6 +77,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(init.returncode, 0, init.stderr)
         doctor = subprocess.run(
             [str(binary), "--project", str(project), "doctor"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,
@@ -88,6 +97,7 @@ class InstallerTests(unittest.TestCase):
     def test_unsafe_prefix_is_refused(self) -> None:
         result = subprocess.run(
             ["bash", str(ROOT / "install.sh"), "--prefix", "/", "--dry-run"],
+            check=False,
             capture_output=True,
             text=True,
             env=self.env,

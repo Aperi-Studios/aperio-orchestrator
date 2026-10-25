@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path, PurePosixPath
 import hashlib
 import os
+from pathlib import Path, PurePosixPath
 
 
 class PathSafetyError(ValueError):
