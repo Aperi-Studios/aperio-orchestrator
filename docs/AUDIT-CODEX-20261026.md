@@ -33,5 +33,20 @@ substitute for the owner's approval.
 - `tests/test_adapter.py`, `tests/test_core.py`: four regression tests.
 - `SECURITY.md`, `docs/ARCHITECTURE.md`: narrower, accurate boundaries.
 
-The current test count is 55. The code and tests were changed after the audit;
-a second external pass is still required.
+## Second pass
+
+A second fresh Codex audit on HEAD `b2c5bd4` returned **refuted** with no P0 and
+these additional findings:
+
+| Severity | Finding | Disposition |
+|---|---|---|
+| P1 | A dangling symlink passed the component check because it required `exists()` first. | **Fixed.** `resolve_inside` rejects a symlink component even when its target is missing; `test_dangling_symlink_component_is_refused`. |
+| P1 | A project with a `.aperio` symlink could read and write state outside the project root. | **Fixed.** `Project` rejects a symlink state directory and verifies that existing state resolves inside the root; `test_state_symlink_is_refused`. |
+| P1 | A host could bypass the per-step check by writing directly to the original project. | **Detected and failed.** The runner hashes the real project before and after the host step and fails on any delta. The OS still does not prevent the write; this remains a documented no-sandbox limit. |
+| P1 | Shell commands or acceptance checks could alter Aperio state without detection. | **Fixed for control state.** Runs and verification hash `project.json`, `queue.json`, plans, and evidence; a change fails the step. Writes outside the project and excluded directories remain unscanned. |
+| P2 | The mediator could select an older passing record by filename instead of the current task state. | **Fixed.** It uses `task.run_id`, requires the current run, and takes the latest evidence by timestamp; a later failed verification yields `REFUTED`. |
+| P2 | Acceptance mutations were reported but not cleaned. | **Partly fixed.** Newly created files are removed; modified or deleted files are reported but not restored. |
+| P2 | Security docs overstated mutation detection. | **Fixed.** `SECURITY.md` states the scanner's exclusions and the state limits. |
+
+The current test count is 58. A third independent pass is still required after
+these changes.

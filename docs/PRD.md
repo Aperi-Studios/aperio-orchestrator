@@ -615,18 +615,20 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **19 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | **21 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | **13 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
-| Mediator tests | **3 passed** | same command; `tests/test_mediator.py` |
+| Mediator tests | **4 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
 | Installer tests | **6 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **55 passed** | same command |
+| Total test suite | **58 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
-| Path traversal / symlink escape | **refused** | `tests/test_core.py` |
+| Path traversal / symlink escape | **refused**, including dangling symlink components | `tests/test_core.py` |
+| Project state symlink | **refused** when opening a project | `tests/test_core.py::test_state_symlink_is_refused` |
+| Control-state change | **fails** if a step alters project, queue, plan, or evidence | `_hash_control_state` |
 | Undeclared shell write | **detected and failed** | `tests/test_core.py::test_command_outside_write_is_detected` |
 | Verification timeout | **cannot pass**, even with `expected_exit: 124` | `tests/test_core.py::test_verification_timeout_cannot_pass` |
 | Acceptance mutation | **fails verification** if a check changes a project file | `tests/test_core.py::test_acceptance_check_cannot_mutate_the_project` |
@@ -646,7 +648,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Fresh-context host review | **real Claude review confirmed** a verified task from a brief-only workspace | review `review-973d3a5fb8` in the temporary goldfish project |
 | Documentation drift | **clean**: links and inline paths resolve | `aperio drift` |
 | Local message store | **implemented**; real Claude and Codex processes read and replied | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
-| Mediator disposition | **implemented**: CONFIRMED, REFUTED, or BLOCKED from evidence | `tests/test_mediator.py` |
+| Mediator disposition | **implemented** from the current task state and latest evidence | `tests/test_mediator.py` |
 | Host dispatch beyond Claude/Codex/Goose | **not built** | no adapter in `src/aperio/adapter.py` for other hosts |
 | Distributed/live two-host mesh | **not built**; local durable message store and mediator are implemented | `src/aperio/mesh.py`, `src/aperio/mediator.py` |
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
@@ -654,7 +656,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
-| External audit of the whole repo | **first Codex pass returned findings; P1 fixes applied; second pass pending** | `docs/AUDIT-CODEX-20261026.md`; Claude audit still pending |
+| External audit of the whole repo | **two Codex passes returned findings; concrete P1 fixes applied; third pass pending** | `docs/AUDIT-CODEX-20261026.md`; Claude audit still pending |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
 

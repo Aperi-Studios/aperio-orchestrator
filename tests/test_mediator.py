@@ -57,6 +57,18 @@ class MediatorTests(unittest.TestCase):
         review(self.project, self.task.id, "qa", "refuted", notes="bad")
         self.assertEqual(mediate(self.project, self.task.id)["disposition"], "REFUTED")
 
+    def test_later_failed_verification_is_refuted(self) -> None:
+        apply_plan(self.project, self.plan)
+        verify(self.project, self.task.id)
+        review(self.project, self.task.id, "qa", "confirmed", notes="checked")
+        self.assertEqual(mediate(self.project, self.task.id)["disposition"], "CONFIRMED")
+        self.plan.acceptance = [Acceptance(id="check", command="false")]
+        self.project.save_plan(self.plan)
+        verify(self.project, self.task.id)
+        record = mediate(self.project, self.task.id)
+        self.assertEqual(record["disposition"], "REFUTED")
+        self.assertEqual(record["task_status"], "failed")
+
 
 if __name__ == "__main__":
     unittest.main()

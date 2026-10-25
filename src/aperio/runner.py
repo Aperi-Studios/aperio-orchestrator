@@ -173,6 +173,23 @@ def _hash_project(project: Project) -> dict[str, str]:
     return _current_hashes(project)
 
 
+def _hash_control_state(project: Project) -> dict[str, str]:
+    """Hash the files that define the approved plan and evidence."""
+    paths: list[Path] = [project.state / "project.json", project.state / "queue.json"]
+    for directory in (project.state / "plans", project.state / "evidence"):
+        if directory.is_dir():
+            paths.extend(path for path in directory.rglob("*") if path.is_file())
+    result: dict[str, str] = {}
+    for path in sorted(paths):
+        if not path.is_file():
+            continue
+        try:
+            result[path.relative_to(project.state).as_posix()] = sha256_file(path)
+        except OSError:
+            continue
+    return result
+
+
 def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[str, Any]:
     assert_command(step.command or "", step)
     cwd = resolve_command_cwd(project.root, step.cwd)
@@ -261,6 +278,7 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
         "limits": "Shell steps are not OS-sandboxed. Writes outside the plan are detected after they happen.",
     }
     project.append_event("run.started", {"run_id": run_id, "task_id": plan.task_id, "actor": actor})
+    control_before = _hash_control_state(project)
 
     failed = False
     try:
@@ -286,11 +304,20 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
                     evidence["violations"].append(f"step {step.id} exited {result['exit_code']}")
                     break
             elif step.kind == "host":
+                host_before = _hash_project(project)
                 host_result = run_host_step(project, plan, step, run_id)
                 host_evidence = host_result.evidence()
                 host_evidence["step_id"] = step.id
                 host_evidence["kind"] = "host"
                 evidence["steps"].append(host_evidence)
+                host_delta = _changed_files(project, host_before)
+                if host_delta:
+                    failed = True
+                    evidence["violations"].append(
+                        "host changed the real project outside its disposable workspace: "
+                        + ", ".join(host_delta)
+                    )
+                    break
                 if host_result.status != "ok":
                     failed = True
                     evidence["violations"].append(
@@ -321,6 +348,9 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
 
     changed = _changed_files(project, before_hashes)
     evidence["changed_files"] = changed
+    if _hash_control_state(project) != control_before:
+        failed = True
+        evidence["violations"].append("a step changed Aperio's control state (project, queue, plan, or evidence)")
     allowed = set(targets)
     outside = [
         rel
@@ -379,6 +409,7 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
     }
     all_ok = True
     before_hashes = _hash_project(project)
+    control_before = _hash_control_state(project)
     for check in plan.acceptance:
         started = time.monotonic()
         timed_out = False
@@ -423,6 +454,24 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
     if mutated:
         all_ok = False
         evidence["mutated_files"] = mutated
+        cleaned: list[str] = []
+        for rel in mutated:
+            if rel in before_hashes:
+                continue
+            try:
+                target = project.resolve_project_path(rel)
+            except (PathSafetyError, OSError):
+                continue
+            if target.is_file():
+                try:
+                    target.unlink()
+                    cleaned.append(rel)
+                except OSError:
+                    pass
+        evidence["cleaned_files"] = cleaned
+    if _hash_control_state(project) != control_before:
+        all_ok = False
+        evidence["state_mutated"] = True
     evidence["status"] = "passed" if all_ok else "failed"
     evidence["finished_at"] = utc_now()
     path = project.save_evidence(task_id, check_id, evidence)

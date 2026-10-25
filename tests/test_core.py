@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import sys
 import tempfile
 import unittest
@@ -270,7 +271,27 @@ class CoreTests(unittest.TestCase):
         result = verify(self.project, task.id)
         self.assertEqual(result["status"], "failed")
         self.assertIn("site/extra.txt", result["mutated_files"])
+        self.assertIn("site/extra.txt", result["cleaned_files"])
+        self.assertFalse((self.root / "site/extra.txt").exists())
         self.assertEqual(self.project.get_task(task.id).status, "failed")
+
+    def test_dangling_symlink_component_is_refused(self) -> None:
+        (self.root / "site").mkdir()
+        (self.root / "site" / "link").symlink_to(".aperio/secret")
+        with self.assertRaises(PathSafetyError):
+            resolve_inside(self.root, "site/link/secret")
+
+    def test_state_symlink_is_refused(self) -> None:
+        external = self.root.parent / f"{self.root.name}-external"
+        external.mkdir()
+        try:
+            Project.init(external, name="external")
+            shutil.rmtree(self.root / ".aperio")
+            (self.root / ".aperio").symlink_to(external / ".aperio", target_is_directory=True)
+            with self.assertRaises(StoreError):
+                Project.open(self.root)
+        finally:
+            shutil.rmtree(external, ignore_errors=True)
 
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))

@@ -50,7 +50,7 @@ def resolve_inside(root: Path, rel: str, *, create_parents: bool = False, allow_
     current = root
     for part in normalized.split("/"):
         current = current / part
-        if current.exists() and current.is_symlink():
+        if current.is_symlink():
             raise PathSafetyError(f"symlink component is not allowed: {rel}")
     if create_parents:
         (root / normalized).parent.mkdir(parents=True, exist_ok=True)

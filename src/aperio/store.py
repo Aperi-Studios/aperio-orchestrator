@@ -24,7 +24,15 @@ class StoreError(RuntimeError):
 class Project:
     def __init__(self, root: Path):
         self.root = root.resolve()
-        self.state = self.root / STATE_DIR
+        state = self.root / STATE_DIR
+        if state.is_symlink():
+            raise StoreError(f"project state must not be a symlink: {state}")
+        if state.exists():
+            try:
+                state.resolve().relative_to(self.root)
+            except ValueError as exc:
+                raise StoreError(f"project state escapes the project: {state}") from exc
+        self.state = state
 
     @classmethod
     def init(cls, root: str | Path, name: str = "") -> Project:
