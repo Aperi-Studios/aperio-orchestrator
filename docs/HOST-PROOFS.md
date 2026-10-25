@@ -31,7 +31,7 @@ Evidence:
 - Run: `run-d86056766a`, host `codex`, exit 0, one create, 15,172 bytes.
 - File sha256: `0c973bba6218cea05fe60f7b195c3980d2c8e0c24f3c3b7f66b3deaecfe50618`.
 - Review: `review-5fcf72b5e9`, reviewer `claude`, verdict `confirmed`, no findings.
-- The reviewer saw `BRIEF.md` and `tree/site/index.html` only.
+- The reviewer saw the brief and tree/site/index.html only.
 - The handoff recorded the host step, the acceptance check, the changed file, and
   the reviewer.
 
