@@ -45,13 +45,14 @@ Run on the final public tree:
 
 | Check | Result |
 |---|---|
-| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 31 tests pass |
+| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 35 tests pass |
 | `ruff check src tests` | pass |
 | `shellcheck install.sh` | pass |
 | GitHub Actions, Python 3.10 / 3.12 / 3.14 | pass |
 | Fresh public clone, `./install.sh`, `aperio --version`, demo plan | pass |
 | Real-home install | binary, skill, and command present |
 | Real Claude host dispatch | file written, acceptance passed, review confirmed, done |
+| Real Claude fresh-context review | brief-only reviewer confirmed a verified task |
 
 The demo was run through the full loop: unapproved run refused, approved run applied, acceptance passed, review confirmed, task done.
 

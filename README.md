@@ -35,7 +35,7 @@ aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder
 aperio verify <task-id>
-aperio review <task-id> --reviewer qa --verdict confirmed
+aperio review <task-id> --host claude
 aperio done <task-id>
 aperio handoff <task-id> --print
 ```
@@ -62,6 +62,7 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 - Project initialization and append-only owner asks.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
 - Host dispatch through a disposable project copy for the Claude and Goose adapters. Claude was proven end to end; Goose's command path is tested, but its local bridge returned HTTP 500 during this run.
+- Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. A real Claude reviewer confirmed a verified task.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
 - Independent review enforcement by reviewer name.
@@ -105,6 +106,7 @@ The shell limitation is real. A command can change a file before Aperio detects 
 - `docs/DECISIONS.md`: decisions that shaped v2.
 - `docs/ARCHIVE.md`: where the old repository and documents live.
 - `docs/REBUILD-REPORT-20261026.md`: what changed in the rebuild and what remains.
+- `docs/EGM-ASSESSMENT.md`: what the Elephant-Goldfish Model is and what Aperio should adopt from it.
 
 ## License
 

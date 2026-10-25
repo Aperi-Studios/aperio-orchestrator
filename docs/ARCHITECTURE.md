@@ -35,6 +35,7 @@ A project initializes `.aperio/`:
   evidence/<task>/  run, verification, and review records
   runs/<id>/        run manifest
   dispatch/<id>/    disposable host workspace and host evidence
+  reviews/<id>/     brief-only host review workspace
   backups/<id>/     file snapshots for rollback
   handoff.md        most recent handoff
   lock              best-effort exclusive lock
@@ -58,7 +59,7 @@ State files are written to a temporary file in the same directory, flushed, and 
    - records changed files and any change outside the declared writes;
    - saves evidence and moves the task to `applied` or `failed`.
 6. `verify` runs the plan's acceptance commands and records pass or fail.
-7. `review` records a named reviewer's `confirmed` or `refuted` verdict. The reviewer must differ from the builder.
+7. `review` records a named reviewer's `confirmed` or `refuted` verdict. With `--host`, it builds a brief-only workspace containing the plan, changed files, acceptance results, and handoff; the fresh host reviewer has no builder conversation and cannot edit. The reviewer must differ from the builder.
 8. `done` requires a verified task and a confirmed review.
 9. `handoff` writes a markdown report from the actual task, plan, evidence, and review.
 10. `rollback` restores files captured before a run and removes files the run created.

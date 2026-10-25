@@ -9,10 +9,10 @@
 | Item | Result | Evidence |
 |---|---|---|
 | Core unit tests | 17 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 6 passed | same command; `tests/test_adapter.py` |
+| Adapter tests | 10 passed | same command; `tests/test_adapter.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Installer tests | 4 passed | same command; `tests/test_installer.py` |
-| Total test suite | 31 passed | same command |
+| Total test suite | 35 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -25,6 +25,8 @@
 | Claude host adapter | real host produced `site/index.html` in a disposable copy; acceptance passed; review and done completed | real-host proof 3, `run-2d57f0f091`; evidence held in the temporary project |
 | Goose host adapter | command path tested with a fake binary; live Goose call failed with HTTP 500 from the local bridge | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command`; live probe output |
 | Host change outside the plan | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
+| Fresh-context host review | real Claude reviewer saw only the brief, changed files, acceptance, and evidence; verdict confirmed | review `review-973d3a5fb8` in the temporary goldfish project |
+| Self-review refusal | a host cannot review its own build | `tests/test_adapter.py::test_host_cannot_review_its_own_build` |
 | `/aperio` command file | installed by the installer | `~/.claude/commands/aperio.md`; host load not verified |
 | Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |
 | Real-home install | binary, skill, and command present; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |
@@ -44,7 +46,7 @@
 
 ## Known limits
 
-- An external audit by another host is pending. The 31-test suite is the builder's verification, not an independent review of the whole repository.
+- An external audit of the whole repository is still pending. The 35-test suite and the single-task host review are not a whole-repository audit.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.

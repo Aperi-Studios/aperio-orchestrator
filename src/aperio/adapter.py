@@ -10,17 +10,19 @@ not a claim of isolation.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .model import Plan, Step
+from .model import Plan, Review, Step
 from .paths import PathSafetyError
-from .policy import PolicyError, assert_writable
+from .policy import PolicyError, assert_reviewer, assert_writable
 from .store import Project
 
 
@@ -326,3 +328,211 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
     else:
         result.status = "ok"
     return result
+
+
+def _review_command(host: str, binary: str, prompt: str, timeout_s: int, budget_usd: float) -> list[str]:
+    if host == "claude":
+        return [
+            binary,
+            "-p",
+            prompt,
+            "--permission-mode",
+            "plan",
+            "--max-budget-usd",
+            f"{budget_usd:.2f}",
+            "--output-format",
+            "text",
+        ]
+    if host == "goose":
+        return [
+            binary,
+            "run",
+            "--no-session",
+            "--max-turns",
+            "8",
+            "--quiet",
+            "--text",
+            prompt,
+        ]
+    raise HostError(f"no reviewer adapter for host: {host} (supported: claude, goose)")
+
+
+def _parse_review(text: str) -> dict[str, Any]:
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        raise HostError("reviewer did not return a JSON object")
+    try:
+        data = json.loads(text[start : end + 1])
+    except json.JSONDecodeError as exc:
+        raise HostError(f"reviewer returned invalid JSON: {exc}") from exc
+    verdict = str(data.get("verdict", "")).lower()
+    if verdict not in {"confirmed", "refuted"}:
+        raise HostError("reviewer verdict must be confirmed or refuted")
+    findings = data.get("findings", [])
+    if not isinstance(findings, list):
+        raise HostError("reviewer findings must be a list")
+    return {"verdict": verdict, "findings": findings, "notes": str(data.get("notes", ""))}
+
+
+def _review_brief(project: Project, task_id: str) -> tuple[Path, list[str]]:
+    from .handoff import build_handoff
+
+    task = project.get_task(task_id)
+    if not task.plan_id:
+        raise HostError("task has no plan")
+    plan = project.get_plan(task.plan_id)
+    if task.status not in {"verified", "reviewed", "failed"}:
+        raise HostError(f"task is {task.status}; verification must pass before review")
+    if not task.run_id:
+        raise HostError("task has no run evidence")
+    run_rows = [row for row in project.evidence(task_id) if row.get("run_id") == task.run_id]
+    if not run_rows or run_rows[-1].get("status") != "applied":
+        raise HostError("last run did not apply cleanly")
+    verify_rows = [row for row in project.evidence(task_id) if str(row.get("check_id", "")).startswith("verify-")]
+    if not verify_rows or verify_rows[-1].get("status") != "passed":
+        raise HostError("last verification did not pass")
+    changed = [str(p) for p in run_rows[-1].get("changed_files", [])]
+    if not changed:
+        raise HostError("run evidence has no changed files")
+    review_id = f"review-{uuid.uuid4().hex[:10]}"
+    workspace = project.state / "reviews" / review_id
+    tree = workspace / "tree"
+    tree.mkdir(parents=True)
+    included: list[str] = []
+    for rel in changed:
+        source = project.resolve_project_path(rel)
+        if not source.is_file() or source.stat().st_size > MAX_FILE_BYTES:
+            continue
+        data = source.read_bytes()
+        if b"\x00" in data:
+            continue
+        destination = tree / rel
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        included.append(rel)
+    brief = [
+        "# Independent review brief",
+        "",
+        "You are a Goldfish reviewer. You have no builder conversation.",
+        "Read this brief and the files under `tree/`. Do not edit anything.",
+        "",
+        f"## Task\n\n{task.request}",
+        "",
+        f"## Plan\n\n{plan.title}\n\nAllowed paths: {', '.join(plan.allowed_paths)}",
+        "",
+        "### Steps",
+        "",
+    ]
+    for step in plan.steps:
+        if step.kind == "write":
+            brief.append(f"- write `{step.path}`")
+        elif step.kind == "host":
+            brief.append(f"- host `{step.host}` writes: {', '.join(step.writes)}")
+        else:
+            brief.append(f"- run `{step.command}`")
+    brief.extend(["", "### Acceptance", ""])
+    for check in plan.acceptance:
+        brief.append(f"- `{check.id}`: `{check.command}` (expected exit {check.expected_exit})")
+    brief.extend(["", "### Verification evidence", ""])
+    for row in verify_rows[-1].get("checks", []):
+        brief.append(f"- `{row.get('check_id')}`: {'passed' if row.get('ok') else 'FAILED'} exit {row.get('exit_code')}")
+    brief.extend(["", "### Changed files", ""])
+    for rel in included:
+        brief.append(f"- `{rel}`")
+    brief.extend(
+        [
+            "",
+            "## What to return",
+            "",
+            "Return ONLY a JSON object:",
+            "",
+            "```json",
+            '{"verdict":"confirmed|refuted","findings":[{"severity":"P0|P1|P2","claim":"...","evidence":"...","expected":"...","actual":"..."}],"notes":"..."}',
+            "```",
+            "",
+            "Use `confirmed` only if the delivered artifact satisfies the stated request and the acceptance evidence is credible. Use `refuted` if it does not. Do not invent findings. Do not edit files. Do not use the network.",
+            "",
+            "## Handoff summary",
+            "",
+            build_handoff(project, task_id),
+        ]
+    )
+    (workspace / "BRIEF.md").write_text("\n".join(brief), encoding="utf-8")
+    return workspace, included
+
+
+def run_host_review(
+    project: Project,
+    task_id: str,
+    host: str = "claude",
+    *,
+    timeout_s: int = 300,
+    budget_usd: float = 1.50,
+) -> dict[str, Any]:
+    task = project.get_task(task_id)
+    if not task.plan_id:
+        raise HostError("task has no plan")
+    plan = project.get_plan(task.plan_id)
+    try:
+        assert_reviewer(plan.builder, host)
+    except PolicyError as exc:
+        raise HostError(str(exc)) from exc
+    workspace, included = _review_brief(project, task_id)
+    binary = _binary_for(host)
+    prompt = (
+        "You are an independent reviewer. Read `BRIEF.md` and the files under `tree/` in the current directory. "
+        "Do not edit anything. Do not use the network. Return only the JSON object requested in BRIEF.md."
+    )
+    command = _review_command(host, binary, prompt, timeout_s, budget_usd)
+    started = time.monotonic()
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            cwd=str(workspace),
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=timeout_s,
+        )
+        exit_code = completed.returncode
+        stdout = completed.stdout or ""
+        stderr = completed.stderr or ""
+    except subprocess.TimeoutExpired as exc:
+        exit_code = 124
+        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
+        stderr = exc.stderr if isinstance(exc.stderr, str) else ""
+    duration = round(time.monotonic() - started, 3)
+    if exit_code != 0:
+        raise HostError(f"reviewer exited {exit_code}: {(stderr or stdout)[-500:]}")
+    parsed = _parse_review(stdout)
+    review_id = f"review-{uuid.uuid4().hex[:10]}"
+    evidence = {
+        "review_id": review_id,
+        "task_id": task_id,
+        "host": host,
+        "verdict": parsed["verdict"],
+        "findings": parsed["findings"],
+        "notes": parsed["notes"],
+        "command": command,
+        "exit_code": exit_code,
+        "duration_s": duration,
+        "stdout": stdout[-MAX_CAPTURE:],
+        "stderr": stderr[-MAX_CAPTURE:],
+        "workspace": str(workspace),
+        "included_files": included,
+        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    path = project.save_evidence(task_id, review_id, evidence)
+    task.review = Review(reviewer=host, verdict=parsed["verdict"], notes=parsed["notes"])
+    task.status = "reviewed" if parsed["verdict"] == "confirmed" else "failed"
+    task.evidence.append(str(path))
+    project.put_task(task)
+    project.append_event(
+        "review.host",
+        {"task_id": task_id, "host": host, "verdict": parsed["verdict"], "findings": len(parsed["findings"])},
+    )
+    return evidence
+

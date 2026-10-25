@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .adapter import HostError, run_host_review
 from .handoff import write_handoff
 from .hosts import detect_hosts
 from .model import Acceptance, Approval, ModelError, Plan, Step, Task, new_id
@@ -136,6 +137,20 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 def cmd_review(args: argparse.Namespace) -> int:
     project = _project(args)
+    if args.host:
+        result = run_host_review(
+            project,
+            args.task_id,
+            host=args.host,
+            timeout_s=args.timeout,
+            budget_usd=args.budget,
+        )
+        print(f"{args.task_id}  review {result['verdict']} by {result['host']}")
+        for finding in result.get("findings", [])[:10]:
+            print(f"  {finding.get('severity', '?')}: {finding.get('claim', '')}")
+        return 0 if result["verdict"] == "confirmed" else 1
+    if not args.reviewer or not args.verdict:
+        raise ModelError("manual review needs --reviewer and --verdict, or use --host")
     result = review(project, args.task_id, args.reviewer, args.verdict, notes=args.notes)
     print(f"{args.task_id}  review {result['verdict']} by {result['reviewer']}")
     return 0 if result["verdict"] == "confirmed" else 1
@@ -266,9 +281,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("review", help="record an independent review")
     p.add_argument("task_id")
-    p.add_argument("--reviewer", required=True)
-    p.add_argument("--verdict", choices=["confirmed", "refuted"], required=True)
+    p.add_argument("--reviewer", default=None)
+    p.add_argument("--verdict", choices=["confirmed", "refuted"], default=None)
     p.add_argument("--notes", default="")
+    p.add_argument("--host", default=None, help="run a fresh-context host review (claude or goose)")
+    p.add_argument("--timeout", type=int, default=300)
+    p.add_argument("--budget", type=float, default=1.50)
     p.set_defaults(func=cmd_review)
 
     p = sub.add_parser("done", help="mark a task done after review")
@@ -304,7 +322,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return int(args.func(args))
-    except (StoreError, RunError, PolicyError, ModelError, OSError, json.JSONDecodeError) as exc:
+    except (StoreError, RunError, PolicyError, ModelError, HostError, OSError, json.JSONDecodeError) as exc:
         print(f"aperio: {exc}", file=sys.stderr)
         return 2
 

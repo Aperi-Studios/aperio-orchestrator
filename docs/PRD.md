@@ -616,10 +616,10 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Item | Result | Command or evidence |
 |---|---|---|
 | Core unit tests | **17 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | **6 passed** | same command; `tests/test_adapter.py` |
+| Adapter tests | **10 passed** | same command; `tests/test_adapter.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
 | Installer tests | **4 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **31 passed** | same command |
+| Total test suite | **35 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -633,6 +633,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Skill file | **installed**; host load not verified | `~/.claude/skills/aperio/SKILL.md` |
 | Claude host adapter | **real dispatch proven**: produced `site/index.html`, acceptance passed, review confirmed, done | real-host proof 3; evidence in the temporary project |
 | Goose host adapter | **command path tested** with a fake binary; live call blocked by local bridge HTTP 500 | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command` |
+| Fresh-context host review | **real Claude review confirmed** a verified task from a brief-only workspace | review `review-973d3a5fb8` in the temporary goldfish project |
 | Host dispatch beyond Claude/Goose | **not built** | no adapter in `src/aperio/adapter.py` for other hosts |
 | Mesh chat | **not built** | no message store in `src/aperio/` |
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |

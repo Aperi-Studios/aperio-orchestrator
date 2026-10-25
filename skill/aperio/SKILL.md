@@ -18,7 +18,8 @@ aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder
 aperio verify <task-id>
-aperio review <task-id> --reviewer <different-reviewer> --verdict confirmed
+aperio review <task-id> --host claude
+# manual fallback: aperio review <task-id> --reviewer <different-reviewer> --verdict confirmed
 aperio done <task-id>
 aperio rollback <task-id> --yes
 aperio handoff <task-id> --print

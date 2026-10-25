@@ -23,14 +23,17 @@ The order is deliberate. Do not build a large feature surface on an unproven loo
 
 **Status:** Claude met the criterion. Goose did not, because of an external bridge failure. Other hosts are not connected.
 
-## M2: Independent review and mesh
+## M2: Independent review and mesh (review implemented; mesh not)
 
-- Add a second host or reviewer path.
+- Fresh-context host review implemented: `aperio review <task> --host claude` builds a brief-only workspace with the plan, changed files, acceptance, and evidence; the reviewer has no builder conversation and cannot edit.
+- A real Claude reviewer confirmed a verified task. A self-review by the builder host is refused.
 - Add a message store with send, read, reply, acknowledgment, and restart persistence.
 - Add a mediator command that compares builder and reviewer evidence and records a disposition.
 - Prove two real hosts exchange a task and a reply.
 
-**Exit criteria:** bidirectional message test, restart test, and a recorded mediator decision.
+**Exit criteria:** a real fresh-context review is recorded, a bidirectional message test passes, restart persistence passes, and the mediator records a disposition.
+
+**Status:** fresh-context review met. Mesh and two-host exchange are not built.
 
 ## M3: CMS and delivery slice
 
