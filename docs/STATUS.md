@@ -19,6 +19,7 @@
 | Installer idempotency | second run leaves one skill | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
 | Installer uninstall | removes binary, library, and skill | same test |
 | Host detection | reads installed host names and versions | `aperio hosts`; presence is not permission |
+| Public repository | public at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
 
 ## Not built
 

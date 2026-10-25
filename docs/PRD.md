@@ -3,7 +3,7 @@
 **Version:** 2.0
 **Date:** 2026-10-26
 **Status:** Product contract for the v2 rebuild. It describes required behavior, not achieved behavior. The current implementation subset is recorded in `docs/STATUS.md`.
-**Supersedes:** `Shahid/APERIO-PRD.md` v1.0 and `Shahid/PRD MADE BY gemini argon.md` v5.0 as the working contract. The two source drafts remain historical inputs.
+**Supersedes:** the pre-v2 canonical PRD and the Gemini v5.0 draft. The two source drafts remain historical inputs and are not part of this repository.
 **Owner:** Shahid
 **Mediator and main agent:** Hermes
 **Change control:** only the owner approves changes to this document. Agents propose changes in a report; they do not silently rewrite it.
@@ -593,19 +593,19 @@ Track from actual runs, not estimates:
 | Artifact | Purpose | Canonical path | Rule |
 |---|---|---|---|
 | Product requirements | What Aperio must do | `docs/PRD.md` | One current specification; amendments through a decision record |
-| Start page | Minimal boot guide | `START-HERE.md` | Links to current state and queue; no stale install claims |
-| Current state | What is true now | `.sps/handoff.md` | One authoritative snapshot; older snapshots archived |
-| Active queue | Tasks, status, blockers | `.sps/task-queue.md` | `DONE` only with evidence; history retained |
-| Active plan | Approved scope and sequence | `.sps/plan.md` or documented plans directory | One active plan; changes are traceable |
-| Owner input | Original instructions | `Shahid/INSTRUCTIONS-*.md`, `Shahid/asks-raw/`, `Shahid/asks-grouped/` | Owner-authored; agents do not rewrite without permission |
-| Decisions and approvals | Owner-authorized actions | `.sps/approvals/`, `framework/sps2/decisions/` | Agent reports are not approval |
-| Laws and enforcement | Rule, enforcement path, negative test | `skill/aperio/` and `framework/sps2/` | A hard law requires a working check |
-| Reports | Historical findings and evidence | `reports/` | Timestamped; state whether current or historical |
-| Communications | Live peer messages | `.sps/comms/` and mesh store | One canonical store readable by all authorized hosts |
-| Tests | Required modules and counts | `.github/expected-test-modules.txt`, `.github/test-count-high-water.txt` | Count actual execution; do not weaken the baseline |
-| Source | Implementation | `skill/`, `framework/`, `scripts/` | No duplicate implementation unless mirroring is mechanically checked |
-| Evidence | Requirement-specific proof | `.sps/evidence/`, target project evidence | Each claim maps to a real file or output |
-| Archive | Retired artifacts | `.sps/archive/`, `.sps/comms/archive/` | Preserve auditability; no casual deletion |
+| Start page | Minimal boot guide | `START-HERE.md` | Links to current state; no stale install claims |
+| Current state | What is true now | `docs/STATUS.md` | One authoritative status page; re-measure before relying on it |
+| Active queue | Tasks and statuses | `.aperio/queue.json` (local) | `DONE` only after acceptance and review; do not commit project state |
+| Active plan | Approved scope and sequence | `.aperio/plans/` (local) | One approved plan per task; changes are traceable |
+| Owner input | Original instructions | `aperio ask` ledger (`.aperio/asks.jsonl`, local) | Owner-authored; agents do not rewrite without permission |
+| Decisions and approvals | Owner-authorized actions | `docs/DECISIONS.md` and the plan approval record | Agent reports are not approval |
+| Laws and enforcement | Rule, enforcement path, negative test | `src/aperio/policy.py`, `src/aperio/runner.py`, `tests/` | A hard rule requires a working check |
+| Reports | Current evidence and known limits | `docs/STATUS.md` | Dated, measured, linked to a command or artifact |
+| Communications | Peer messages | not built in v2 | Do not claim a live mesh |
+| Tests | Executable checks | `tests/` | Run the suite; do not cite a file name as proof |
+| Source | Implementation | `src/`, `skill/`, `install.sh` | No duplicate implementation unless mechanically checked |
+| Evidence | Requirement-specific proof | `.aperio/evidence/` (local), target project | Each claim maps to a real file or output |
+| Archive | Pre-v2 material | `docs/ARCHIVE.md` and the external archive | Preserve auditability; no casual deletion |
 
 ---
 
@@ -632,7 +632,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
 | OS sandbox for shell steps | **not built**; undeclared writes are detected after execution | `docs/ARCHITECTURE.md` limits |
 | Windows installer parity | **not built** | no PowerShell installer in v2 |
-| Public repository | **pending at document creation**; see `docs/STATUS.md` for the live URL | remote status |
+| Public repository | **public** at `https://github.com/Aperi-Studios/aperio-orchestrator` | `gh repo view Aperi-Studios/aperio-orchestrator --json visibility,url` |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
 
