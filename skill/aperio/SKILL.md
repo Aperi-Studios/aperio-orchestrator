@@ -25,6 +25,8 @@ aperio rollback <task-id> --yes
 aperio handoff <task-id> --print
 aperio drift
 aperio status --json
+aperio message send --from builder --to reviewer --body "please review" --task <task-id>
+aperio mediate <task-id>
 aperio hosts
 ```
 

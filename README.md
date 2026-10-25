@@ -39,6 +39,8 @@ aperio review <task-id> --host claude
 aperio done <task-id>
 aperio handoff <task-id> --print
 aperio drift
+aperio message send --from builder --to reviewer --body "please review" --task <task-id>
+aperio mediate <task-id>
 ```
 
 A plan is JSON. It declares allowed paths, exact write steps, bounded run steps, host steps, and acceptance checks. A host step is shown in `examples/host-plan.json`.
@@ -70,13 +72,15 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 - Rollback of files captured before a run.
 - Handoff generation from actual state.
 - Deterministic documentation drift checks: links and inline paths that do not exist fail `aperio drift`.
+- Local durable message store with send, read, reply, ack, filters, and restart persistence.
+- Mediator disposition from run, verify, and review evidence: `CONFIRMED`, `REFUTED`, or `BLOCKED`.
 - Installer, idempotent reinstall, dry run, and uninstall.
 - Read-only host detection.
 
 ## What is not built
 
 - Dispatch to hosts beyond the Claude and Goose adapters.
-- Live mesh messaging and multi-host mediator comparison.
+- A distributed or live two-host mesh; the current store is local.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - A web dashboard.
 - OS-level sandboxing. Host steps and shell steps are detected, not jailed.

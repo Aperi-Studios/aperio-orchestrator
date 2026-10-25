@@ -35,6 +35,7 @@ A small standard-library core:
 - rollback from pre-run snapshots;
 - handoff generated from actual state;
 - deterministic documentation drift checks for links and inline paths;
+- local durable message store and evidence-based mediator disposition;
 - installer with dry run, idempotent reinstall, skill, `/aperio` command, and uninstall;
 - read-only host detection.
 
@@ -46,7 +47,7 @@ Run on the final public tree:
 
 | Check | Result |
 |---|---|
-| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 40 tests pass |
+| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 48 tests pass |
 | `ruff check src tests` | pass |
 | `shellcheck install.sh` | pass |
 | GitHub Actions, Python 3.10 / 3.12 / 3.14 | pass |
@@ -55,13 +56,15 @@ Run on the final public tree:
 | Real Claude host dispatch | file written, acceptance passed, review confirmed, done |
 | Real Claude fresh-context review | brief-only reviewer confirmed a verified task |
 | `aperio drift` | clean: docs links and inline paths resolve |
+| Local message store | send, read, reply, ack, filters, restart persistence |
+| Mediator | records CONFIRMED, REFUTED, or BLOCKED from evidence |
 
 The demo was run through the full loop: unapproved run refused, approved run applied, acceptance passed, review confirmed, task done.
 
 ## What is not built
 
 - Dispatch to hosts beyond the Claude and Goose adapters.
-- Mesh chat and mediator message comparison.
+- A distributed or live two-host mesh; the local store and mediator are implemented.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - Web dashboard.
 - OS sandbox for host or shell steps.

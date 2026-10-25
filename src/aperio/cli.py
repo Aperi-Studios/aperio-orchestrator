@@ -15,6 +15,8 @@ from .drift import check as drift_check
 from .drift import format_findings as format_drift
 from .handoff import write_handoff
 from .hosts import detect_hosts
+from .mediator import MediationError, mediate
+from .mesh import MeshError, MeshStore
 from .model import Acceptance, Approval, ModelError, Plan, Step, Task, new_id
 from .policy import PolicyError
 from .runner import RunError, apply_plan, finish, review, rollback, verify
@@ -251,6 +253,56 @@ def cmd_drift(args: argparse.Namespace) -> int:
     return 1 if findings else 0
 
 
+def cmd_message(args: argparse.Namespace) -> int:
+    project = _project(args)
+    store = MeshStore(project)
+    try:
+        if args.message_command == "send":
+            message = store.send(
+                args.sender,
+                args.to,
+                args.body,
+                task_id=args.task,
+                kind=args.kind,
+                thread_id=args.thread,
+                reply_to=args.reply_to,
+            )
+            print(json.dumps(message, indent=2, sort_keys=True))
+            return 0
+        if args.message_command == "read":
+            messages = store.read(
+                recipient=args.to,
+                task_id=args.task,
+                thread_id=args.thread,
+                since_id=args.since,
+                limit=args.limit,
+                mark_read=args.mark_read,
+            )
+            if args.json:
+                print(json.dumps(messages, indent=2, sort_keys=True))
+            else:
+                for message in messages:
+                    print(f"{message['id']}  {message['thread_id']}  {message['sender']} -> {message['recipient']}: {message['body']}")
+            return 0
+        if args.message_command == "ack":
+            print(json.dumps(store.ack(args.message_id, args.by), indent=2, sort_keys=True))
+            return 0
+        if args.message_command == "stats":
+            print(json.dumps(store.stats(), indent=2, sort_keys=True))
+            return 0
+    finally:
+        store.close()
+    raise ModelError(f"unknown message command: {args.message_command}")
+
+
+def cmd_mediate(args: argparse.Namespace) -> int:
+    project = _project(args)
+    record = mediate(project, args.task_id)
+    print(f"{record['disposition']}: {record['reason']}")
+    print(record["evidence_path"])
+    return 0 if record["disposition"] == "CONFIRMED" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aperio",
@@ -329,6 +381,37 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("drift", help="check docs for links and paths that do not exist")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_drift)
+
+    p = sub.add_parser("message", help="local durable message store")
+    msg = p.add_subparsers(dest="message_command", required=True)
+    send = msg.add_parser("send", help="send a message")
+    send.add_argument("--from", dest="sender", required=True)
+    send.add_argument("--to", required=True)
+    send.add_argument("--body", required=True)
+    send.add_argument("--task", default=None)
+    send.add_argument("--kind", default="note", choices=["note", "task", "reply", "review", "status"])
+    send.add_argument("--thread", default=None)
+    send.add_argument("--reply-to", type=int, default=None)
+    send.set_defaults(func=cmd_message)
+    read = msg.add_parser("read", help="read messages")
+    read.add_argument("--to", default=None)
+    read.add_argument("--task", default=None)
+    read.add_argument("--thread", default=None)
+    read.add_argument("--since", type=int, default=0)
+    read.add_argument("--limit", type=int, default=100)
+    read.add_argument("--mark-read", action="store_true")
+    read.add_argument("--json", action="store_true")
+    read.set_defaults(func=cmd_message)
+    ack = msg.add_parser("ack", help="acknowledge a message")
+    ack.add_argument("message_id", type=int)
+    ack.add_argument("--by", required=True)
+    ack.set_defaults(func=cmd_message)
+    stats = msg.add_parser("stats", help="message counts")
+    stats.set_defaults(func=cmd_message)
+
+    p = sub.add_parser("mediate", help="record a disposition from task evidence")
+    p.add_argument("task_id")
+    p.set_defaults(func=cmd_mediate)
     return parser
 
 
@@ -337,7 +420,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return int(args.func(args))
-    except (StoreError, RunError, PolicyError, ModelError, HostError, OSError, json.JSONDecodeError) as exc:
+    except (
+        StoreError,
+        RunError,
+        PolicyError,
+        ModelError,
+        HostError,
+        MeshError,
+        MediationError,
+        OSError,
+        json.JSONDecodeError,
+    ) as exc:
         print(f"aperio: {exc}", file=sys.stderr)
         return 2
 

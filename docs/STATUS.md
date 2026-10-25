@@ -11,9 +11,11 @@
 | Core unit tests | 17 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | 10 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
+| Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
+| Mediator tests | 3 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Installer tests | 4 passed | same command; `tests/test_installer.py` |
-| Total test suite | 40 passed | same command |
+| Total test suite | 48 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -29,6 +31,8 @@
 | Fresh-context host review | real Claude reviewer saw only the brief, changed files, acceptance, and evidence; verdict confirmed | review `review-973d3a5fb8` in the temporary goldfish project |
 | Self-review refusal | a host cannot review its own build | `tests/test_adapter.py::test_host_cannot_review_its_own_build` |
 | Documentation drift | Docs links and inline paths resolve; repo check clean | `aperio drift`; `tests/test_drift.py` |
+| Local message store | send, read, reply, ack, filters, restart persistence | `tests/test_mesh.py` |
+| Mediator disposition | records CONFIRMED, REFUTED, or BLOCKED from run, verify, and review evidence | `tests/test_mediator.py`; `aperio mediate` |
 | `/aperio` command file | installed by the installer | `~/.claude/commands/aperio.md`; host load not verified |
 | Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |
 | Real-home install | binary, skill, and command present; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |
@@ -39,8 +43,9 @@
 ## Not built
 
 - Dispatch to hosts beyond the Claude and Goose adapters.
-- Live mesh chat and multi-host mediator comparison.
-- CMS, media, SEO, or Astro/Lumos delivery.
+- A distributed or live two-host mesh; the current message store is local and persistent.
+- A real host-to-host exchange over that store.
+- CMS, media, SEO, and Astro/Lumos delivery.
 - Web dashboard.
 - OS sandbox for host or shell steps.
 - Remote deployment.

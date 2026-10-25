@@ -27,13 +27,13 @@ The order is deliberate. Do not build a large feature surface on an unproven loo
 
 - Fresh-context host review implemented: `aperio review <task> --host claude` builds a brief-only workspace with the plan, changed files, acceptance, and evidence; the reviewer has no builder conversation and cannot edit.
 - A real Claude reviewer confirmed a verified task. A self-review by the builder host is refused.
-- Add a message store with send, read, reply, acknowledgment, and restart persistence.
-- Add a mediator command that compares builder and reviewer evidence and records a disposition.
-- Prove two real hosts exchange a task and a reply.
+- A local durable message store is implemented: send, read, reply, ack, filters, and restart persistence.
+- A mediator command records `CONFIRMED`, `REFUTED`, or `BLOCKED` from run, verify, and review evidence.
+- Add a distributed transport and prove two real hosts exchange a task and a reply.
 
 **Exit criteria:** a real fresh-context review is recorded, a bidirectional message test passes, restart persistence passes, and the mediator records a disposition.
 
-**Status:** fresh-context review met. Mesh and two-host exchange are not built.
+**Status:** fresh-context review, local messaging, restart persistence, and mediator disposition met. A live two-host exchange over a distributed transport is not built.
 
 ## M3: CMS and delivery slice
 

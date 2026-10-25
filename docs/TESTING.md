@@ -6,7 +6,7 @@
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-Expected on a clean v2 tree: 40 tests pass.
+Expected on a clean v2 tree: 48 tests pass.
 
 ## Run one module
 
@@ -14,6 +14,8 @@ Expected on a clean v2 tree: 40 tests pass.
 PYTHONPATH=src python3 -m unittest tests.test_core -v
 PYTHONPATH=src python3 -m unittest tests.test_adapter -v
 PYTHONPATH=src python3 -m unittest tests.test_drift -v
+PYTHONPATH=src python3 -m unittest tests.test_mesh -v
+PYTHONPATH=src python3 -m unittest tests.test_mediator -v
 PYTHONPATH=src python3 -m unittest tests.test_cli -v
 PYTHONPATH=src python3 -m unittest tests.test_installer -v
 ```

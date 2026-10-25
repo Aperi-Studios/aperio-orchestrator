@@ -444,10 +444,12 @@ def review(project: Project, task_id: str, reviewer: str, verdict: str, notes: s
 
     task.review = Review(reviewer=reviewer.strip(), verdict=verdict, notes=notes)
     task.status = "reviewed" if verdict == "confirmed" else "failed"
+    review_id = f"review-{uuid.uuid4().hex[:10]}"
     path = project.save_evidence(
         task_id,
-        f"review-{uuid.uuid4().hex[:10]}",
+        review_id,
         {
+            "review_id": review_id,
             "task_id": task_id,
             "reviewer": task.review.reviewer,
             "verdict": verdict,

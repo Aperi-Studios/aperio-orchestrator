@@ -14,6 +14,8 @@ src/aperio/
   policy.py     allowed paths, protected paths, review separation
   adapter.py    disposable-workspace host dispatch and change validation
   drift.py      deterministic documentation link and path checks
+  mesh.py       local durable message store
+  mediator.py   evidence-based task disposition
   runner.py     apply, detect changes, verify, review, finish, rollback
   handoff.py    owner-facing markdown from actual state
   hosts.py      read-only host detection
@@ -37,6 +39,8 @@ A project initializes `.aperio/`:
   runs/<id>/        run manifest
   dispatch/<id>/    disposable host workspace and host evidence
   reviews/<id>/     brief-only host review workspace
+  mesh/             local message store (SQLite)
+  mediations/       mediator disposition records
   backups/<id>/     file snapshots for rollback
   handoff.md        most recent handoff
   lock              best-effort exclusive lock
@@ -64,6 +68,8 @@ State files are written to a temporary file in the same directory, flushed, and 
 8. `done` requires a verified task and a confirmed review.
 9. `handoff` writes a markdown report from the actual task, plan, evidence, and review.
 10. `rollback` restores files captured before a run and removes files the run created.
+11. `message` stores local durable messages with threads, recipient filters, read state, acks, and replies.
+12. `mediate` records `CONFIRMED`, `REFUTED`, or `BLOCKED` from the run, verification, and review evidence. It does not replace a live host-to-host exchange.
 
 ## Task states
 
