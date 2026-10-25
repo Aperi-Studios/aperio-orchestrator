@@ -82,7 +82,8 @@ def _expand_targets(project: Project, plan: Plan) -> list[str]:
                 if any(char in normalized for char in "*?["):
                     for path in project.root.glob(normalized):
                         if path.is_file() and not path.is_symlink():
-                            targets.add(relative_posix(project.root, path))
+                            rel = relative_posix(project.root, path)
+                            targets.add(assert_writable(rel, plan))
                 elif candidate.is_dir():
                     for path in candidate.rglob("*"):
                         if path.is_file() and not path.is_symlink() and not _is_excluded(path.relative_to(project.root)):

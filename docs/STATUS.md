@@ -8,15 +8,15 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 25 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 14 passed | same command; `tests/test_adapter.py` |
+| Core unit tests | 27 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Adapter tests | 15 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 5 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
-| Installer tests | 6 passed | same command; `tests/test_installer.py` |
+| Installer tests | 7 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 64 passed | same command |
+| Total test suite | 68 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -25,6 +25,10 @@
 | State file symlink | a symlinked queue file is refused and the external file is untouched | `tests/test_core.py::test_state_file_symlink_is_refused` |
 | Review tamper | a reviewer that changes the project is refused | `tests/test_adapter.py::test_reviewer_cannot_change_the_project` |
 | Control-state change | a step that alters project, queue, plan, or evidence fails | `_hash_control_state`; `tests/test_core.py` |
+| Protected-path glob | matching a protected path fails even through a glob | `tests/test_core.py::test_glob_cannot_reach_a_protected_path` |
+| Task ID traversal | persisted task ids cannot contain path separators | `tests/test_core.py::test_task_id_traversal_is_refused` |
+| Installer prefix canonicalization | `/..` resolves to `/` and is refused | `tests/test_installer.py::test_prefix_that_resolves_to_root_is_refused` |
+| Host deletion | host deletions are rejected | `tests/test_adapter.py::test_host_deletion_is_rejected` |
 | Undeclared shell write | detected and failed | `tests/test_core.py::test_command_outside_write_is_detected` |
 | Verification timeout | cannot pass, even with `expected_exit: 124` | `tests/test_core.py::test_verification_timeout_cannot_pass` |
 | Artifact binding | review and done refuse if the project changes after verification | `tests/test_core.py::test_review_refuses_a_project_changed_after_verification`; `test_finish_refuses...` |
@@ -66,7 +70,7 @@
 
 ## Known limits
 
-- Five external Codex passes found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 64-test suite is not a whole-repository audit. Claude's independent audit and the owner's approval are still pending. See `docs/AUDIT-CODEX-20261026.md`.
+- Six external Codex passes found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 68-test suite is not a whole-repository audit. Claude's independent audit and the owner's approval are still pending. See `docs/AUDIT-CODEX-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.

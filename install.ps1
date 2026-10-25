@@ -77,6 +77,11 @@ if ($Uninstall) {
     exit 0
 }
 
+if (-not $NoSkill -and (Test-Path $CommandFile) -and -not (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
+    Write-Error "install.ps1: refusing to overwrite existing $CommandFile; move it aside or use -NoSkill"
+    exit 2
+}
+
 Invoke-Step { New-Item -ItemType Directory -Force -Path $Lib, $Bin | Out-Null } "create $Lib and $Bin"
 Invoke-Step { Remove-Item -Recurse -Force (Join-Path $Lib "aperio") -ErrorAction SilentlyContinue } "clear $Lib/aperio"
 Invoke-Step { Copy-Item -Recurse -Force (Join-Path $Root "src/aperio") (Join-Path $Lib "aperio") } "copy package to $Lib"

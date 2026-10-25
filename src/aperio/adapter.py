@@ -342,7 +342,7 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
             result.violations.append(f"{rel}: {exc}")
             continue
         if op == "delete":
-            changes.append(HostChange(path=normalized, op="delete"))
+            result.violations.append(f"{rel}: host deletions are not accepted")
             continue
         data = path.read_bytes()
         if len(data) > MAX_FILE_BYTES:
@@ -529,6 +529,13 @@ def run_host_review(
     verify_rows = [row for row in project.evidence(task_id) if row.get("check_id") == task.verify_id]
     if not verify_rows or verify_rows[-1].get("status") != "passed":
         raise HostError("current verification did not pass; cannot review")
+    from .runner import _artifact_digest as runner_artifact_digest
+    from .runner import _plan_digest as runner_plan_digest
+
+    if verify_rows[-1].get("artifact_digest") != runner_artifact_digest(project):
+        raise HostError("project changed after verification; verify again")
+    if verify_rows[-1].get("plan_digest") != runner_plan_digest(plan):
+        raise HostError("plan changed after verification; verify again")
     try:
         assert_reviewer(plan.builder, host)
     except PolicyError as exc:

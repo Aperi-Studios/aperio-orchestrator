@@ -35,6 +35,10 @@ def _artifact_digest(project: Project) -> str:
     return hashlib.sha256(json.dumps(sorted(entries), separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
+def _plan_digest(plan: Any) -> str:
+    return hashlib.sha256(json.dumps(plan.to_dict(), sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
 class MediationError(RuntimeError):
     """The task does not have enough evidence to mediate."""
 
@@ -84,6 +88,9 @@ def mediate(project: Project, task_id: str) -> dict[str, Any]:
     elif verify.get("artifact_digest") != _artifact_digest(project):
         disposition = "REFUTED"
         reason = "project changed after verification"
+    elif verify.get("plan_digest") != _plan_digest(plan):
+        disposition = "REFUTED"
+        reason = "plan changed after verification"
     elif verify.get("status") != "passed":
         disposition = "REFUTED"
         reason = f"verification status is {verify.get('status')}"

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aperio.model import Acceptance, Approval, Plan, Step, Task
+from aperio.model import Acceptance, Approval, ModelError, Plan, Step, Task
 from aperio.paths import PathSafetyError, normalize_rel, resolve_inside
 from aperio.policy import PolicyError, assert_reviewer, path_allowed
 from aperio.runner import RunError, apply_plan, finish, review, rollback, verify
@@ -339,6 +339,29 @@ class CoreTests(unittest.TestCase):
         self.project.save_plan(plan)
         with self.assertRaises(RunError):
             review(self.project, task.id, "qa", "confirmed")
+
+    def test_glob_cannot_reach_a_protected_path(self) -> None:
+        (self.root / ".git").mkdir()
+        (self.root / ".git" / "config").write_text("protected\n", encoding="utf-8")
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="run", kind="run", command="true", writes=[".[g]it/*"])],
+            allowed=["*"],
+        )
+        with self.assertRaises(PolicyError):
+            apply_plan(self.project, plan)
+        self.assertEqual((self.root / ".git" / "config").read_text(), "protected\n")
+
+    def test_task_id_traversal_is_refused(self) -> None:
+        with self.assertRaises(ModelError):
+            Task.from_dict(
+                {
+                    "id": "../../escape",
+                    "title": "bad",
+                    "request": "bad",
+                    "status": "planned",
+                }
+            )
 
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))

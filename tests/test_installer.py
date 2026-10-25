@@ -166,6 +166,19 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("unsafe prefix", result.stderr)
 
+    def test_prefix_that_resolves_to_root_is_refused(self) -> None:
+        result = subprocess.run(
+            ["bash", str(ROOT / "install.sh"), "--prefix", "/..", "--dry-run"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=self.env,
+            cwd=str(ROOT),
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("unsafe prefix", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

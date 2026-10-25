@@ -615,14 +615,14 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **25 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | **14 passed** | same command; `tests/test_adapter.py` |
+| Core unit tests | **27 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Adapter tests | **15 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **5 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
-| Installer tests | **6 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **64 passed** | same command |
+| Installer tests | **7 passed** | same command; `tests/test_installer.py` |
+| Total test suite | **68 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -631,6 +631,10 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | State file symlink | **refused**; external file untouched | `tests/test_core.py::test_state_file_symlink_is_refused` |
 | Review tamper | **refused** if the reviewer changes the project | `tests/test_adapter.py::test_reviewer_cannot_change_the_project` |
 | Control-state change | **fails** if a step alters project, queue, plan, or evidence | `_hash_control_state` |
+| Protected-path glob | **fails** when a glob matches a protected path | `tests/test_core.py::test_glob_cannot_reach_a_protected_path` |
+| Task ID traversal | **refused** for persisted task ids | `tests/test_core.py::test_task_id_traversal_is_refused` |
+| Installer prefix canonicalization | **refused** when `/..` resolves to `/` | `tests/test_installer.py::test_prefix_that_resolves_to_root_is_refused` |
+| Host deletion | **rejected** | `tests/test_adapter.py::test_host_deletion_is_rejected` |
 | Undeclared shell write | **detected and failed** | `tests/test_core.py::test_command_outside_write_is_detected` |
 | Verification timeout | **cannot pass**, even with `expected_exit: 124` | `tests/test_core.py::test_verification_timeout_cannot_pass` |
 | Artifact binding | **review and done refuse** if the project changed after verification | `tests/test_core.py` artifact tests |
@@ -659,7 +663,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
-| External audit of the whole repo | **five Codex passes; P1s fixed or documented; Claude audit and owner approval pending** | `docs/AUDIT-CODEX-20261026.md` |
+| External audit of the whole repo | **six Codex passes; P1s fixed or documented; Claude audit and owner approval pending** | `docs/AUDIT-CODEX-20261026.md` |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
 

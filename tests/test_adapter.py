@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import stat
 import sys
 import tempfile
@@ -55,6 +56,8 @@ class AdapterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="aperio-adapter-")
         self.root = Path(self.temp.name)
+        self.external = self.root.parent / f"{self.root.name}-binaries"
+        self.external.mkdir()
         self.project = Project.init(self.root, name="adapter-test")
         self.host = self.root / "fake-host"
         self.host.write_text(
@@ -73,6 +76,7 @@ class AdapterTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.env.stop()
         self.temp.cleanup()
+        shutil.rmtree(self.external, ignore_errors=True)
 
     def test_host_step_applies_then_verifies_reviews_and_finishes(self) -> None:
         task, plan = make_plan(
@@ -123,7 +127,7 @@ class AdapterTests(unittest.TestCase):
         )
         apply_plan(self.project, plan)
         verify(self.project, task.id)
-        reviewer = self.root / "fake-reviewer"
+        reviewer = self.external / "fake-reviewer"
         reviewer.write_text(
             "#!/usr/bin/env python3\n"
             "print('{\"verdict\":\"confirmed\",\"findings\":[],\"notes\":\"checked\"}')\n",
@@ -143,7 +147,7 @@ class AdapterTests(unittest.TestCase):
         task, plan = make_plan(self.project, prompt="Create the page.", writes=["site/index.html"])
         apply_plan(self.project, plan)
         verify(self.project, task.id)
-        reviewer = self.root / "fake-reviewer-tamper"
+        reviewer = self.external / "fake-reviewer-tamper"
         reviewer.write_text(
             "#!/usr/bin/env python3\n"
             "import os\n"
@@ -164,7 +168,7 @@ class AdapterTests(unittest.TestCase):
         task, plan = make_plan(self.project, prompt="Create the page.", writes=["site/index.html"])
         apply_plan(self.project, plan)
         verify(self.project, task.id)
-        reviewer = self.root / "fake-reviewer-refute"
+        reviewer = self.external / "fake-reviewer-refute"
         reviewer.write_text(
             "#!/usr/bin/env python3\n"
             "print('{\"verdict\":\"refuted\",\"findings\":[{\"severity\":\"P1\",\"claim\":\"missing heading\"}],\"notes\":\"not acceptable\"}')\n",
@@ -181,7 +185,7 @@ class AdapterTests(unittest.TestCase):
         task, plan = make_plan(self.project, prompt="Create the page.", writes=["site/index.html"])
         apply_plan(self.project, plan)
         verify(self.project, task.id)
-        reviewer = self.root / "fake-reviewer-bad"
+        reviewer = self.external / "fake-reviewer-bad"
         reviewer.write_text("#!/usr/bin/env python3\nprint('not json')\n", encoding="utf-8")
         reviewer.chmod(reviewer.stat().st_mode | stat.S_IXUSR)
         with mock.patch.dict(os.environ, {"APERIO_HOST_CLAUDE": str(reviewer)}), self.assertRaises(HostError):
@@ -246,6 +250,23 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertTrue(any("symlink" in v for v in result["violations"]))
         self.assertFalse((self.root / "site/link").exists())
+
+    def test_host_deletion_is_rejected(self) -> None:
+        (self.root / "site").mkdir()
+        (self.root / "site" / "index.html").write_text("original", encoding="utf-8")
+        self.host.write_text(
+            "#!/usr/bin/env python3\n"
+            "from pathlib import Path\n"
+            "Path('site/index.html').unlink()\n"
+            "print('deleted')\n",
+            encoding="utf-8",
+        )
+        self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)
+        _task, plan = make_plan(self.project, prompt="Delete the page.", writes=["site/index.html"])
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(any("deletions" in v for v in result["violations"]))
+        self.assertTrue((self.root / "site" / "index.html").exists())
 
     def test_host_without_changes_fails(self) -> None:
         self.host.write_text("#!/usr/bin/env python3\nprint('no change')\n", encoding="utf-8")

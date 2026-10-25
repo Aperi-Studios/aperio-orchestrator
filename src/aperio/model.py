@@ -6,6 +6,7 @@ and resumed without a database or a proprietary service.
 
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -287,8 +288,11 @@ class Task:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Task:
         review_data = data.get("review")
+        task_id = str(data["id"])
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,80}", task_id):
+            raise ModelError(f"invalid task id: {task_id!r}")
         task = cls(
-            id=str(data["id"]),
+            id=task_id,
             title=str(data["title"]),
             request=str(data["request"]),
             status=str(data.get("status", "planned")),

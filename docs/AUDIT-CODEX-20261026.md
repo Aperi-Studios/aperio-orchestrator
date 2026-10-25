@@ -105,3 +105,21 @@ Remaining known limits: no OS sandbox, changes in excluded or outside-project
 paths are not observed, a reviewer's detected edit is not restored, a modified
 file changed by an acceptance check is not restored, and Windows process
 cleanup is direct-process only.
+
+## Sixth pass
+
+A sixth fresh Codex audit on HEAD `465c0d7` found no P0 and these additional
+issues:
+
+| Severity | Finding | Disposition |
+|---|---|---|
+| P1 | A glob pattern could pass the protected-path text check and expand to `.git`. | **Fixed.** Every glob expansion is rechecked with `assert_writable`; test `test_glob_cannot_reach_a_protected_path`. |
+| P1 | The Bash installer checked `/..` before resolving it to `/`. | **Fixed.** The prefix is canonicalized with `realpath` and checked again; test `test_prefix_that_resolves_to_root_is_refused`. |
+| P2 | Host deletion was accepted even though the prompt says not to delete. | **Fixed.** Host deletions are rejected. |
+| P2 | A crafted task id could traverse into evidence or mediation paths. | **Fixed.** Persisted task ids are validated; test `test_task_id_traversal_is_refused`. |
+| P2 | Mediation did not compare the plan digest. | **Fixed.** It compares artifact and plan digests. |
+| P2 | Host review could record a stale verification. | **Fixed.** It compares the current artifact and plan digests before running. |
+| P2 | The PowerShell installer overwrote an existing command file. | **Fixed.** It now refuses unless the file is an Aperio v2 command. |
+
+Test count: 68. A final static pass and the owner's approval are still required.
+

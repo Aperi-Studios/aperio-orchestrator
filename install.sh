@@ -36,11 +36,12 @@ done
 case "$PREFIX" in
   ""|"/"|".") echo "install.sh: refusing unsafe prefix: $PREFIX" >&2; exit 2 ;;
 esac
+PREFIX="$(python3 -c 'import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "$PREFIX")"
+case "$PREFIX" in
+  ""|"/"|".") echo "install.sh: refusing unsafe prefix: $PREFIX" >&2; exit 2 ;;
+esac
 if [ "$DRY_RUN" -eq 0 ]; then
   mkdir -p "$PREFIX"
-  PREFIX="$(cd "$PREFIX" && pwd)"
-else
-  PREFIX="$(cd "$PREFIX" 2>/dev/null && pwd || printf '%s' "$PREFIX")"
 fi
 LIB="$PREFIX/share/aperio"
 BIN="$PREFIX/bin/aperio"
