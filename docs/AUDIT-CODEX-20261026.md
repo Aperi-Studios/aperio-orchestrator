@@ -66,5 +66,27 @@ with these remaining issues:
 | P2 | Acceptance mutation cleanup was partial. | **Documented and partly fixed.** Newly created files are removed; modified or deleted files are reported but not restored. |
 | P2 | A timed-out shell's descendants could outlive the timeout. | **Not fixed.** The runner does not manage a process group. This is a known limit. |
 
-The fourth pass is still required. The known limits are recorded in
-`SECURITY.md` and `docs/STATUS.md`.
+The fourth pass follows. The known limits are recorded in `SECURITY.md` and
+`docs/STATUS.md`.
+
+## Fourth pass
+
+A fourth fresh Codex audit on HEAD `c15e39f` found no P0 and returned
+**confirmed** for remaining paths to external writes, stale-evidence
+completion, reviewer/host mutation, and overclaimed detection. It also found a
+nested state-symlink path and a timeout descendant risk.
+
+| Severity | Finding | Disposition |
+|---|---|---|
+| P1 | State subdirectories and files could be symlinks, redirecting backups, mesh, mediations, or handoffs. | **Fixed.** Opening a project rejects a symlink anywhere in state except the disposable `dispatch` and `reviews` workspaces; state reads, writes, and appends also reject symlinks. |
+| P1 | A task could finish on stale verification or missing evidence. | **Fixed.** Verification records an artifact digest and `task.verify_id`; manual review and `done` refuse if the digest no longer matches. A new run or verification clears the old review. |
+| P1 | A review host could change the project and the change remained. | **Detected, not restored.** The review runner fingerprints before/after and refuses the verdict; a detected edit remains. This is now stated as a limit. |
+| P1 | Timeouts did not stop descendants. | **Fixed for process groups.** Shell steps run in a new session and a timeout kills the group; a process that detaches itself can still outlive the runner. |
+| P1 | Shell writes outside the project are not detected. | **Documented, not fixed.** This is inherent without an OS sandbox and is now stated accurately in `src/aperio/policy.py` and `SECURITY.md`. |
+| P2 | Control-state hashing omitted asks and events. | **Fixed.** Both are included. |
+| P2 | Manual reviewer identity is self-reported. | **Documented.** The check prevents an equal label, not an impersonated person. |
+
+The test count is 63. A fifth independent pass is still required. Remaining
+known limits are no OS sandbox, no restoration of a reviewer's edit, no
+restoration of modified files changed by an acceptance check, and no defense
+against a deliberately detached process.

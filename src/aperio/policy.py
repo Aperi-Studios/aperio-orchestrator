@@ -1,8 +1,9 @@
 """Write boundaries and approval rules.
 
 These checks are deliberately conservative. They do not claim to be an OS sandbox:
-a shell command can still write outside the project before the runner detects it.
-The runner records violations and refuses to mark the task verified.
+a shell command can write outside the project, and the runner cannot observe a
+write that never appears inside the scanned project tree. Within the project,
+the runner records violations and refuses to mark the task verified.
 """
 
 from __future__ import annotations

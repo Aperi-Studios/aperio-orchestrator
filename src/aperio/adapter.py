@@ -513,6 +513,11 @@ def run_host_review(
     if not task.plan_id:
         raise HostError("task has no plan")
     plan = project.get_plan(task.plan_id)
+    if not task.verify_id:
+        raise HostError("task has no current verification")
+    verify_rows = [row for row in project.evidence(task_id) if row.get("check_id") == task.verify_id]
+    if not verify_rows or verify_rows[-1].get("status") != "passed":
+        raise HostError("current verification did not pass; cannot review")
     try:
         assert_reviewer(plan.builder, host)
     except PolicyError as exc:

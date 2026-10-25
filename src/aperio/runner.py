@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import signal
 import subprocess
 import time
 import uuid
@@ -12,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .adapter import HostError, run_host_step
-from .model import Plan, Step, utc_now
+from .model import Plan, Step, Task, utc_now
 from .paths import (
     PathSafetyError,
     relative_posix,
@@ -195,6 +196,60 @@ def _hash_control_state(project: Project) -> dict[str, str]:
     return result
 
 
+def _artifact_digest(project: Project) -> str:
+    return sha256_text(json.dumps(sorted(_hash_project(project).items()), separators=(",", ":")))
+
+
+def _current_verification(project: Project, task: Task) -> dict[str, Any]:
+    if not task.verify_id:
+        raise RunError("task has no current verification")
+    rows = [row for row in project.evidence(task.id) if row.get("check_id") == task.verify_id]
+    if not rows:
+        raise RunError("current verification evidence is missing")
+    record = rows[-1]
+    if record.get("status") != "passed":
+        raise RunError("current verification did not pass")
+    if record.get("artifact_digest") != _artifact_digest(project):
+        raise RunError("project changed after verification; verify again")
+    return record
+
+
+def _run_shell_command(
+    command: str,
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    timeout: int,
+) -> tuple[int, str, str, bool]:
+    kwargs: dict[str, Any] = {
+        "shell": True,
+        "cwd": str(cwd),
+        "env": env,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "errors": "replace",
+    }
+    if os.name != "nt":
+        kwargs["start_new_session"] = True
+    process = subprocess.Popen(command, **kwargs)
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+        return int(process.returncode), stdout or "", stderr or "", False
+    except subprocess.TimeoutExpired:
+        if os.name != "nt":
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+        try:
+            stdout, stderr = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout, stderr = process.communicate()
+        return 124, stdout or "", stderr or "", True
+
+
 def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[str, Any]:
     assert_command(step.command or "", step)
     cwd = resolve_command_cwd(project.root, step.cwd)
@@ -210,27 +265,12 @@ def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[
         }
     )
     started = time.monotonic()
-    try:
-        completed = subprocess.run(
-            step.command or "",
-            shell=True,
-            check=False,
-            cwd=str(cwd),
-            env=env,
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=step.timeout_s,
-        )
-        exit_code = completed.returncode
-        stdout = completed.stdout or ""
-        stderr = completed.stderr or ""
-        timed_out = False
-    except subprocess.TimeoutExpired as exc:
-        exit_code = 124
-        stdout = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
-        stderr = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
-        timed_out = True
+    exit_code, stdout, stderr, timed_out = _run_shell_command(
+        step.command or "",
+        cwd=cwd,
+        env=env,
+        timeout=step.timeout_s,
+    )
     duration = round(time.monotonic() - started, 3)
     return {
         "step_id": step.id,
@@ -257,7 +297,8 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
     if task.review is not None:
         task.review = None
         task.notes.append("previous review cleared by a new run")
-        project.put_task(task)
+    task.verify_id = None
+    project.put_task(task)
     if plan.approval.approved_by.strip().lower() == actor.strip().lower():
         # An owner may also be the actor in a tiny project; record it rather than
         # pretending it is independent review. Verification still needs a reviewer.
@@ -416,7 +457,8 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
     if task.review is not None:
         task.review = None
         task.notes.append("previous review cleared by a new verification")
-        project.put_task(task)
+    task.verify_id = None
+    project.put_task(task)
     check_id = f"verify-{uuid.uuid4().hex[:10]}"
     evidence: dict[str, Any] = {
         "check_id": check_id,
@@ -432,25 +474,12 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
     for check in plan.acceptance:
         started = time.monotonic()
         timed_out = False
-        try:
-            completed = subprocess.run(
-                check.command,
-                shell=True,
-                check=False,
-                cwd=str(project.root),
-                capture_output=True,
-                text=True,
-                errors="replace",
-                timeout=check.timeout_s,
-            )
-            exit_code = completed.returncode
-            stdout = completed.stdout or ""
-            stderr = completed.stderr or ""
-        except subprocess.TimeoutExpired as exc:
-            timed_out = True
-            exit_code = 124
-            stdout = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
-            stderr = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
+        exit_code, stdout, stderr, timed_out = _run_shell_command(
+            check.command,
+            cwd=project.root,
+            env=os.environ.copy(),
+            timeout=check.timeout_s,
+        )
         ok = not timed_out and exit_code == check.expected_exit
         if check.stdout_contains is not None and check.stdout_contains not in stdout:
             ok = False
@@ -491,10 +520,12 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
     if _hash_control_state(project) != control_before:
         all_ok = False
         evidence["state_mutated"] = True
+    evidence["artifact_digest"] = _artifact_digest(project)
     evidence["status"] = "passed" if all_ok else "failed"
     evidence["finished_at"] = utc_now()
     path = project.save_evidence(task_id, check_id, evidence)
     task.evidence.append(str(path))
+    task.verify_id = check_id
     task.status = "verified" if all_ok else "failed"
     if not all_ok:
         task.notes.append(f"verification {check_id} failed")
@@ -516,6 +547,7 @@ def review(project: Project, task_id: str, reviewer: str, verdict: str, notes: s
         raise RunError(str(exc)) from exc
     if verdict not in {"confirmed", "refuted"}:
         raise RunError("verdict must be confirmed or refuted")
+    _current_verification(project, task)
     from .model import Review
 
     task.review = Review(reviewer=reviewer.strip(), verdict=verdict, notes=notes)
@@ -550,6 +582,7 @@ def finish(project: Project, task_id: str) -> dict[str, Any]:
     plan = project.get_plan(task.plan_id)
     if not plan.acceptance:
         raise RunError("task has no acceptance checks")
+    _current_verification(project, task)
     task.status = "done"
     project.put_task(task)
     project.append_event("task.done", {"task_id": task_id})

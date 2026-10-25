@@ -57,6 +57,15 @@ class MediatorTests(unittest.TestCase):
         review(self.project, self.task.id, "qa", "refuted", notes="bad")
         self.assertEqual(mediate(self.project, self.task.id)["disposition"], "REFUTED")
 
+    def test_project_changed_after_verification_is_refuted(self) -> None:
+        apply_plan(self.project, self.plan)
+        verify(self.project, self.task.id)
+        review(self.project, self.task.id, "qa", "confirmed", notes="checked")
+        (self.root / "site" / "index.html").write_text("changed", encoding="utf-8")
+        record = mediate(self.project, self.task.id)
+        self.assertEqual(record["disposition"], "REFUTED")
+        self.assertIn("changed after verification", record["reason"])
+
     def test_later_failed_verification_is_refuted(self) -> None:
         apply_plan(self.project, self.plan)
         verify(self.project, self.task.id)

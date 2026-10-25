@@ -7,11 +7,32 @@ safe proxy for chronology.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+from pathlib import Path
 from typing import Any
 
 from .model import utc_now
 from .store import Project
+
+EXCLUDED_DIRS = {".git", ".aperio", "node_modules", "__pycache__", ".venv", "venv", ".mypy_cache", ".pytest_cache"}
+
+
+def _artifact_digest(project: Project) -> str:
+    entries: list[tuple[str, str]] = []
+    for dirpath, dirnames, filenames in os.walk(project.root):
+        dirnames[:] = [name for name in dirnames if name not in EXCLUDED_DIRS]
+        for name in filenames:
+            path = Path(dirpath) / name
+            if path.is_symlink():
+                entries.append((path.relative_to(project.root).as_posix(), "symlink:" + os.readlink(path)))
+                continue
+            try:
+                entries.append((path.relative_to(project.root).as_posix(), hashlib.sha256(path.read_bytes()).hexdigest()))
+            except OSError:
+                continue
+    return hashlib.sha256(json.dumps(sorted(entries), separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
 class MediationError(RuntimeError):
@@ -57,6 +78,12 @@ def mediate(project: Project, task_id: str) -> dict[str, Any]:
     elif verify is None:
         disposition = "BLOCKED"
         reason = "no verification evidence"
+    elif verify.get("check_id") != task.verify_id:
+        disposition = "BLOCKED"
+        reason = "verification evidence does not match the task"
+    elif verify.get("artifact_digest") != _artifact_digest(project):
+        disposition = "REFUTED"
+        reason = "project changed after verification"
     elif verify.get("status") != "passed":
         disposition = "REFUTED"
         reason = f"verification status is {verify.get('status')}"

@@ -265,6 +265,7 @@ class Task:
     review: Review | None = None
     evidence: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    verify_id: str | None = None
 
     ALLOWED: ClassVar[set[str]] = {
         "planned",
@@ -298,6 +299,7 @@ class Task:
             review=Review.from_dict(review_data) if review_data else None,
             evidence=[str(e) for e in data.get("evidence", [])],
             notes=[str(n) for n in data.get("notes", [])],
+            verify_id=data.get("verify_id"),
         )
         if task.status not in cls.ALLOWED:
             raise ModelError(f"task {task.id}: unknown status {task.status!r}")

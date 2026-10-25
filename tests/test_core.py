@@ -305,6 +305,29 @@ class CoreTests(unittest.TestCase):
         finally:
             external.unlink(missing_ok=True)
 
+    def test_review_refuses_a_project_changed_after_verification(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        (self.root / "site" / "index.html").write_text("changed", encoding="utf-8")
+        with self.assertRaises(RunError):
+            review(self.project, task.id, "qa", "confirmed")
+
+    def test_finish_refuses_a_project_changed_after_review(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        review(self.project, task.id, "qa", "confirmed")
+        (self.root / "site" / "index.html").write_text("changed", encoding="utf-8")
+        with self.assertRaises(RunError):
+            finish(self.project, task.id)
+
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))
         self.assertTrue(path_allowed("site/a/b.txt", ["site"]))
