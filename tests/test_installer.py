@@ -265,6 +265,21 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(rollback.returncode, 0, rollback.stderr)
         self.assertTrue(probe.is_file())
 
+    def test_rollback_failure_keeps_the_library(self) -> None:
+        install = self.run_install()
+        self.assertEqual(install.returncode, 0, install.stderr)
+        update = self.run_install("--update")
+        self.assertEqual(update.returncode, 0, update.stderr)
+        share = self.prefix / "share"
+        old_mode = share.stat().st_mode
+        os.chmod(share, 0o555)
+        try:
+            rollback = self.run_install("--rollback")
+        finally:
+            os.chmod(share, old_mode)
+        self.assertNotEqual(rollback.returncode, 0)
+        self.assertTrue((self.prefix / "share" / "aperio" / "VERSION").is_file())
+
     def test_powershell_rollback_without_backup_is_refused(self) -> None:
         if not shutil.which("pwsh"):
             self.skipTest("pwsh is not installed")
@@ -291,6 +306,25 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(update.returncode, 0, update.stderr)
         backups = list((prefix / "share").glob("aperio.backup.*"))
         self.assertEqual(len(backups), 5)
+
+    def test_powershell_rollback_failure_keeps_the_library(self) -> None:
+        if not shutil.which("pwsh"):
+            self.skipTest("pwsh is not installed")
+        prefix = self.root / "ps-rollback-failure"
+        base = ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(prefix), "-NoSkill"]
+        install = subprocess.run(base, check=False, capture_output=True, text=True, timeout=60)
+        self.assertEqual(install.returncode, 0, install.stderr)
+        update = subprocess.run(base + ["-Update"], check=False, capture_output=True, text=True, timeout=60)
+        self.assertEqual(update.returncode, 0, update.stderr)
+        share = prefix / "share"
+        old_mode = share.stat().st_mode
+        os.chmod(share, 0o555)
+        try:
+            rollback = subprocess.run(base + ["-Rollback"], check=False, capture_output=True, text=True, timeout=60)
+        finally:
+            os.chmod(share, old_mode)
+        self.assertNotEqual(rollback.returncode, 0)
+        self.assertTrue((prefix / "share" / "aperio" / "VERSION").is_file())
 
     def test_powershell_unsafe_prefix_is_refused(self) -> None:
         if not shutil.which("pwsh"):
