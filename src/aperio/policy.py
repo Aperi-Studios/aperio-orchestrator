@@ -19,6 +19,15 @@ class PolicyError(ValueError):
     """A requested write or command violates the approved plan."""
 
 
+# These cannot be removed by a project policy file. A project may add more
+# protected paths, but it cannot opt out of the control plane or Git metadata.
+PROTECTED_PATHS = (".git", ".aperio")
+
+
+def _protected_paths(extra: list[str] | None) -> list[str]:
+    return sorted({*PROTECTED_PATHS, *(extra or [])})
+
+
 def normalize_allowed(value: str) -> str:
     if value == "*":
         return "*"
@@ -51,7 +60,7 @@ def protected(path: str, protected_paths: list[str]) -> bool:
 
 
 def validate_plan_paths(plan: Plan, protected_paths: list[str] | None = None) -> None:
-    protected_paths = protected_paths or [".git", ".aperio"]
+    protected_paths = _protected_paths(protected_paths)
     for allowed in plan.allowed_paths:
         normalized = normalize_allowed(allowed)
         if normalized == "*":
@@ -67,7 +76,7 @@ def validate_plan_paths(plan: Plan, protected_paths: list[str] | None = None) ->
 
 
 def assert_writable(path: str, plan: Plan, protected_paths: list[str] | None = None) -> str:
-    protected_paths = protected_paths or [".git", ".aperio"]
+    protected_paths = _protected_paths(protected_paths)
     try:
         normalized = normalize_rel(path)
     except PathSafetyError as exc:

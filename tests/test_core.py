@@ -8,7 +8,12 @@ from pathlib import Path
 
 from aperio.model import Acceptance, Approval, ModelError, Plan, Step, Task
 from aperio.paths import PathSafetyError, normalize_rel, resolve_inside
-from aperio.policy import PolicyError, assert_reviewer, path_allowed
+from aperio.policy import (
+    PolicyError,
+    assert_reviewer,
+    path_allowed,
+    validate_plan_paths,
+)
 from aperio.runner import RunError, apply_plan, finish, review, rollback, verify
 from aperio.store import Project, StoreError
 
@@ -140,6 +145,24 @@ class CoreTests(unittest.TestCase):
         self.assertTrue((self.root / "dist/sub/nested.txt").is_file())
         verified = verify(self.project, task.id)
         self.assertEqual(verified["status"], "passed", verified)
+
+    def test_protected_paths_cannot_be_removed_by_policy(self) -> None:
+        _, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+            allowed=[".git/"],
+            approval=False,
+        )
+        with self.assertRaises(PolicyError):
+            validate_plan_paths(plan, [])
+        _, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path=".aperio/state.json", content="x")],
+            allowed=[".aperio/"],
+            approval=False,
+        )
+        with self.assertRaises(PolicyError):
+            validate_plan_paths(plan, [])
 
     def test_reviewer_must_differ_from_builder(self) -> None:
         with self.assertRaises(PolicyError):

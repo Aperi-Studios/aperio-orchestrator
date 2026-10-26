@@ -8,7 +8,7 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 31 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | 32 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | 17 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
@@ -25,7 +25,7 @@
 | Repo tests | 4 passed | same command; `tests/test_repo.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 191 passed | same command |
+| Total test suite | 192 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -44,6 +44,7 @@
 | Review tamper | a reviewer that changes the project is refused | `tests/test_adapter.py::test_reviewer_cannot_change_the_project` |
 | Control-state change | a step that alters project, queue, plan, evidence, discovery, or inspection fails | `_hash_control_state`; `tests/test_discovery.py::test_run_cannot_rewrite_discovery_control_state`; `tests/test_core.py` |
 | Protected-path glob | matching a protected path fails even through a glob | `tests/test_core.py::test_glob_cannot_reach_a_protected_path` |
+| Non-overridable protected paths | `.git` and `.aperio` remain protected even when a policy passes an empty or custom protected-path list | `src/aperio/policy.py::PROTECTED_PATHS`; `tests/test_core.py::test_protected_paths_cannot_be_removed_by_policy` |
 | Task ID traversal | persisted task ids cannot contain path separators | `tests/test_core.py::test_task_id_traversal_is_refused` |
 | Installer prefix canonicalization | `/..` resolves to `/` and is refused | `tests/test_installer.py::test_prefix_that_resolves_to_root_is_refused` |
 | Host deletion | host deletions are rejected | `tests/test_adapter.py::test_host_deletion_is_rejected` |
@@ -99,7 +100,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 191-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 192-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
