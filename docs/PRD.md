@@ -412,6 +412,128 @@ P17 may accept a task, plan, discover authorized CLIs, choose deterministically,
 
 **Acceptance:** no gate means no probing or spawn; executable resolution is pinned or confined to trusted roots; digest rechecked before spawn; invalid configuration fails closed; timeouts terminate the intended process tree where supported; evidence reflects every result; limitations are disclosed.
 
+### FR-36: Mandatory stack mastery and learning dossier (P0)
+
+Aperio must force the executing agent to learn the work before it plans or codes. The plan is blocked until a **learning dossier** exists for the exact stack and surface class. The dossier records:
+
+1. the exact runtime, language, framework, package manager, database, hosting, and integration versions;
+2. official documentation, release notes, migration guides, and security advisories used, with source URLs, access dates, and versions;
+3. the dedicated skill or skills for the stack, their source, version, license, and scope;
+4. available MCP servers, tools, CLIs, and editor integrations, or an explicit `N/A` with a reason;
+5. current constraints, deprecations, licensing, cost, and platform limits;
+6. the local proof command that demonstrates the agent can run the stack, not just describe it;
+7. the teach-back summary and unresolved questions.
+
+A claim such as “the framework supports this” is not learning evidence. A blog post is not a substitute for official documentation. If an official source is unavailable, the dossier records the fallback source, why it is trusted, and the residual risk. The dossier is bound to the plan digest and expires when the stack or version changes.
+
+**Acceptance:** a missing, stale, unsourced, or generic dossier blocks plan approval; the dossier names the exact stack and versions; a recorded local proof command runs; changing the stack after approval invalidates the plan; an owner waiver is explicit and dated.
+
+### FR-37: Toolchain acquisition and project-scoped skill creation (P0)
+
+Aperio must inventory the tools the work needs and acquire them safely:
+
+- identify official MCP servers, CLIs, packages, and skills;
+- record source, version or commit, license, maintainer, permissions, network access, credentials, and cost;
+- prefer project-scoped installation; global installation, paid services, credential use, or elevated permissions require explicit owner approval;
+- pin versions or digests where the ecosystem supports it, and verify the installed artifact;
+- never install an unreviewed package or MCP merely because a model suggested it;
+- if no dedicated skill exists, create a **project-scoped skill** with triggers, scope, required inputs, commands, safety rules, tests, version, and known limits;
+- do not overwrite a foreign or globally installed skill; propose the change and wait for approval;
+- record a fallback when an MCP, package, or skill is unavailable.
+
+A created skill is not trusted until it loads in a fresh session, passes its own validation, and has a reproducible test. A skill that writes outside its scope or hides its commands fails.
+
+**Acceptance:** installation without required approval is refused; the provenance record is complete; a fake or tampered package is rejected; a missing skill produces a tested project-scoped skill, not an unsupported claim; a global install is never implied by a project-local action.
+
+### FR-38: Pre-flight, deployment, and after-sales data (P0)
+
+Before implementation, collect and record the pre-flight facts:
+
+- audience, jobs, success measures, and content owners;
+- required, conditional, and out-of-scope features;
+- integrations, data sources, contracts, and rate or quota limits;
+- brand, content, media, locale, accessibility, SEO, and legal constraints;
+- target surfaces and the application classes in scope;
+- budget, timeline, review owners, and approval path.
+
+Before deployment, collect and verify:
+
+- hosting or platform, domains, DNS, TLS, and environment-variable **names**;
+- build, migration, seed, backup, and restore commands;
+- CI/CD, branch protection, release approval, and rollback path;
+- monitoring, logging, alerting, privacy, retention, and access ownership;
+- smoke checks and post-deploy verification steps.
+
+For after-sales service, record:
+
+- support window, response expectations, and escalation owner;
+- logs, metrics, alerts, dashboards, and health checks;
+- backup schedule, restore drill, and recovery ownership;
+- update and dependency policy;
+- administrator and credential-recovery procedure, without storing secret values in Aperio;
+- user documentation, known limits, and change-request path.
+
+These records live in the target project or an approved client record, not in Aperio's repository. Missing deployment or after-sales data blocks a production handoff unless the owner explicitly accepts the gap.
+
+**Acceptance:** a pre-flight checklist exists before coding; a deployment checklist exists before release; the handoff contains an after-sales pack; missing items fail the gate or carry a dated owner waiver; no secret values are copied into reports.
+
+### FR-39: Application-class design and architecture school (P1)
+
+Aperio must teach and enforce design and architecture appropriate to the surface, not apply one template everywhere. At minimum it distinguishes:
+
+- marketing and content sites;
+- web applications and dashboards;
+- CMS administration and publishing;
+- CRM, ERP, and internal operations tools;
+- mobile applications;
+- desktop applications.
+
+For the selected class, the agent must produce a design contract covering audience, hierarchy, navigation, typography, spacing, grid, color and contrast, imagery, motion, responsive behavior, empty/loading/error states, accessibility, content tone, and originality. Architecture must state module boundaries, data ownership, API or service contracts, error handling, observability, and the deployment shape.
+
+“Award-winning” is a review standard, not a claim. It means the work has researched references, an intentional visual point of view, strong hierarchy and typography, disciplined spacing, accessible interaction, credible content, and measured performance. It does not mean copying an award site or asserting a prize. Dense CRM and desktop interfaces are judged on task speed, keyboard use, and information density; mobile interfaces on touch, viewport, and offline behavior; CMS interfaces on editing safety and publishing clarity.
+
+**Acceptance:** the design contract and reference board exist before visual implementation; the applicable class checklist is used; mobile and desktop are inspected; accessibility and performance checks run against built output; generic template composition or unlicensed assets are rejected; no award claim is made without evidence.
+
+### FR-40: Security baseline and threat model (P0)
+
+Before implementation, produce a threat model for the actual system: assets, actors, trust boundaries, entry points, data flows, abuse cases, and the highest-impact failures. Apply, at minimum:
+
+- authentication, session lifecycle, authorization, and least privilege;
+- input validation, output encoding, injection prevention, and file-upload safety;
+- secret handling, encryption in transit and at rest where applicable, and key rotation;
+- dependency, package, and MCP supply-chain review;
+- CSRF, SSRF, path traversal, unsafe deserialization, and rate-limit controls where applicable;
+- security headers, TLS, error handling, logging, audit trails, and privacy retention;
+- backup, restore, incident response, and administrator recovery.
+
+Aperio must not claim a system is “impenetrable.” Security is proven by a threat model, negative tests, dependency and secret checks, an independent review, and disclosure of unresolved risk. Any unresolved critical or high finding blocks handoff and deployment unless the owner records an explicit, time-bound risk acceptance.
+
+**Acceptance:** the threat model exists; authorization and injection negative tests pass; secrets and dependency scans are recorded; headers and transport are verified on the deployed shape; unresolved critical/high findings block completion; the report states what was not tested.
+
+### FR-41: Task sizing, checkpoints, and handoff readiness (P0)
+
+Every approved plan declares, per chunk, the maximum files, elapsed time, host runs, and spend. The default is one vertical slice per chunk, at most five changed files, one host run, and thirty minutes of agent work, adjustable by the owner or the approved plan. A chunk that exceeds its limit pauses for a checkpoint; it does not silently continue.
+
+Every checkpoint records the diff, tests, evidence, learning updates, new risks, and the next action. Stop and ask when:
+
+- a security, credential, destructive, deployment, or public-release boundary is reached;
+- the same failure repeats twice without new evidence;
+- the plan’s scope or stack must change;
+- the task exceeds its declared size or budget;
+- required data, access, or approval is missing.
+
+Before handoff, verify: no unresolved TODO or placeholder, dependencies and versions are recorded, tests and known limits are current, docs and commands match behavior, deployment and after-sales data exist, rollback is possible, and another agent can resume from repository state.
+
+**Acceptance:** an oversize plan is split or refused; a missing checkpoint blocks the next chunk; the two-failure rule produces a replan rather than an endless retry; the handoff checklist is complete; a cold-start agent can resume without private chat history.
+
+### FR-42: Teaching contract and competency evidence (P0)
+
+Aperio acts as the teacher for every executing agent. Before work, it must explain the stack, the official sources, the design and security rules, the task boundaries, and the evidence required. The agent must return a concise teach-back and a small local proof. The competency record identifies what was learned, what remains uncertain, and what the agent is not allowed to do without help.
+
+Teaching is not a document dump. A teach-back that repeats headings without demonstrating understanding fails. If the agent cannot complete the proof, Aperio narrows the task, requests a missing tool or source, or stops. A different host may resume from the competency record.
+
+**Acceptance:** a task cannot start without a teach-back and proof; a fabricated or copy-pasted teach-back is rejected; the competency record survives restart; the next agent can see exactly what was and was not learned.
+
 ---
 
 ## 8. Non-functional requirements
@@ -492,6 +614,12 @@ A task is `DONE` only when all applicable statements are true:
 10. No open P0 or P1 blocker is disguised as complete; no approval-required action was performed without approval.
 11. Current state, queue, and handoff are updated so a cold-start host can resume.
 12. The owner summary states what is delivered, verified, not verified, blocked, deferred, and what still needs owner action.
+13. The learning dossier, teach-back, local proof, and competency record are current for the exact stack.
+14. Every installed MCP, package, CLI, or skill has provenance, permission, version, and fallback recorded; a created skill has a passing test.
+15. The applicable application-class design contract, reference board, and review checklist exist; no award is claimed without evidence.
+16. The threat model exists and no unresolved critical or high security finding is hidden.
+17. Every chunk stayed within its declared file, time, host-run, and spend limits; checkpoints are recorded.
+18. Pre-flight, deployment, and after-sales data are complete, or the missing item has a dated owner waiver.
 
 ---
 
@@ -531,6 +659,14 @@ Clone into a different path with a clean environment and no optional agents. Run
 
 Scan worktree, tracked content, reachable history, branches, and retained artifacts with the approved identity and secret tools. Confirm remote branch history and worktrees are clean. A clean scan is not publication approval.
 
+### E2E-9: New stack learning, tooling, and skill creation
+
+Give the system a task on a stack with no bundled skill. Prove that it refuses to code before producing the learning dossier, cites official sources, records MCP/package/skill provenance and permissions, creates a tested project-scoped skill if none exists, and completes a local proof. Remove or tamper with a source and prove the gate fails rather than filling the gap from memory.
+
+### E2E-10: Design, security, chunking, and handoff
+
+Run one vertical slice through the application-class design contract, threat model, and declared chunk limits. Force an oversize chunk and a repeated failure; prove the system pauses, replans, and records the checkpoint. Verify the final handoff contains pre-flight, deployment, after-sales, rollback, known limits, and a cold-start competency record.
+
 ---
 
 ## 12. Roadmap
@@ -545,8 +681,11 @@ Scan worktree, tracked content, reachable history, branches, and retained artifa
 6. Prove bidirectional mesh with real hosts, restart, and migration.
 7. Complete prompt rewrite transparency and model mode labeling.
 8. Deliver one real selected project end to end.
-9. Re-run tests and validators from the current checkout; label sandbox denials and stale checks.
-10. Keep privacy and release operations blocked until the owner approves after evidence.
+9. Enforce the learning dossier, teach-back, local proof, and competency record before plan approval.
+10. Enforce toolchain provenance and project-scoped skill creation.
+11. Enforce task chunk limits, checkpoints, and the two-failure replan rule.
+12. Re-run tests and validators from the current checkout; label sandbox denials and stale checks.
+13. Keep privacy and release operations blocked until the owner approves after evidence.
 
 ### P1: Make specialist code useful
 
@@ -558,6 +697,8 @@ Scan worktree, tracked content, reachable history, branches, and retained artifa
 6. Progress dashboard, heartbeat, status, cross-host handoff.
 7. Installer, updater, uninstaller, recovery, and cross-platform parity.
 8. Registry freshness and model selection by capability and cost.
+9. Application-class design school, pre-flight/deployment/after-sales packs, and security threat-model gate.
+10. Close the P1 audit-derived hardening backlog in `docs/PRD.md` Appendix A, starting with Z-02, Z-03, Z-04, and Z-05.
 
 ### P2: Expand
 
@@ -583,6 +724,12 @@ Track from actual runs, not estimates:
 - fan-out: chunks parallelized, completed, failed, wall-clock, conflicts, integration overhead; not subagent count;
 - prompt transparency: every rewrite shows mode and a full diff; target 100%;
 - CMS functional coverage: edit, persist, render, publish, deny, media, revision, rollback; target 100% for required CMS scope;
+- learning coverage: exact stack, official sources, dedicated skill/MCP status, local proof, and teach-back present before plan approval; target 100% of approved tasks;
+- toolchain provenance: every installed or created tool has source, version, license, permissions, and fallback; target 100%;
+- design coverage: design contract, reference board, class checklist, mobile/desktop inspection, and accessibility/performance checks; target 100% of applicable surfaces;
+- security coverage: threat model, negative tests, secret/dependency scans, and unresolved critical/high findings; target zero hidden high-risk findings;
+- chunk compliance: tasks completed within declared file, time, host-run, and spend limits; target 100% or an explicit replan;
+- handoff readiness: pre-flight, deployment, after-sales, rollback, docs, and cold-start resume data present; target 100% for production handoffs;
 - test discovery integrity: no zero-test pass, no omitted module without a decision, counts match actual discovery;
 - portability: explicit pass, fail, or unavailable per OS and shell;
 - privacy: zero unauthorized identifiers or secrets in the required scan scope before publication; a clean scan is not approval;
@@ -815,6 +962,10 @@ These are recorded with defaults so work can continue. The owner can override an
 3. **OpenCode.** Default: do not dispatch until the conflict between older "do not use" and newer allowlist entries is resolved by the owner.
 4. **Public release.** Default: stay private until the owner approves after a clean history and branch audit. No force-push without explicit approval.
 5. **Budget.** Default: zero new spend on models, APIs, hosting, or dependencies unless the owner approves an exception.
+6. **Tool installation consent.** Default: project-scoped MCPs, packages, and skills may be installed after provenance and security checks when they need no credentials, elevated permissions, payment, or broad network access. Global installation, credential-bearing tools, paid services, and elevated permissions require explicit owner approval.
+7. **Default chunk limits.** Default: one vertical slice, at most five changed files, one host run, and thirty minutes of agent work per chunk. The owner may set a stricter or looser limit per project.
+8. **“Award-winning” standard.** Default: a researched design contract, reference board, originality review, accessibility, performance, and real mobile/desktop inspection. Never claim an award or a prize without evidence.
+9. **Surface scope.** Default: teach the principles for marketing sites, web apps, CMS, CRM/ERP, mobile, and desktop; implement and prove only the surface classes the owner selects for the current project.
 
 ---
 
@@ -852,7 +1003,7 @@ reproducible test or command proves it. Listing an item here is not a claim.
 | Z-D2 | `review --host` help advertised unsupported adapters | **Verified fixed** | `890eff6`; `test_review_help_lists_only_supported_hosts` |
 | Z-D3 | Six stale documentation statements | **Verified fixed** | `0394f84`; `docs/STATUS.md`, `docs/TESTING.md` |
 | Z-D4a | Evidence name filter missed `env` and `.env2` | **Verified fixed** | `src/aperio/evidence.py`; expanded refusal test |
-| Z-D4b | Mesh `read(mark_read=True)` re-selected after commit | **Verified fixed** | `src/aperio/mesh.py`; `test_send_read_ack_and_reply` |
+| Z-D4b | Mesh `read(mark_read=True)` re-selected after commit | **Implemented** | `src/aperio/mesh.py`; `test_send_read_ack_and_reply` does not yet discriminate (passes against the pre-fix code too) |
 | Z-D4c | Windows lock was a silent no-op | **Implemented; native Windows unverified** | `src/aperio/store.py` msvcrt fallback; no Windows runner |
 | Z-D4d | Audit status reset after mutation | **Accepted intentional** | `src/aperio/audit.py`; regression test |
 | Z-D4e | Codex hard-coded macOS path fallback | **Accepted; PATH checked first** | `src/aperio/hosts.py`; documented |
