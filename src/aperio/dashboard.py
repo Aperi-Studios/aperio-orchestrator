@@ -16,6 +16,8 @@ from .discovery import DiscoveryError
 from .discovery import status as discovery_status
 from .learning import LearningError
 from .learning import status as learning_status
+from .paths import PathSafetyError, relative_posix, resolve_inside
+from .policy import PROTECTED_PATHS, protected
 from .readiness import ReadinessError
 from .readiness import status as readiness_status
 from .store import Project
@@ -158,7 +160,20 @@ footer {{ color:var(--muted); font-size:12px; margin-top:24px; }}
 
 
 def write(project: Project, output: str = "") -> str:
-    path = project.root / output if output else project.state / DASHBOARD_NAME
+    if output:
+        # --output must stay inside the project and outside the control plane:
+        # this path is owner-facing HTML, never a state file.
+        try:
+            path = resolve_inside(project.root, output)
+        except PathSafetyError as exc:
+            raise PathSafetyError(f"dashboard output escapes the project: {output}") from exc
+        rel = relative_posix(project.root, path)
+        if protected(rel, list(PROTECTED_PATHS)):
+            raise PathSafetyError(
+                f"dashboard output would overwrite project state: {rel}"
+            )
+    else:
+        path = project.state / DASHBOARD_NAME
     if path.exists() and path.is_dir():
         raise ValueError(f"dashboard output is a directory: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from aperio.dashboard import DASHBOARD_NAME, render, write
 from aperio.model import Task
+from aperio.paths import PathSafetyError
 from aperio.store import Project
 
 
@@ -44,3 +45,18 @@ class DashboardTests(unittest.TestCase):
         path = Path(write(self.project, "reports/status.html"))
         self.assertTrue(path.is_file())
         self.assertIn("<!doctype html>", path.read_text(encoding="utf-8"))
+
+    def test_write_refuses_to_clobber_the_control_plane(self) -> None:
+        # N3: --output used to be joined straight onto project.root, so a grade
+        # report could overwrite project state files.
+        project_json = self.project.state / "project.json"
+        before = project_json.read_text(encoding="utf-8")
+        with self.assertRaises(PathSafetyError):
+            write(self.project, ".aperio/project.json")
+        self.assertEqual(project_json.read_text(encoding="utf-8"), before)
+
+    def test_write_refuses_traversal(self) -> None:
+        outside = Path(self.temp.name) / "escape.html"
+        with self.assertRaises(PathSafetyError):
+            write(self.project, "../escape.html")
+        self.assertFalse(outside.exists())

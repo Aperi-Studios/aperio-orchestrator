@@ -17,7 +17,7 @@
 | Learning tests | 10 passed | same command; `tests/test_learning.py` |
 | Skill tests | 8 passed | same command; `tests/test_skillgen.py` |
 | Toolchain tests | 8 passed | same command; `tests/test_toolchain.py` |
-| Dashboard tests | 4 passed | same command; `tests/test_dashboard.py` |
+| Dashboard tests | 6 passed | same command; `tests/test_dashboard.py` |
 | Security tests | 7 passed | same command; `tests/test_security.py` |
 | Todo tests | 6 passed | same command; `tests/test_todo.py` |
 | Readiness tests | 5 passed | same command; `tests/test_readiness.py` |
@@ -28,7 +28,7 @@
 | Repo tests | 4 passed | same command; `tests/test_repo.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 232 passed | same command |
+| Total test suite | 234 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -53,6 +53,7 @@
 | Run revalidates readiness | `run` refuses if pre-flight readiness vanished or changed after approval | `src/aperio/cli.py::cmd_run`; `tests/test_cli.py::test_run_rejects_readiness_that_vanished_after_approval` |
 | Skill frontmatter integrity | generated skill descriptions are JSON-quoted and validation checks name, scope, version, and purpose against the registry | `src/aperio/skillgen.py`; `tests/test_skillgen.py::test_frontmatter_survives_quotes_and_newlines_in_purpose` |
 | Queue recovery journal | every queue save is appended as a `queue.saved` event; `aperio recover` restores a missing/corrupt queue and refuses a future schema | `src/aperio/store.py::recover_queue`; `tests/test_core.py::test_queue_recovers_from_event_journal`, `test_queue_recovery_refuses_future_schema` |
+| Dashboard output safety | `--output` must stay inside the project and cannot overwrite `.git` or `.aperio`; traversal is refused | `src/aperio/dashboard.py::write`; `tests/test_dashboard.py::test_write_refuses_to_clobber_the_control_plane`, `test_write_refuses_traversal` |
 | Security scan | bounded local scan for private keys, high-confidence tokens, sensitive filenames, and assigned secrets; excludes generated and VCS directories | `src/aperio/security.py`; `tests/test_security.py` |
 | Toolchain installer | manifests declare source, version, license, scope, permissions, risk flags, cost, install argv, and verify argv; risky tools require exact owner confirmation; failed verification never records an install | `src/aperio/toolchain.py`; `tests/test_toolchain.py` |
 | Resume interrupted run | `aperio resume` restores the pre-run snapshot, clears stale verification/review, and reruns the same approved plan; it refuses when no run is interrupted | `src/aperio/runner.py::resume_plan`; `tests/test_core.py::test_resume_restores_the_interrupted_snapshot_before_rerunning`, `test_resume_refuses_when_no_run_is_interrupted` |
@@ -112,7 +113,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 232-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 234-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
