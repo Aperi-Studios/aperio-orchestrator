@@ -12,6 +12,7 @@ src/aperio/
   store.py      project state, atomic JSON, append-only events
   paths.py      relative-path validation and symlink checks
   policy.py     allowed paths, protected paths, review separation
+  dashboard.py  generated read-only status page from project state
   sandbox.py    optional OS isolation for shell and read steps
   adapter.py    disposable-workspace host dispatch and change validation
   drift.py       deterministic documentation link and path checks

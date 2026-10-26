@@ -782,6 +782,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Learning tests | **10 passed** | same command; `tests/test_learning.py` |
 | Skill tests | **8 passed** | same command; `tests/test_skillgen.py` |
 | Toolchain tests | **8 passed** | same command; `tests/test_toolchain.py` |
+| Dashboard tests | **4 passed** | same command; `tests/test_dashboard.py` |
 | Todo tests | **6 passed** | same command; `tests/test_todo.py` |
 | Readiness tests | **5 passed** | same command; `tests/test_readiness.py` |
 | Discovery tests | **25 passed** | same command; `tests/test_discovery.py` |
@@ -790,7 +791,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
 | Installer tests | **23 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **221 passed** | same command |
+| Total test suite | **225 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -918,7 +919,7 @@ Every completion report includes this table, filled from actual work:
 | FR-25 | SEO pack | | | | | |
 | FR-26 | prompt | | | | | |
 | FR-27 | learning | | | | | |
-| FR-28 | status | | | | | |
+| FR-28 | status | `src/aperio/dashboard.py` | `aperio dashboard` | 4 dashboard tests; generated HTML | IMPLEMENTED | |
 | FR-29 | git/CI | | | | | |
 | FR-30 | install | | | | | |
 | FR-31 | portability | | | | | |
@@ -1061,6 +1062,7 @@ still required for deployment, paid hosts, credentials, and public release.
 |---|---|---|---|
 | FR-36 learning dossier | **Implemented and verified** | `src/aperio/learning.py`; 10 learning tests; plan/approve/run gate; plan digest binding | Expire the dossier automatically on version change and re-run the proof |
 | FR-37 toolchain and skill creation | **Implemented** | manifest validation, approval-gated argv install with verification, project skills; 8 toolchain tests and 8 skill tests | registry discovery and live host skill loading |
+| FR-28 status dashboard | **Implemented** | generated read-only HTML from state; escaped text; no scripts or network | live server or interactive controls |
 | FR-38 pre-flight, deploy, after-sales | **Partial** | readiness validation; pre-flight plan gate; full readiness at done/handoff | Deployment execution, real provider checks, support SLA automation |
 | FR-39 application design school | **Partial** | design contract, surface class, references, accessibility, responsive, originality fields | independent design critique and visual review workflow |
 | FR-40 security threat model | **Partial** | threat model, trust boundaries, controls, scans, headers, incident fields; high/critical block | executed dependency/secret scans and external penetration testing |

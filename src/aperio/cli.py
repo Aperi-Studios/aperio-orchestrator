@@ -29,6 +29,7 @@ from .audit import start as audit_start
 from .audit import status as audit_status
 from .audit import validate as audit_validate
 from .audit import verify_finding as audit_verify_finding
+from .dashboard import write as write_dashboard
 from .discovery import (
     QUESTION_BY_ID,
     DiscoveryError,
@@ -805,6 +806,13 @@ def cmd_skill(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dashboard(args: argparse.Namespace) -> int:
+    project = _project(args)
+    path = write_dashboard(project, args.output)
+    print(path)
+    return 0
+
+
 def cmd_tool(args: argparse.Namespace) -> int:
     project = _project(args)
     if args.tool_command == "import":
@@ -1163,6 +1171,10 @@ def build_parser() -> argparse.ArgumentParser:
     skill_validate_parser.add_argument("name")
     skill_validate_parser.add_argument("--json", action="store_true")
     skill_validate_parser.set_defaults(func=cmd_skill)
+
+    p = sub.add_parser("dashboard", help="write a self-contained status dashboard")
+    p.add_argument("--output", default="")
+    p.set_defaults(func=cmd_dashboard)
 
     p = sub.add_parser("tool", help="approval-gated toolchain and MCP manifest")
     tool = p.add_subparsers(dest="tool_command", required=True)

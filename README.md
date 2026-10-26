@@ -53,6 +53,7 @@ aperio audit report
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..."
 aperio discover status
+aperio dashboard
 aperio learn import examples/learning-dossier.json
 aperio learn proof --command "python3 -V"
 aperio learn validate
@@ -107,6 +108,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Owner-visible todo ledger with ordered, minimal tasks; `plan` refuses an empty todo list, and the next task cannot start until the previous task is accepted with evidence.
 - Readiness record for pre-flight, deployment, after-sales, design, and security facts; `aperio readiness validate` refuses gaps and high/critical unresolved risk.
 - Project-scoped skill creation: `aperio skill create` writes a validated scaffold under `.aperio/skills/` and refuses to overwrite a foreign skill.
+- Generated read-only status dashboard: `aperio dashboard` writes self-contained HTML from the state files with no scripts or network.
 - Manifest-driven toolchain installation: `aperio tool import` validates source, version, license, permissions, risk flags, cost, install argv, and verify argv; risky tools require exact owner confirmation.
 - Non-overridable `.git` and `.aperio` protection, plus a read-only `kind: read` step that fails on any project change.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
@@ -131,7 +133,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Live host dispatch for OpenCode, KiloCode, Cline, and agy; their command shapes are tested, but live runs are not yet proven.
 - A distributed or live two-host mesh; the current store is local.
 - CMS, media, SEO, and Astro/Lumos delivery.
-- A web dashboard.
+- A web dashboard server or interactive controls; the generated `aperio dashboard` page is read-only.
 - Optional OS sandboxing for shell/read steps when a plan sets `sandbox: true`; host steps are still detected, not jailed.
 - Remote deployment.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer is tested under `pwsh` on macOS.
