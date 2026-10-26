@@ -136,6 +136,39 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("discovery is required before planning", result.stderr)
 
+    def test_plan_with_malformed_types_is_rejected(self) -> None:
+        self.init()
+        self.complete_discovery()
+        base = {
+            "title": "Bad plan",
+            "request": "Bad plan",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        cases = [
+            {**base, "allowed_paths": "site/"},
+            {**base, "steps": {"id": "write"}},
+            {**base, "acceptance": {"id": "check"}},
+        ]
+        for number, plan in enumerate(cases):
+            path = self.root / f"bad-{number}.json"
+            path.write_text(json.dumps(plan), encoding="utf-8")
+            result = self.cli("plan", str(path))
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("must be a list", result.stderr)
+        self.assertEqual(list((self.root / ".aperio" / "plans").glob("*.json")), [])
+
+    def test_project_status_json_includes_discovery(self) -> None:
+        self.init()
+        self.complete_discovery()
+        result = self.cli("status", "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["project"], str(self.root.resolve()))
+        self.assertTrue(data["discovery"]["ready"])
+        self.assertEqual(data["tasks"], [])
+
     def test_plan_without_acceptance_is_rejected(self) -> None:
         self.init()
         plan = {

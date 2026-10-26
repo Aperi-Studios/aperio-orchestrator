@@ -126,6 +126,18 @@ class InspectTests(unittest.TestCase):
         self.assertNotIn("TOPSECRET", json.dumps(data))
         self.assertNotIn("evil", data["scripts"])
 
+    def test_tests_detection_ignores_skipped_dirs(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="aperio-inspect-skip-") as name:
+            root = Path(name)
+            (root / "node_modules" / "pkg").mkdir(parents=True)
+            (root / "node_modules" / "pkg" / "test_fake.js").write_text("x", encoding="utf-8")
+            data = inspect_path(root)
+            self.assertFalse(data["tests"])
+
+    def test_corrupt_inspection_does_not_break_hints(self) -> None:
+        (self.root / ".aperio" / "inspection.json").write_text("{not json", encoding="utf-8")
+        self.assertEqual(hints(self.project, "evidence"), [])
+
     def test_collect_and_hints(self) -> None:
         collect(self.project)
         evidence = hints(self.project, "evidence")

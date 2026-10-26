@@ -99,14 +99,30 @@ def cmd_plan(args: argparse.Namespace) -> int:
     )
     if not task.title or not task.request:
         raise ModelError("plan needs title and request")
+    allowed_raw = data.get("allowed_paths", [])
+    if not isinstance(allowed_raw, list) or not all(isinstance(item, str) for item in allowed_raw):
+        raise ModelError("plan allowed_paths must be a list of strings")
+    steps_raw = data.get("steps", [])
+    if not isinstance(steps_raw, list) or not all(isinstance(item, dict) for item in steps_raw):
+        raise ModelError("plan steps must be a list of objects")
+    acceptance_raw = data.get("acceptance", [])
+    if not isinstance(acceptance_raw, list) or not all(isinstance(item, dict) for item in acceptance_raw):
+        raise ModelError("plan acceptance must be a list of objects")
+    try:
+        steps = [Step.from_dict(item) for item in steps_raw]
+        acceptance = [Acceptance.from_dict(item) for item in acceptance_raw]
+    except ModelError:
+        raise
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise ModelError(f"plan step or acceptance is malformed: {exc}") from exc
     plan = Plan(
         id=new_id("plan"),
         task_id=task.id,
         title=task.title,
         request=task.request,
-        allowed_paths=[str(p) for p in data.get("allowed_paths", [])],
-        steps=[Step.from_dict(item) for item in data.get("steps", [])],
-        acceptance=[Acceptance.from_dict(item) for item in data.get("acceptance", [])],
+        allowed_paths=list(allowed_raw),
+        steps=steps,
+        acceptance=acceptance,
         builder=str(data.get("builder", "agent")),
     )
     plan.validate()
@@ -124,6 +140,11 @@ def cmd_plan(args: argparse.Namespace) -> int:
             research = ", ".join(progress["research"])
             raise DiscoveryError(
                 "discovery has unresolved research answers; record a decision first: " + research
+            )
+        if progress["expired"]:
+            expired = ", ".join(progress["expired"])
+            raise DiscoveryError(
+                "discovery waivers expired; renew or answer: " + expired
             )
         raise DiscoveryError("discovery is not ready")
     if progress["waived"]:
@@ -151,6 +172,13 @@ def _require_current_discovery(project: Project, plan: Plan) -> None:
         raise DiscoveryError(
             "discovery changed after this plan was created; make a new plan"
         )
+    progress = discovery_status(project)
+    if not progress["ready"]:
+        if progress["expired"]:
+            raise DiscoveryError(
+                "discovery waivers expired; renew or answer: " + ", ".join(progress["expired"])
+            )
+        raise DiscoveryError("discovery is no longer ready; make a new plan")
 
 
 def cmd_approve(args: argparse.Namespace) -> int:
@@ -256,7 +284,20 @@ def cmd_status(args: argparse.Namespace) -> int:
         return 0
     tasks = project.tasks()
     if args.json:
-        print(json.dumps([t.to_dict() for t in tasks], indent=2, sort_keys=True))
+        discovery = project.discovery()
+        progress = discovery_status(project) if discovery is not None else None
+        print(
+            json.dumps(
+                {
+                    "project": str(project.root),
+                    "state": str(project.state),
+                    "discovery": progress,
+                    "tasks": [task.to_dict() for task in tasks],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
     else:
         print(f"Project: {project.root}")
         print(f"State:   {project.state}")
@@ -309,15 +350,27 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     for name, ok, detail in checks:
         print(f"{'OK  ' if ok else 'FAIL'} {name}: {detail}")
         failed = failed or not ok
-    discovery = project.discovery()
-    if discovery is not None:
-        progress = discovery_status(project)
-        print(
-            "INFO discovery: "
-            f"{progress['answered']}/{progress['total']} answered, "
-            f"{progress['research']} need research, "
-            f"ready={'yes' if progress['ready'] else 'no'}"
-        )
+    discovery = None
+    try:
+        discovery = project.discovery()
+        if discovery is not None:
+            progress = discovery_status(project)
+            print(
+                "INFO discovery: "
+                f"{progress['answered']}/{progress['total']} answered, "
+                f"{progress['research']} need research, "
+                f"{len(progress['expired'])} expired waivers, "
+                f"ready={'yes' if progress['ready'] else 'no'}"
+            )
+    except (StoreError, DiscoveryError) as exc:
+        print(f"FAIL discovery: {exc}")
+        failed = True
+    try:
+        project.tasks()
+        print("OK queue: parsed")
+    except (StoreError, ModelError) as exc:
+        print(f"FAIL queue: {exc}")
+        failed = True
     return 1 if failed else 0
 
 
@@ -350,6 +403,7 @@ def _question_payload(project: Project, question: Any) -> dict[str, Any]:
             "missing": progress["missing"],
             "waived": progress["waived"],
             "waived_research": progress["waived_research"],
+            "expired": progress["expired"],
             "ready": progress["ready"],
         },
         "hints": inspection_hints(project, question.id),

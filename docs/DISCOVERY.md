@@ -494,7 +494,7 @@ A new surface can be added without editing the profile list: add a facet value, 
 2. **Facet profile:** partial; labels load conditional packs for commerce, CMS, SEO, migration, and quality, but do not cover the full module catalog.
 3. **Question engine:** implemented for 10 core questions and 10 conditional questions across five module families.
 4. **Coverage report:** implemented as answered, research, missing, and ready (`aperio discover status`).
-5. **Plan gate:** implemented for every project; `plan` refuses until discovery is ready and warns when an explicit owner waiver is used. A plan records a digest of the discovery state, so approval and run are refused if discovery changes afterward. Waivers require the exact confirmation phrase, a stated risk, and a review date; `labels` cannot be waived.
+5. **Plan gate:** implemented for every project; `plan` refuses until discovery is ready and warns when an explicit owner waiver is used. A plan records a digest of the discovery state, so approval and run are refused if discovery changes afterward. Expired waivers make the record not ready. Waivers require the exact confirmation phrase, a stated risk, and a future review date; `labels` cannot be waived.
 6. **Scenario fixtures:** not implemented.
 7. **Read-only inspectors:** implemented for folder facts and single-page URL metadata; analytics/Search Console, sitemap/crawl, browser rendering, and accessibility-tree inspection are not implemented.
 8. **Evidence attachments:** text references are recorded on discovery answers; `aperio evidence add` records a path, size, and SHA-256 in a manifest without copying file contents. Redaction and expiry are not implemented.

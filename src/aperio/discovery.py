@@ -366,7 +366,15 @@ def _read_state(data: dict[str, Any] | None) -> dict[str, Any]:
         for key in ("by", "risk", "review_at"):
             if not isinstance(waiver.get(key), str) or not waiver[key].strip():
                 raise DiscoveryError(f"discovery waiver {key} is malformed: {question_id}")
+        try:
+            date.fromisoformat(waiver["review_at"])
+        except ValueError as exc:
+            raise DiscoveryError(f"discovery waiver review date is malformed: {question_id}") from exc
     return data
+
+
+def _waiver_expired(waiver: dict[str, Any]) -> bool:
+    return date.fromisoformat(waiver["review_at"]) < date.today()
 
 
 def _answer_complete(answer: dict[str, Any] | None) -> bool:
@@ -398,7 +406,10 @@ def next_question(project: Project) -> Question | None:
     data = _read_or_new(project)
     waivers = data.get("waivers", {})
     for question in _applicable(data):
-        if question.id in waivers:
+        waiver = waivers.get(question.id)
+        if waiver:
+            if _waiver_expired(waiver):
+                return question
             continue
         answer = data["answers"].get(question.id)
         if answer is None or answer.get("status") == "research" or not _answer_complete(answer):
@@ -476,23 +487,24 @@ def answer_question(
     if not question.allow_text and not values:
         raise DiscoveryError(f"{question.id}: choose an option")
 
-    data = _state(project)
-    labels = _labels(data)
-    if question.requires and not all(label in labels for label in question.requires):
-        raise DiscoveryError(f"{question.id}: answer the labels question first")
+    with project.lock():
+        data = _state(project)
+        labels = _labels(data)
+        if question.requires and not all(label in labels for label in question.requires):
+            raise DiscoveryError(f"{question.id}: answer the labels question first")
 
-    status = "research" if "not_sure" in values else "answered"
-    data["answers"][question.id] = {
-        "values": values,
-        "text": text,
-        "evidence": evidence,
-        "status": status,
-        "recorded_at": utc_now(),
-    }
-    data.setdefault("waivers", {}).pop(question.id, None)
-    data["updated_at"] = utc_now()
-    project.save_discovery(data)
-    return data["answers"][question.id]
+        status = "research" if "not_sure" in values else "answered"
+        data["answers"][question.id] = {
+            "values": values,
+            "text": text,
+            "evidence": evidence,
+            "status": status,
+            "recorded_at": utc_now(),
+        }
+        data.setdefault("waivers", {}).pop(question.id, None)
+        data["updated_at"] = utc_now()
+        project.save_discovery(data)
+        return data["answers"][question.id]
 
 
 WAIVER_CONFIRM = "I accept this risk"
@@ -525,24 +537,25 @@ def waive_question(
         raise DiscoveryError("review date must be YYYY-MM-DD") from exc
     if review_date < date.today():
         raise DiscoveryError("review date must not be in the past")
-    data = _state(project)
-    if question.requires and not all(label in _labels(data) for label in question.requires):
-        raise DiscoveryError(f"{question_id}: answer the labels question first")
-    existing = data.get("answers", {}).get(question_id, {})
-    if existing.get("status") == "answered":
-        raise DiscoveryError(f"{question_id}: already answered; a waiver is not needed")
-    waiver = {
-        "by": by.strip(),
-        "risk": risk.strip(),
-        "review_at": review_at.strip(),
-        "accepted_at": utc_now(),
-        "confirm": confirm,
-        "status": "waived",
-    }
-    data.setdefault("waivers", {})[question_id] = waiver
-    data["updated_at"] = utc_now()
-    project.save_discovery(data)
-    return waiver
+    with project.lock():
+        data = _state(project)
+        if question.requires and not all(label in _labels(data) for label in question.requires):
+            raise DiscoveryError(f"{question_id}: answer the labels question first")
+        existing = data.get("answers", {}).get(question_id, {})
+        if existing.get("status") == "answered":
+            raise DiscoveryError(f"{question_id}: already answered; a waiver is not needed")
+        waiver = {
+            "by": by.strip(),
+            "risk": risk.strip(),
+            "review_at": review_at.strip(),
+            "accepted_at": utc_now(),
+            "confirm": confirm,
+            "status": "waived",
+        }
+        data.setdefault("waivers", {})[question_id] = waiver
+        data["updated_at"] = utc_now()
+        project.save_discovery(data)
+        return waiver
 
 
 def digest(project: Project) -> str:
@@ -570,6 +583,7 @@ def status(project: Project) -> dict[str, Any]:
             "missing": [question.id for question in applicable],
             "waived": [],
             "waived_research": [],
+            "expired": [],
             "ready": False,
             "next": applicable[0].id,
             "answers": {},
@@ -579,10 +593,15 @@ def status(project: Project) -> dict[str, Any]:
     answers = data.get("answers", {})
     waivers = data.get("waivers", {})
     applicable = _applicable(data)
+    expired = [
+        question.id
+        for question in applicable
+        if question.id in waivers and _waiver_expired(waivers[question.id])
+    ]
     missing = [
         question.id
         for question in applicable
-        if question.id not in waivers
+        if (question.id in expired or question.id not in waivers)
         and (question.id not in answers or not _answer_complete(answers.get(question.id)))
         and answers.get(question.id, {}).get("status") != "research"
     ]
@@ -597,14 +616,19 @@ def status(project: Project) -> dict[str, Any]:
         for question in applicable
         if _answer_complete(answers.get(question.id))
     ]
-    waived = [question.id for question in applicable if question.id in waivers]
+    waived = [
+        question.id
+        for question in applicable
+        if question.id in waivers and question.id not in expired
+    ]
     waived_research = [
         question.id
         for question in applicable
         if question.id in waivers
+        and question.id not in expired
         and answers.get(question.id, {}).get("status") == "research"
     ]
-    ready = not missing and not research
+    ready = not missing and not research and not expired
     return {
         "total": len(applicable),
         "answered": len(answered),
@@ -612,8 +636,9 @@ def status(project: Project) -> dict[str, Any]:
         "missing": missing,
         "waived": waived,
         "waived_research": waived_research,
+        "expired": expired,
         "ready": ready,
-        "next": missing[0] if missing else (research[0] if research else None),
+        "next": (missing[0] if missing else (research[0] if research else (expired[0] if expired else None))),
         "answers": answers,
         "waivers": waivers,
     }
@@ -627,10 +652,12 @@ def summary(project: Project) -> str:
     for question in _applicable(data):
         waiver = waivers.get(question.id)
         if waiver:
+            expired = _waiver_expired(waiver)
             suffix = " (research was requested)" if answers.get(question.id, {}).get("status") == "research" else ""
+            state = "EXPIRED" if expired else "WAIVED"
             lines.append(
                 f"- **{SUMMARY_LABELS.get(question.id, question.domain)}:** "
-                f"WAIVED by {waiver.get('by', 'unknown')} — {waiver.get('risk', 'no risk stated')}"
+                f"{state} by {waiver.get('by', 'unknown')} — {waiver.get('risk', 'no risk stated')}"
                 f" (review by {waiver.get('review_at', 'not set')}){suffix}"
             )
             continue
@@ -686,9 +713,13 @@ def format_status(project: Project) -> str:
     ]
     if result["waived"]:
         parts.append(f"{len(result['waived'])} waived")
+    if result["expired"]:
+        parts.append(f"{len(result['expired'])} expired")
     lines = [" · ".join(parts), "Ready: no"]
     if result["waived"]:
         lines.append("Waived: " + ", ".join(result["waived"]))
+    if result["expired"]:
+        lines.append("Expired waivers: " + ", ".join(result["expired"]))
     if result["next"]:
         question = QUESTION_BY_ID[result["next"]]
         lines.append(f"Next: {question.id} — {question.prompt}")

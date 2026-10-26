@@ -144,7 +144,7 @@ only in chat:
   records the owner's answer.
 - `aperio discover status --json` reports answered, research, missing, and ready.
 - `aperio discover summary` prints the recorded interview.
-- `aperio discover waive <question-id> --by owner --risk "..." --review-at "YYYY-MM-DD" --confirm "I accept this risk"` records an explicit owner waiver with a review date.
+- `aperio discover waive <question-id> --by owner --risk "..." --review-at "YYYY-MM-DD" --confirm "I accept this risk"` records an explicit owner waiver with a review date. An expired waiver makes discovery not ready.
 
 The plan gate is bound to the discovery record. If discovery changes after a plan is
 created, the plan cannot be approved or run; make a new plan. Do not edit

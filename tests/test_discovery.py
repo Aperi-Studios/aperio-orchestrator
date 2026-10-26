@@ -310,6 +310,47 @@ class DiscoveryTests(unittest.TestCase):
         with self.assertRaises(DiscoveryError):
             cmd_approve(args)
 
+    def test_expired_waiver_is_not_ready(self) -> None:
+        self.complete()
+        data = self.project.discovery()
+        assert data is not None
+        data["answers"].pop("name", None)
+        self.project.save_discovery(data)
+        waive_question(
+            self.project,
+            "name",
+            by="owner",
+            risk="working name is not decided",
+            confirm=WAIVER_CONFIRM,
+            review_at=FUTURE,
+        )
+        plan = ROOT / "examples" / "demo-site-plan.json"
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                cmd_plan(argparse.Namespace(project=str(self.root), file=str(plan))),
+                0,
+            )
+        plan_id = output.getvalue().splitlines()[0].split()[1]
+        data = self.project.discovery()
+        assert data is not None
+        data["waivers"]["name"]["review_at"] = (date.today() - timedelta(days=1)).isoformat()
+        self.project.save_discovery(data)
+        progress = status(self.project)
+        self.assertFalse(progress["ready"])
+        self.assertIn("name", progress["expired"])
+        self.assertIn("expired", format_status(self.project))
+        with self.assertRaises(DiscoveryError):
+            cmd_approve(
+                argparse.Namespace(
+                    project=str(self.root),
+                    plan_id=plan_id,
+                    by="owner",
+                    note="",
+                    confirm="I approve this plan",
+                )
+            )
+
     def test_plan_refuses_incomplete_discovery(self) -> None:
         plan = ROOT / "examples" / "demo-site-plan.json"
         args = argparse.Namespace(project=str(self.root), file=str(plan))

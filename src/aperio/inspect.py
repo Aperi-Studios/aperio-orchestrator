@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from .model import utc_now
-from .store import Project
+from .store import Project, StoreError
 
 SKIP_DIRS = {
     ".git",
@@ -238,7 +238,7 @@ def _detect_stack(root: Path) -> dict[str, Any]:
     if (root / "manage.py").is_file() and "Django" not in stack:
         stack.append("Django")
     requirements = root / "requirements.txt"
-    if requirements.is_file():
+    if requirements.is_file() and not requirements.is_symlink():
         try:
             text = requirements.read_text(encoding="utf-8").lower()
         except (OSError, UnicodeError):
@@ -275,7 +275,7 @@ def _detect_cms_or_commerce(dependencies: list[str], stack: list[str]) -> dict[s
         ("stripe", "Stripe"),
         ("medusa", "Medusa"),
     ):
-        if token in text:
+        if re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])", text):
             if token in {"shopify", "woocommerce", "stripe", "medusa"}:
                 commerce.append(label)
             else:
@@ -351,6 +351,10 @@ def inspect_path(root: str | Path) -> dict[str, Any]:
     files = 0
     total_bytes = 0
     truncated = False
+    has_test = any(
+        (path / name).is_dir() and not (path / name).is_symlink()
+        for name in ("tests", "test", "__tests__")
+    )
     top_level: list[str] = []
     try:
         top_level = sorted(item.name for item in path.iterdir() if item.name not in SKIP_DIRS)
@@ -364,6 +368,8 @@ def inspect_path(root: str | Path) -> dict[str, Any]:
             file_path = Path(current) / name
             if file_path.is_symlink():
                 continue
+            if name.startswith("test_") or ".test." in name or ".spec." in name:
+                has_test = True
             files += 1
             try:
                 total_bytes += file_path.stat().st_size
@@ -384,11 +390,7 @@ def inspect_path(root: str | Path) -> dict[str, Any]:
             html_facts = parse_html(html_file.read_text(encoding="utf-8", errors="replace"))
         except OSError:
             html_facts = {}
-    tests = any((path / name).exists() for name in ("tests", "test", "__tests__")) or any(
-        child.name.startswith("test_") or ".test." in child.name or ".spec." in child.name
-        for child in path.rglob("*")
-        if child.is_file() and not child.is_symlink()
-    )
+    tests = has_test
     docs = [name for name in ("README.md", "README.rst", "docs") if (path / name).exists()]
     ci = (path / ".github" / "workflows").is_dir()
     deployment = [
@@ -455,7 +457,7 @@ def _private_host(host: str) -> bool:
 def _validate_url(url: str, allow_private: bool) -> urllib.parse.SplitResult:
     parsed = urllib.parse.urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise InspectionError(f"URL must be http or https with a hostname: {url}")
+        raise InspectionError("URL must be http or https with a hostname")
     if parsed.username or parsed.password:
         raise InspectionError("URL must not contain credentials")
     if not allow_private and _private_host(parsed.hostname):
@@ -512,9 +514,9 @@ def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
             final_url = response.geturl()
             status = response.status
     except urllib.error.HTTPError as exc:
-        raise InspectionError(f"HTTP {exc.code} for {url}") from exc
+        raise InspectionError(f"HTTP {exc.code} for {_display_url(url)}") from exc
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-        raise InspectionError(f"cannot fetch {url}: {exc}") from exc
+        raise InspectionError(f"cannot fetch {_display_url(url)}: {exc}") from exc
     facts = parse_html(text, final_url)
     _validate_url(final_url, allow_private)
     security_headers = {
@@ -567,7 +569,10 @@ def collect(project: Project, url: str | None = None, allow_private: bool = Fals
 
 
 def hints(project: Project, question_id: str) -> list[str]:
-    data = project.inspection()
+    try:
+        data = project.inspection()
+    except StoreError:
+        return []
     if not data:
         return []
     folder = data.get("folder") or {}
