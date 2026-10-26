@@ -368,7 +368,30 @@ Every unresolved item gets:
 
 A plan may proceed with an unknown only when the owner explicitly accepts the risk. “Assumed” without an owner is a placeholder and must fail the gate.
 
-## 8. Coverage and gates
+## 8. Program decomposition
+
+A request can be valid and still be too large for one plan. “Ecommerce plus CMS plus CRM plus payments plus SEO” is a program, not a single task.
+
+Decompose it:
+
+1. Record the full vision and non-goals.
+2. Define phases with one end-to-end outcome each.
+3. Put the smallest useful slice first.
+4. Give each phase its own facets, plan, allowed paths, acceptance, review, rollback, and handoff.
+5. Ask the owner to approve the first phase only.
+
+Example ecommerce sequence:
+
+| Phase | Outcome | Explicitly not included |
+|---|---|---|
+| 1 | Catalog, CMS, product pages, inquiry form | live payments, CRM automation |
+| 2 | Checkout and payment in test mode | production payouts, CRM sync |
+| 3 | CRM/email sync and order operations | growth experiments |
+| 4 | SEO, analytics, performance, accessibility hardening | new product lines |
+
+The phase order is a recommendation, not a universal law. The gate is that one phase is independently useful, testable, and reversible.
+
+## 9. Coverage and gates
 
 A field is `missing`, `claimed` (E1), `evidenced` (E2/E3), or `verified` (E4). A module gate is a boolean expression over its required fields, for example:
 
@@ -389,7 +412,7 @@ The plan gate refuses when a blocking field is missing. The owner can waive a fi
 
 No waiver is implied by silence.
 
-## 9. Simulation: composite profiles
+## 10. Simulation: composite profiles
 
 These are **test profiles**, not a closed taxonomy. Each combines facets and loads different modules; the point is that no two need a special project-type switch.
 
@@ -423,7 +446,7 @@ These are **test profiles**, not a closed taxonomy. Each combines facets and loa
 
 A new surface can be added without editing the profile list: add a facet value, a module, and a test profile.
 
-## 10. Anti-patterns
+## 11. Anti-patterns
 
 - A fixed “project type” list that cannot express combinations.
 - A 60-question form sent before any inspection.
@@ -438,7 +461,7 @@ A new surface can be added without editing the profile list: add a facet value, 
 - Treating a host binary as proof of a reviewer.
 - Claiming “all scenarios covered” from a handful of demos.
 
-## 11. Agent behavior contract
+## 12. Agent behavior contract
 
 1. Start with the outcome, not a project-type label.
 2. Reflect each answer back in plain language.
@@ -452,7 +475,7 @@ A new surface can be added without editing the profile list: add a facet value, 
 10. Do not plan until the gate is met or a named risk is accepted.
 11. Never claim verification from documentation alone.
 
-## 12. Implementation order
+## 13. Implementation order
 
 1. **Discovery record:** stable field IDs, raw words, sources, evidence levels, confidence, sensitivity, owner, and follow-up.
 2. **Facet profile:** validated facet values, extensible custom values, and module selection.
@@ -465,7 +488,7 @@ A new surface can be added without editing the profile list: add a facet value, 
 
 Do not add an LLM judge to decide whether discovery is complete. The agent conducts the interview; the gate is deterministic.
 
-## 13. Sources
+## 14. Sources
 
 - GOV.UK Service Manual, “How the discovery phase works”: https://www.gov.uk/service-manual/agile-delivery/how-the-discovery-phase-works
 - Nielsen Norman Group, “Discovery: Definition”: https://www.nngroup.com/articles/discovery-phase/

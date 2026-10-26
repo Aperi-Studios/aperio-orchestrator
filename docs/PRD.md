@@ -224,7 +224,7 @@ Record every substantive owner instruction, amendment, constraint, rejection, an
 
 Ask one question at a time and build a facet profile rather than forcing one project type. A project can combine change, surface, lifecycle, content, user, data, commerce, discovery, quality, delivery, AI, locale, integration, risk, stage, team, budget, and timeline facets. Collect purpose, audience, features, content, stack, CMS, auth, data, integrations, hosting, budget, localization, accessibility, SEO, maintenance, and deployment constraints. Do not use a form when a conversation is enough.
 
-The question model, eighteen domains, 138 base fields, facet profiles, evidence levels, and module gates are specified in [Discovery and Evidence Intake](DISCOVERY.md).
+The question model, eighteen domains, 138 base fields, facet profiles, evidence levels, module gates, and program decomposition are specified in [Discovery and Evidence Intake](DISCOVERY.md).
 
 **Acceptance:** every required answer is answered or explicitly marked `N/A` or `Assumed` with a reason; placeholders fail.
 

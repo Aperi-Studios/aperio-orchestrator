@@ -101,6 +101,24 @@ must-haves, non-goals, success measure, and access owner are known. If the owner
 cannot answer, record `unknown` with the risk; do not invent an answer. Never
 ask for a password, API key, card number, or recovery code.
 
+### Program-sized requests
+
+If the request is really a program — for example “an ecommerce site with CMS,
+CRM, payments, email, and SEO” — do not turn it into one giant plan.
+
+1. Record the full vision as the destination.
+2. Split it into phases, each with one end-to-end outcome.
+3. Recommend the smallest first phase that proves real value.
+4. Ask the owner to choose the first phase.
+5. Give each phase its own plan, allowed paths, acceptance checks, review, and rollback.
+
+A useful first ecommerce phase is usually catalog + CMS + product pages + an
+inquiry form, with no live payments and no CRM automation. Checkout, CRM sync,
+and growth work come after that path is proven.
+
+Do not treat a large request as a mistake. Treat it as a program that needs a
+first slice. Never approve the whole program in one plan.
+
 ### End of the interview
 
 Show a compact summary:
