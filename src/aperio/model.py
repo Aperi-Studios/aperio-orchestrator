@@ -209,6 +209,7 @@ class Plan:
     created_at: str = field(default_factory=utc_now)
     approval: Approval | None = None
     builder: str = "agent"
+    discovery_digest: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -233,6 +234,7 @@ class Plan:
             created_at=str(data.get("created_at", utc_now())),
             approval=Approval.from_dict(approval_data) if approval_data else None,
             builder=str(data.get("builder", "agent")),
+            discovery_digest=str(data.get("discovery_digest", "")),
         )
         plan.validate()
         return plan

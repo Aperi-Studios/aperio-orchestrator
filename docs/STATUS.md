@@ -14,15 +14,15 @@
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 5 passed | same command; `tests/test_cli.py` |
-| Discovery tests | 15 passed | same command; `tests/test_discovery.py` |
-| Inspection tests | 7 passed | same command; `tests/test_inspect.py` |
+| Discovery tests | 19 passed | same command; `tests/test_discovery.py` |
+| Inspection tests | 10 passed | same command; `tests/test_inspect.py` |
 | Installer tests | 10 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 99 passed | same command |
+| Total test suite | 106 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
-| Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_waiver_allows_plan_and_warns` |
-| Read-only inspection | folder stack, tests, docs, CI, deployment, env names; URL title, meta, H1, canonical, security headers; private URLs and symlinked inputs refused; redirects revalidated | `tests/test_inspect.py`; `aperio inspect` |
+| Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change` |
+| Read-only inspection | folder stack, tests, docs, CI, deployment, env names; URL title, meta, H1, canonical, security headers; private URLs, credential URLs, and symlinked inputs refused; redirects revalidated; query values redacted | `tests/test_inspect.py`; `aperio inspect` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
 | Path traversal and symlink escape | refused, including dangling symlink components | `tests/test_core.py` |

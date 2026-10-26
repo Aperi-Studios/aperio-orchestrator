@@ -11,7 +11,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from aperio.cli import cmd_plan
+from aperio.cli import cmd_approve, cmd_plan
 from aperio.discovery import (
     WAIVER_CONFIRM,
     DiscoveryError,
@@ -54,10 +54,12 @@ class DiscoveryTests(unittest.TestCase):
         for question_id, choices, text in answers:
             answer_question(self.project, question_id, choices=choices, text=text)
 
-    def test_next_creates_persistent_state(self) -> None:
+    def test_next_is_read_only(self) -> None:
         question = next_question(self.project)
         assert question is not None
         self.assertEqual(question.id, "idea")
+        self.assertFalse((self.root / ".aperio" / "discovery.json").exists())
+        answer_question(self.project, "idea", text="A small portfolio site")
         self.assertTrue((self.root / ".aperio" / "discovery.json").is_file())
 
     def test_answer_and_status(self) -> None:
@@ -215,7 +217,7 @@ class DiscoveryTests(unittest.TestCase):
             parse_choices(question, "²")
 
     def test_empty_answer_is_not_complete(self) -> None:
-        next_question(self.project)
+        answer_question(self.project, "idea", text="A small portfolio site")
         data = self.project.discovery()
         assert data is not None
         data["answers"]["idea"] = {"status": "answered", "values": [], "text": " "}
@@ -226,7 +228,7 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(question.id, "idea")
 
     def test_malformed_state_is_rejected(self) -> None:
-        next_question(self.project)
+        answer_question(self.project, "idea", text="A small portfolio site")
         data = self.project.discovery()
         assert data is not None
         data["answers"] = []
@@ -235,6 +237,49 @@ class DiscoveryTests(unittest.TestCase):
             status(self.project)
         with self.assertRaises(DiscoveryError):
             summary(self.project)
+
+    def test_plan_is_invalidated_by_discovery_change(self) -> None:
+        self.complete()
+        plan = ROOT / "examples" / "demo-site-plan.json"
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                cmd_plan(argparse.Namespace(project=str(self.root), file=str(plan))),
+                0,
+            )
+        plan_id = output.getvalue().splitlines()[0].split()[1]
+        answer_question(self.project, "labels", choices=["commerce"])
+        args = argparse.Namespace(
+            project=str(self.root),
+            plan_id=plan_id,
+            by="owner",
+            note="",
+            confirm="I approve this plan",
+        )
+        with self.assertRaises(DiscoveryError):
+            cmd_approve(args)
+
+    def test_labels_text_answer_is_rejected(self) -> None:
+        with self.assertRaises(DiscoveryError):
+            answer_question(self.project, "labels", text="new")
+
+    def test_per_answer_malformed_shape_is_rejected(self) -> None:
+        answer_question(self.project, "idea", text="A small portfolio site")
+        data = self.project.discovery()
+        assert data is not None
+        data["answers"]["idea"] = {"values": None, "status": "answered"}
+        self.project.save_discovery(data)
+        with self.assertRaises(DiscoveryError):
+            status(self.project)
+
+    def test_unsupported_schema_is_rejected(self) -> None:
+        answer_question(self.project, "idea", text="A small portfolio site")
+        data = self.project.discovery()
+        assert data is not None
+        data["schema"] = 99
+        self.project.save_discovery(data)
+        with self.assertRaises(DiscoveryError):
+            status(self.project)
 
     def test_plan_refuses_incomplete_discovery(self) -> None:
         plan = ROOT / "examples" / "demo-site-plan.json"

@@ -7,6 +7,7 @@ project state. It does not call a model and does not invent an answer.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
@@ -150,6 +151,7 @@ QUESTIONS: tuple[Question, ...] = (
             _c("cms", "CMS or editorial workflow"),
         ),
         multi=True,
+        allow_text=False,
     ),
     Question(
         "commerce_flow",
@@ -333,8 +335,37 @@ def _read_state(data: dict[str, Any] | None) -> dict[str, Any]:
         raise DiscoveryError("discovery state is missing")
     if not isinstance(data, dict) or not isinstance(data.get("answers"), dict):
         raise DiscoveryError("discovery state is malformed")
-    if not isinstance(data.get("waivers"), dict):
+    schema = data.get("schema", SCHEMA_VERSION)
+    if schema != SCHEMA_VERSION:
+        raise DiscoveryError(f"unsupported discovery schema: {schema}")
+    if "waivers" not in data:
         data["waivers"] = {}
+    if not isinstance(data["waivers"], dict):
+        raise DiscoveryError("discovery waivers are malformed")
+    for question_id, answer in data["answers"].items():
+        if question_id not in QUESTION_BY_ID:
+            raise DiscoveryError(f"discovery answer has unknown question: {question_id}")
+        if not isinstance(answer, dict):
+            raise DiscoveryError(f"discovery answer is malformed: {question_id}")
+        values = answer.get("values", [])
+        if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+            raise DiscoveryError(f"discovery answer values are malformed: {question_id}")
+        valid = {choice.value for choice in QUESTION_BY_ID[question_id].choices}
+        if any(value not in valid for value in values):
+            raise DiscoveryError(f"discovery answer has an unknown choice: {question_id}")
+        if answer.get("status") not in {"answered", "research"}:
+            raise DiscoveryError(f"discovery answer status is malformed: {question_id}")
+        for key in ("text", "evidence"):
+            if not isinstance(answer.get(key, ""), str):
+                raise DiscoveryError(f"discovery answer {key} is malformed: {question_id}")
+    for question_id, waiver in data["waivers"].items():
+        if question_id not in QUESTION_BY_ID or not isinstance(waiver, dict):
+            raise DiscoveryError(f"discovery waiver is malformed: {question_id}")
+        if waiver.get("status") != "waived":
+            raise DiscoveryError(f"discovery waiver status is malformed: {question_id}")
+        for key in ("by", "risk", "review_at"):
+            if not isinstance(waiver.get(key), str) or not waiver[key].strip():
+                raise DiscoveryError(f"discovery waiver {key} is malformed: {question_id}")
     return data
 
 
@@ -358,8 +389,13 @@ def _applicable(data: dict[str, Any]) -> list[Question]:
     ]
 
 
+def _read_or_new(project: Project) -> dict[str, Any]:
+    data = project.discovery()
+    return _new_state() if data is None else _read_state(data)
+
+
 def next_question(project: Project) -> Question | None:
-    data = _state(project)
+    data = _read_or_new(project)
     waivers = data.get("waivers", {})
     for question in _applicable(data):
         if question.id in waivers:
@@ -371,7 +407,7 @@ def next_question(project: Project) -> Question | None:
 
 
 def question_index(project: Project, question_id: str) -> int:
-    data = _state(project)
+    data = _read_or_new(project)
     for index, question in enumerate(_applicable(data), 1):
         if question.id == question_id:
             return index
@@ -509,6 +545,20 @@ def waive_question(
     return waiver
 
 
+def digest(project: Project) -> str:
+    data = project.discovery()
+    if data is None:
+        raise DiscoveryError("discovery state is missing")
+    data = _read_state(data)
+    payload = {
+        "schema": data.get("schema", SCHEMA_VERSION),
+        "answers": data.get("answers", {}),
+        "waivers": data.get("waivers", {}),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def status(project: Project) -> dict[str, Any]:
     data = project.discovery()
     if data is None:
@@ -603,7 +653,7 @@ def summary(project: Project) -> str:
 
 
 def format_question(project: Project, question: Question) -> str:
-    data = _state(project)
+    data = _read_or_new(project)
     index = question_index(project, question.id)
     lines = [f"Discovery {index} of {len(_applicable(data))} · {question.domain}", "", question.prompt, ""]
     if question.choices:

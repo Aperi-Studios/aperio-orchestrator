@@ -66,6 +66,7 @@ class _HtmlFacts(HTMLParser):
         self.scripts = 0
         self._in_title = False
         self._in_h1 = False
+        self._h1_parts: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = {key.lower(): value or "" for key, value in attrs}
@@ -75,6 +76,7 @@ class _HtmlFacts(HTMLParser):
             self._in_title = True
         elif tag == "h1":
             self._in_h1 = True
+            self._h1_parts = []
         elif tag == "meta":
             name = values.get("name", "").lower()
             if name == "description":
@@ -91,7 +93,7 @@ class _HtmlFacts(HTMLParser):
             self.links += 1
         elif tag == "img":
             self.images += 1
-            if not values.get("alt", "").strip():
+            if "alt" not in values:
                 self.images_without_alt += 1
         elif tag == "form":
             self.forms += 1
@@ -102,6 +104,9 @@ class _HtmlFacts(HTMLParser):
         if tag == "title":
             self._in_title = False
         elif tag == "h1":
+            if self._h1_parts:
+                self.h1.append(" ".join(self._h1_parts))
+            self._h1_parts = []
             self._in_h1 = False
 
     def handle_data(self, data: str) -> None:
@@ -111,7 +116,7 @@ class _HtmlFacts(HTMLParser):
         if self._in_title:
             self.title = (self.title + " " + value).strip()
         if self._in_h1:
-            self.h1.append(value)
+            self._h1_parts.append(value)
 
 
 def parse_html(text: str, base_url: str = "") -> dict[str, Any]:
@@ -120,10 +125,13 @@ def parse_html(text: str, base_url: str = "") -> dict[str, Any]:
         parser.feed(text)
     except Exception as exc:  # pragma: no cover - HTMLParser is tolerant
         raise InspectionError(f"could not parse HTML: {exc}") from exc
+    canonical = parser.canonical
+    if canonical and base_url:
+        canonical = urllib.parse.urljoin(base_url, canonical)
     return {
         "title": parser.title,
         "description": parser.description,
-        "canonical": parser.canonical,
+        "canonical": canonical,
         "robots": parser.robots,
         "lang": parser.lang,
         "h1": parser.h1[:10],
@@ -141,7 +149,7 @@ def _read_json(path: Path) -> dict[str, Any] | None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeError, json.JSONDecodeError):
         return None
     return data if isinstance(data, dict) else None
 
@@ -158,7 +166,7 @@ def _env_names(path: Path) -> list[str]:
             key = line.split("=", 1)[0].strip()
             if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
                 names.append(key)
-    except OSError:
+    except (OSError, UnicodeError):
         return []
     return sorted(dict.fromkeys(names))[:50]
 
@@ -233,7 +241,7 @@ def _detect_stack(root: Path) -> dict[str, Any]:
     if requirements.is_file():
         try:
             text = requirements.read_text(encoding="utf-8").lower()
-        except OSError:
+        except (OSError, UnicodeError):
             text = ""
         for token, label in (
             ("fastapi", "FastAPI"),
@@ -342,6 +350,7 @@ def inspect_path(root: str | Path) -> dict[str, Any]:
         raise InspectionError(f"not a directory: {path}")
     files = 0
     total_bytes = 0
+    truncated = False
     top_level: list[str] = []
     try:
         top_level = sorted(item.name for item in path.iterdir() if item.name not in SKIP_DIRS)
@@ -361,6 +370,7 @@ def inspect_path(root: str | Path) -> dict[str, Any]:
             except OSError:
                 pass
             if files >= MAX_FILES:
+                truncated = True
                 break
         if files >= MAX_FILES:
             break
@@ -399,6 +409,7 @@ def inspect_path(root: str | Path) -> dict[str, Any]:
         "name": path.name,
         "top_level": top_level[:80],
         "files": files,
+        "truncated": truncated,
         "bytes": total_bytes,
         "stack": stack_facts["stack"],
         "scripts": stack_facts["scripts"],
@@ -444,9 +455,22 @@ def _validate_url(url: str, allow_private: bool) -> urllib.parse.SplitResult:
     parsed = urllib.parse.urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise InspectionError(f"URL must be http or https with a hostname: {url}")
+    if parsed.username or parsed.password:
+        raise InspectionError("URL must not contain credentials")
     if not allow_private and _private_host(parsed.hostname):
         raise InspectionError("refusing a private, loopback, or non-public URL")
     return parsed
+
+
+def _display_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.query:
+        return url
+    pairs = []
+    for item in parsed.query.split("&"):
+        key = item.split("=", 1)[0]
+        pairs.append(f"{key}=[redacted]" if key else "[redacted]")
+    return urllib.parse.urlunsplit(parsed._replace(query="&".join(pairs)))
 
 
 class _CheckedRedirect(urllib.request.HTTPRedirectHandler):
@@ -479,7 +503,10 @@ def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
         with opener.open(request, timeout=12) as response:
             body = response.read(MAX_URL_BYTES)
             charset = response.headers.get_content_charset() or "utf-8"
-            text = body.decode(charset, errors="replace")
+            try:
+                text = body.decode(charset, errors="replace")
+            except LookupError:
+                text = body.decode("utf-8", errors="replace")
             headers = response.headers
             final_url = response.geturl()
             status = response.status
@@ -501,8 +528,8 @@ def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
     return {
         "kind": "url",
         "captured_at": utc_now(),
-        "url": url,
-        "final_url": final_url,
+        "url": _display_url(url),
+        "final_url": _display_url(final_url),
         "status": status,
         "content_type": headers.get("Content-Type", ""),
         "server": headers.get("Server", ""),
@@ -526,8 +553,14 @@ def collect(project: Project, url: str | None = None, allow_private: bool = Fals
         "limits": list(folder.get("limits", [])),
     }
     if url:
-        data["url"] = inspect_url(url, allow_private=allow_private)
-        data["limits"].extend(data["url"].get("limits", []))
+        try:
+            data["url"] = inspect_url(url, allow_private=allow_private)
+            data["limits"].extend(data["url"].get("limits", []))
+        except InspectionError as exc:
+            data["url"] = {"error": str(exc)}
+            data["limits"].append("The URL inspection failed; folder facts are still recorded.")
+            project.save_inspection(data)
+            raise
     project.save_inspection(data)
     return data
 

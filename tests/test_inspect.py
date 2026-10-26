@@ -15,6 +15,7 @@ from aperio.discovery import answer_question
 from aperio.inspect import (
     InspectionError,
     _CheckedRedirect,
+    _display_url,
     collect,
     hints,
     inspect_path,
@@ -138,6 +139,32 @@ class InspectTests(unittest.TestCase):
         self.assertEqual(facts["h1"], ["H"])
         self.assertEqual(facts["images_without_alt"], 1)
         self.assertEqual(facts["forms"], 1)
+
+    def test_html_parser_handles_inline_h1_and_decorative_alt(self) -> None:
+        facts = parse_html(
+            '<link rel="canonical" href="/x"><h1>Hello <em>world</em></h1>'
+            '<img src="decorative.png" alt="">',
+            base_url="https://example.com/page",
+        )
+        self.assertEqual(facts["h1"], ["Hello world"])
+        self.assertEqual(facts["images_without_alt"], 0)
+        self.assertEqual(facts["canonical"], "https://example.com/x")
+
+    def test_url_rejects_credentials_and_redacts_query(self) -> None:
+        with self.assertRaises(InspectionError):
+            inspect_url("https://user:pass@example.com/")
+        self.assertEqual(
+            _display_url("https://example.com/page?token=SECRET&x=1"),
+            "https://example.com/page?token=[redacted]&x=[redacted]",
+        )
+
+    def test_collect_saves_folder_when_url_fails(self) -> None:
+        with self.assertRaises(InspectionError):
+            collect(self.project, url="http://127.0.0.1:1/")
+        data = self.project.inspection()
+        assert data is not None
+        self.assertEqual(data["folder"]["kind"], "folder")
+        self.assertIn("error", data["url"])
 
     def test_url_inspection_and_private_refusal(self) -> None:
         server = ThreadingHTTPServer(("127.0.0.1", 0), HtmlHandler)

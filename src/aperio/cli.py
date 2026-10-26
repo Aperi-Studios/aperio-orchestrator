@@ -23,6 +23,9 @@ from .discovery import (
     waive_question,
 )
 from .discovery import (
+    digest as discovery_digest,
+)
+from .discovery import (
     status as discovery_status,
 )
 from .discovery import (
@@ -114,13 +117,19 @@ def cmd_plan(args: argparse.Namespace) -> int:
             raise DiscoveryError(
                 "discovery is required before planning; finish or waive: " + missing
             )
-        raise DiscoveryError("discovery has unresolved research answers; record a decision first")
+        if progress["research"]:
+            research = ", ".join(progress["research"])
+            raise DiscoveryError(
+                "discovery has unresolved research answers; record a decision first: " + research
+            )
+        raise DiscoveryError("discovery is not ready")
     if progress["waived"]:
         print(
             "WARNING: discovery waivers accepted: " + ", ".join(progress["waived"]),
             file=sys.stderr,
         )
 
+    plan.discovery_digest = discovery_digest(project)
     task.plan_id = plan.id
     with project.lock():
         project.save_plan(plan)
@@ -131,11 +140,22 @@ def cmd_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _require_current_discovery(project: Project, plan: Plan) -> None:
+    if not plan.discovery_digest:
+        return
+    current = discovery_digest(project)
+    if current != plan.discovery_digest:
+        raise DiscoveryError(
+            "discovery changed after this plan was created; make a new plan"
+        )
+
+
 def cmd_approve(args: argparse.Namespace) -> int:
     project = _project(args)
     if args.confirm != "I approve this plan":
         raise ModelError('approval requires --confirm "I approve this plan"')
     plan = project.get_plan(args.plan_id)
+    _require_current_discovery(project, plan)
     task = project.get_task(plan.task_id)
     if task.status not in {"planned", "approved", "failed"}:
         raise ModelError(f"task is {task.status}; an approved, verified, or done task cannot be re-approved")
@@ -155,6 +175,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not task.plan_id:
         raise RunError("task has no plan")
     plan = project.get_plan(task.plan_id)
+    _require_current_discovery(project, plan)
     evidence = apply_plan(project, plan, actor=args.actor)
     print(f"{evidence['run_id']}  {evidence['status']}")
     if evidence.get("changed_files"):
@@ -323,6 +344,9 @@ def _question_payload(project: Project, question: Any) -> dict[str, Any]:
             "answered": progress["answered"],
             "total": progress["total"],
             "research": progress["research"],
+            "missing": progress["missing"],
+            "waived": progress["waived"],
+            "waived_research": progress["waived_research"],
             "ready": progress["ready"],
         },
         "hints": inspection_hints(project, question.id),

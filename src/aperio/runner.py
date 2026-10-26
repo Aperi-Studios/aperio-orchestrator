@@ -313,6 +313,16 @@ def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[
 
 def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, Any]:
     """Apply an approved plan. Returns the evidence record."""
+    if plan.discovery_digest:
+        from .discovery import DiscoveryError
+        from .discovery import digest as discovery_digest
+
+        try:
+            current = discovery_digest(project)
+        except DiscoveryError as exc:
+            raise RunError("discovery state is missing or invalid") from exc
+        if current != plan.discovery_digest:
+            raise RunError("discovery changed after this plan was created; make a new plan")
     if not plan.approval:
         raise RunError("plan is not approved")
     task = project.get_task(plan.task_id)

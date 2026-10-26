@@ -146,6 +146,10 @@ only in chat:
 - `aperio discover summary` prints the recorded interview.
 - `aperio discover waive <question-id> --by owner --risk "..." --review-at "YYYY-MM-DD" --confirm "I accept this risk"` records an explicit owner waiver with a review date.
 
+The plan gate is bound to the discovery record. If discovery changes after a plan is
+created, the plan cannot be approved or run; make a new plan. Do not edit
+`.aperio/discovery.json` by hand.
+
 A `research` answer is not complete. Research it, present the recommendation,
 and record the owner's decision before planning. Do not write a plan while
 `ready` is false unless the owner explicitly accepts a named risk. The agent
