@@ -86,7 +86,12 @@ if ($Rollback) {
         Write-Host "would: restore $($backup.FullName) to $Lib"
         exit 0
     }
-    Restore-Library $backup.FullName
+    try {
+        Restore-Library $backup.FullName
+    } catch {
+        [Console]::Error.WriteLine("install.ps1: could not restore the backup to $Lib")
+        exit 2
+    }
     Write-Host "rolled back to $((Get-Content (Join-Path $Lib 'VERSION') -Raw).Trim())"
     exit 0
 }
@@ -127,7 +132,7 @@ if ($Uninstall) {
 }
 
 if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir "SKILL.md")) -and -not (Test-Path (Join-Path $SkillDir $Marker))) {
-    Write-Error "install.ps1: refusing to overwrite existing $SkillDir/SKILL.md; move it aside or use -NoSkill"
+    [Console]::Error.WriteLine("install.ps1: refusing to overwrite existing $SkillDir/SKILL.md; move it aside or use -NoSkill")
     exit 2
 }
 

@@ -277,7 +277,7 @@ class InstallerTests(unittest.TestCase):
             rollback = self.run_install("--rollback")
         finally:
             os.chmod(share, old_mode)
-        self.assertNotEqual(rollback.returncode, 0)
+        self.assertEqual(rollback.returncode, 2, rollback.stderr)
         self.assertTrue((self.prefix / "share" / "aperio" / "VERSION").is_file())
 
     def test_powershell_rollback_without_backup_is_refused(self) -> None:
@@ -323,8 +323,28 @@ class InstallerTests(unittest.TestCase):
             rollback = subprocess.run(base + ["-Rollback"], check=False, capture_output=True, text=True, timeout=60)
         finally:
             os.chmod(share, old_mode)
-        self.assertNotEqual(rollback.returncode, 0)
+        self.assertEqual(rollback.returncode, 2, rollback.stderr)
         self.assertTrue((prefix / "share" / "aperio" / "VERSION").is_file())
+
+    def test_powershell_skill_overwrite_is_refused(self) -> None:
+        if not shutil.which("pwsh"):
+            self.skipTest("pwsh is not installed")
+        home = self.root / "ps-home"
+        skills = self.root / "ps-skills"
+        skill_dir = skills / "aperio"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("foreign\n", encoding="utf-8")
+        env = dict(os.environ, HOME=str(home), APERIO_SKILL_HOME=str(skills))
+        result = subprocess.run(
+            ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(self.root / "ps-skill-refusal"), "-DryRun"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("refusing to overwrite", result.stderr)
 
     def test_powershell_unsafe_prefix_is_refused(self) -> None:
         if not shutil.which("pwsh"):
