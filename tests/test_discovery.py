@@ -327,7 +327,7 @@ class DiscoveryTests(unittest.TestCase):
         )
         plan = ROOT / "examples" / "demo-site-plan.json"
         output = io.StringIO()
-        with redirect_stdout(output):
+        with redirect_stdout(output), redirect_stderr(io.StringIO()):
             self.assertEqual(
                 cmd_plan(argparse.Namespace(project=str(self.root), file=str(plan))),
                 0,

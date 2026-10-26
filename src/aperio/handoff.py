@@ -62,7 +62,8 @@ def build_handoff(project: Project, task_id: str) -> str:
     repository = repo_facts(project)
     if repository:
         changed = f" ({repository['changed']} changed)" if repository["dirty"] else ""
-        lines[7:7] = [
+        anchor = lines.index("## Requested outcome")
+        lines[anchor:anchor] = [
             "## Repository",
             "",
             f"**Branch:** `{repository['branch']}`  ",
