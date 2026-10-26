@@ -62,6 +62,8 @@ aperio readiness import readiness.json
 aperio readiness validate
 aperio skill create custom-stack --purpose "..." --trigger "When the custom stack is used"
 aperio skill validate custom-stack
+aperio tool import examples/toolchain.json
+aperio tool install custom-tool --by owner --confirm "I approve this tool install"
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder
@@ -105,6 +107,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Owner-visible todo ledger with ordered, minimal tasks; `plan` refuses an empty todo list, and the next task cannot start until the previous task is accepted with evidence.
 - Readiness record for pre-flight, deployment, after-sales, design, and security facts; `aperio readiness validate` refuses gaps and high/critical unresolved risk.
 - Project-scoped skill creation: `aperio skill create` writes a validated scaffold under `.aperio/skills/` and refuses to overwrite a foreign skill.
+- Manifest-driven toolchain installation: `aperio tool import` validates source, version, license, permissions, risk flags, cost, install argv, and verify argv; risky tools require exact owner confirmation.
 - Non-overridable `.git` and `.aperio` protection, plus a read-only `kind: read` step that fails on any project change.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
 - Host dispatch through a disposable project copy for the Claude, Codex, dsh, Goose, OpenCode, KiloCode, Cline, and agy adapters. Claude and Codex are proven on current code. dsh and Goose command paths are tested, but their live runs are blocked by a missing credential and an HTTP 500 bridge, respectively. The OpenCode, KiloCode, Cline, and agy command shapes are tested with a fake binary; live runs are not yet proven.
@@ -132,7 +135,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Optional OS sandboxing for shell/read steps when a plan sets `sandbox: true`; host steps are still detected, not jailed.
 - Remote deployment.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer is tested under `pwsh` on macOS.
-- Automated MCP or package installation. The learning dossier records the decision and provenance; installation must happen through an approved plan or the host, with owner approval for global/paid/credentialed tools.
+- Automated MCP or package discovery. Installation works only from a declared toolchain manifest with an explicit argv and verification command; risky tools still require owner approval.
 - Automatic public release.
 
 ## Safety model

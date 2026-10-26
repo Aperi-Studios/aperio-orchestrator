@@ -20,6 +20,7 @@ src/aperio/
   todo.py       owner-visible todo list and one-task approval ledger
   readiness.py  pre-flight, deploy, after-sales, design, and security checks
   skillgen.py   project-scoped skill scaffolding and registry
+  toolchain.py  manifest validation and approval-gated tool installation
   inspect.py    read-only folder facts and URL metadata
   evidence.py   path, size, and SHA-256 evidence manifest
   audit.py      coverage-ledger security audit records and reports
@@ -49,6 +50,7 @@ A project initializes `.aperio/`:
   todo.json         ordered tasks, statuses, acceptance evidence, and approvals
   readiness.json    pre-flight, deploy, after-sales, design, and security records
   skills/           project-scoped generated skills and registry
+  toolchain.json    declared tools, install/verify argv, and install results
   evidence/<task>/  run, verification, and review records
   runs/<id>/        run manifest and crash checkpoint
   dispatch/<id>/    disposable host workspace and host evidence

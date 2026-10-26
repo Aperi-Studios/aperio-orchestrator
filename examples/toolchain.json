@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "tools": [
+    {
+      "name": "example-project-tool",
+      "kind": "package",
+      "source": "Replace with the official source URL or registry",
+      "version": "Replace with the exact version",
+      "license": "Replace with the license",
+      "scope": "project",
+      "permissions": [
+        "Replace with the files or directories this tool may touch"
+      ],
+      "network": false,
+      "credentials": false,
+      "elevated": false,
+      "cost_usd": 0,
+      "install": [
+        "replace-with-the-install-argv",
+        "--version",
+        "Replace with the exact version"
+      ],
+      "verify": [
+        "replace-with-the-verify-argv",
+        "--version"
+      ]
+    }
+  ]
+}

@@ -102,6 +102,12 @@ from .todo import defer as todo_defer
 from .todo import format_status as format_todo
 from .todo import start as todo_start
 from .todo import status as todo_status
+from .toolchain import ToolError
+from .toolchain import format_status as format_toolchain
+from .toolchain import import_manifest as import_toolchain
+from .toolchain import install as install_tool
+from .toolchain import status as toolchain_status
+from .toolchain import validate_manifest as validate_toolchain
 
 
 def _project(args: argparse.Namespace) -> Project:
@@ -799,6 +805,33 @@ def cmd_skill(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_tool(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.tool_command == "import":
+        result = import_toolchain(project, args.file, replace=args.replace)
+        print(as_json(result) if args.json else format_toolchain(result))
+        return 0
+    if args.tool_command == "validate":
+        data = json.loads(Path(args.file).read_text(encoding="utf-8"))
+        issues = validate_toolchain(data)
+        result = {"file": args.file, "ready": not issues, "issues": issues}
+        print(as_json(result) if args.json else ("\n".join(issues) if issues else "toolchain  ready"))
+        return 0 if not issues else 1
+    if args.tool_command == "install":
+        result = install_tool(
+            project,
+            args.name,
+            approved_by=args.by,
+            confirm=args.confirm,
+            timeout=args.timeout,
+        )
+        print(as_json(result) if args.json else f"{result['name']}  installed  {result['version']}")
+        return 0
+    data = toolchain_status(project)
+    print(as_json(data) if args.json else format_toolchain(data))
+    return 0
+
+
 def cmd_audit(args: argparse.Namespace) -> int:
     project = _project(args)
     with project.lock():
@@ -1131,6 +1164,28 @@ def build_parser() -> argparse.ArgumentParser:
     skill_validate_parser.add_argument("--json", action="store_true")
     skill_validate_parser.set_defaults(func=cmd_skill)
 
+    p = sub.add_parser("tool", help="approval-gated toolchain and MCP manifest")
+    tool = p.add_subparsers(dest="tool_command", required=True)
+    tool_import = tool.add_parser("import", help="import a toolchain JSON manifest")
+    tool_import.add_argument("file")
+    tool_import.add_argument("--replace", action="store_true")
+    tool_import.add_argument("--json", action="store_true")
+    tool_import.set_defaults(func=cmd_tool)
+    tool_validate = tool.add_parser("validate", help="validate a manifest without importing it")
+    tool_validate.add_argument("file")
+    tool_validate.add_argument("--json", action="store_true")
+    tool_validate.set_defaults(func=cmd_tool)
+    tool_install = tool.add_parser("install", help="install and verify one declared tool")
+    tool_install.add_argument("name")
+    tool_install.add_argument("--by", default="")
+    tool_install.add_argument("--confirm", default="")
+    tool_install.add_argument("--timeout", type=int, default=300)
+    tool_install.add_argument("--json", action="store_true")
+    tool_install.set_defaults(func=cmd_tool)
+    tool_status = tool.add_parser("status", help="show declared and installed tools")
+    tool_status.add_argument("--json", action="store_true")
+    tool_status.set_defaults(func=cmd_tool)
+
     p = sub.add_parser("audit", help="source-anchored security audit ledger")
     audit = p.add_subparsers(dest="audit_command", required=True)
     audit_start_parser = audit.add_parser("start", help="create an audit ledger")
@@ -1235,6 +1290,7 @@ def main(argv: list[str] | None = None) -> int:
         LearningError,
         ReadinessError,
         SkillError,
+        ToolError,
         OSError,
         json.JSONDecodeError,
     ) as exc:
