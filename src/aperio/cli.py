@@ -84,6 +84,9 @@ from .readiness import status as readiness_status
 from .repo import facts as repo_facts
 from .repo import format_facts as format_git
 from .runner import RunError, apply_plan, finish, review, rollback, verify
+from .skillgen import SkillError, list_skills
+from .skillgen import create as skill_create
+from .skillgen import validate as skill_validate
 from .store import Project, StoreError
 from .todo import accept as todo_accept
 from .todo import add as todo_add
@@ -694,6 +697,29 @@ def cmd_readiness(args: argparse.Namespace) -> int:
     return 0 if result["ready"] else 1
 
 
+def cmd_skill(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.skill_command == "create":
+        record = skill_create(
+            project,
+            args.name,
+            purpose=args.purpose,
+            triggers=args.trigger,
+            body=args.body,
+            replace=args.replace,
+        )
+        print(as_json(record) if args.json else f"{record['name']}  {record['status']}  {record['path']}")
+        return 0
+    if args.skill_command == "validate":
+        issues = skill_validate(project, args.name)
+        result = {"name": args.name, "ready": not issues, "issues": issues}
+        print(as_json(result) if args.json else ("\n".join(issues) if issues else f"{args.name}  ready"))
+        return 0 if not issues else 1
+    data = list_skills(project)
+    print(as_json(data) if args.json else "\n".join(item["name"] for item in data["skills"]) or "No project skills.")
+    return 0
+
+
 def cmd_audit(args: argparse.Namespace) -> int:
     project = _project(args)
     with project.lock():
@@ -999,6 +1025,24 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_validate.add_argument("--json", action="store_true")
     readiness_validate.set_defaults(func=cmd_readiness)
 
+    p = sub.add_parser("skill", help="project-scoped skill scaffolding")
+    skill = p.add_subparsers(dest="skill_command", required=True)
+    skill_create_parser = skill.add_parser("create", help="create or update an owned project skill")
+    skill_create_parser.add_argument("name")
+    skill_create_parser.add_argument("--purpose", required=True)
+    skill_create_parser.add_argument("--trigger", action="append", required=True)
+    skill_create_parser.add_argument("--body", default="")
+    skill_create_parser.add_argument("--replace", action="store_true")
+    skill_create_parser.add_argument("--json", action="store_true")
+    skill_create_parser.set_defaults(func=cmd_skill)
+    skill_list = skill.add_parser("list", help="list project skills")
+    skill_list.add_argument("--json", action="store_true")
+    skill_list.set_defaults(func=cmd_skill)
+    skill_validate_parser = skill.add_parser("validate", help="validate a project skill")
+    skill_validate_parser.add_argument("name")
+    skill_validate_parser.add_argument("--json", action="store_true")
+    skill_validate_parser.set_defaults(func=cmd_skill)
+
     p = sub.add_parser("audit", help="source-anchored security audit ledger")
     audit = p.add_subparsers(dest="audit_command", required=True)
     audit_start_parser = audit.add_parser("start", help="create an audit ledger")
@@ -1102,6 +1146,7 @@ def main(argv: list[str] | None = None) -> int:
         InspectionError,
         LearningError,
         ReadinessError,
+        SkillError,
         OSError,
         json.JSONDecodeError,
     ) as exc:
