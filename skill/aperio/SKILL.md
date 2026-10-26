@@ -9,6 +9,17 @@ Aperio is a bounded project loop, not an autonomous shell. Every change goes
 through an ask, an approved plan, a recorded run, acceptance checks, and an
 independent review.
 
+## Start of a session
+
+If `/aperio` is invoked without a request, ask exactly two questions and stop:
+
+1. What should be built or changed, in the owner's own words?
+2. What should the project be called?
+
+Do not run host detection, initialize a project, write a plan, or touch files
+until the ask is recorded. Do not present a host inventory as proof that a
+reviewer is available; presence is not permission.
+
 ## Commands
 
 Before running these, check `type aperio`. If it is a shell function, use `command aperio` or `$HOME/.local/bin/aperio`; a shell wrapper must not shadow the installed CLI.
