@@ -430,6 +430,7 @@ def inspect_path(root: str | Path) -> dict[str, Any]:
             "Inspection is read-only but does not prove behavior.",
             "No files outside the target are read.",
             "No dependency is installed, built, or executed.",
+            "Environment files are read only for variable names; values are never recorded.",
         ],
     }
 
