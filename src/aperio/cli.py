@@ -31,6 +31,10 @@ from .drift import check as drift_check
 from .drift import format_findings as format_drift
 from .handoff import write_handoff
 from .hosts import detect_hosts
+from .inspect import InspectionError
+from .inspect import collect as collect_inspection
+from .inspect import format_report as format_inspection
+from .inspect import hints as inspection_hints
 from .mediator import MediationError, mediate
 from .mesh import MeshError, MeshStore
 from .model import Acceptance, Approval, ModelError, Plan, Step, Task, new_id
@@ -310,6 +314,7 @@ def _question_payload(project: Project, question: Any) -> dict[str, Any]:
             "research": progress["research"],
             "ready": progress["ready"],
         },
+        "hints": inspection_hints(project, question.id),
     }
 
 
@@ -327,6 +332,11 @@ def cmd_discover(args: argparse.Namespace) -> int:
             print(as_json({"ready": False, "question": _question_payload(project, question)}))
         else:
             print(format_next(project))
+            hints = inspection_hints(project, question.id)
+            if hints:
+                print("\nInspection hints:")
+                for hint in hints:
+                    print(f"- {hint}")
         return 0
     if args.discover_command == "answer":
         question = QUESTION_BY_ID.get(args.question_id)
@@ -367,6 +377,13 @@ def cmd_discover(args: argparse.Namespace) -> int:
         print(discovery_summary(project))
         return 0
     raise DiscoveryError("unknown discover command")
+
+
+def cmd_inspect(args: argparse.Namespace) -> int:
+    project = _project(args)
+    data = collect_inspection(project, url=args.url, allow_private=args.allow_private)
+    print(as_json(data) if args.json else format_inspection(data))
+    return 0
 
 
 def cmd_message(args: argparse.Namespace) -> int:
@@ -516,6 +533,12 @@ def build_parser() -> argparse.ArgumentParser:
     discover_summary = discover.add_parser("summary", help="show recorded answers")
     discover_summary.set_defaults(func=cmd_discover)
 
+    p = sub.add_parser("inspect", help="read-only folder and URL inspection")
+    p.add_argument("--url", default=None, help="public URL to inspect read-only")
+    p.add_argument("--allow-private", action="store_true", help="allow a private or loopback URL")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_inspect)
+
     p = sub.add_parser("message", help="local durable message store")
     msg = p.add_subparsers(dest="message_command", required=True)
     send = msg.add_parser("send", help="send a message")
@@ -563,6 +586,7 @@ def main(argv: list[str] | None = None) -> int:
         MeshError,
         MediationError,
         DiscoveryError,
+        InspectionError,
         OSError,
         json.JSONDecodeError,
     ) as exc:

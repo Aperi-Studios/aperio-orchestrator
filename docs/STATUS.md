@@ -15,11 +15,13 @@
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Discovery tests | 8 passed | same command; `tests/test_discovery.py` |
+| Inspection tests | 5 passed | same command; `tests/test_inspect.py` |
 | Installer tests | 10 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 84 passed | same command |
+| Total test suite | 89 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
+| Read-only inspection | folder stack, tests, docs, CI, deployment, env names; URL title, meta, H1, canonical, security headers; private URLs refused | `tests/test_inspect.py`; `aperio inspect` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
 | Path traversal and symlink escape | refused, including dangling symlink components | `tests/test_core.py` |

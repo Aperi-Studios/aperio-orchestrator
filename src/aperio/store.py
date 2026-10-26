@@ -173,6 +173,16 @@ class Project:
         self._write_json(self.state / "discovery.json", data)
         self.append_event("discovery.updated", {"answered": len(data.get("answers", {}))})
 
+    def inspection(self) -> dict[str, Any] | None:
+        path = self.state / "inspection.json"
+        if not path.is_file():
+            return None
+        return self._read_json(path)
+
+    def save_inspection(self, data: dict[str, Any]) -> None:
+        self._write_json(self.state / "inspection.json", data)
+        self.append_event("inspection.updated", {"kind": data.get("kind", "unknown")})
+
     def add_ask(self, text: str, source: str = "manual") -> Ask:
         if not text or not text.strip():
             raise ModelError("ask text must not be empty")

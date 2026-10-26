@@ -2,7 +2,7 @@
 
 **Version:** 2 (facet-based)
 
-**Status:** core CLI implemented: 10 universal and 10 conditional questions, persistent answers, evidence references, research status, readiness, and a plan gate that refuses an incomplete record (`aperio discover`). The full 138-field module catalog, owner-waiver flow, and read-only inspectors remain specifications.
+**Status:** core CLI implemented: 10 universal and 10 conditional questions, persistent answers, evidence references, research status, readiness, and a plan gate that refuses an incomplete record (`aperio discover`). The full 138-field module catalog and owner-waiver flow remain specifications. Basic read-only folder and URL inspection is implemented.
 
 **Research date:** 2026-10-26
 
@@ -496,7 +496,7 @@ A new surface can be added without editing the profile list: add a facet value, 
 4. **Coverage report:** implemented as answered, research, missing, and ready (`aperio discover status`).
 5. **Plan gate:** implemented when a discovery record exists; `plan` refuses an incomplete record. An owner-waiver flow is not implemented.
 6. **Scenario fixtures:** not implemented.
-7. **Read-only inspectors:** not implemented.
+7. **Read-only inspectors:** implemented for folder facts and single-page URL metadata; analytics/Search Console, sitemap/crawl, browser rendering, and accessibility-tree inspection are not implemented.
 8. **Evidence attachments:** evidence references are recorded as text; hashes, redaction, expiry, and a manifest are not implemented.
 
 Do not add an LLM judge to decide whether discovery is complete. The agent conducts the interview; the gate is deterministic.

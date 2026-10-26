@@ -112,6 +112,22 @@ choices. Do not run host detection as a substitute for discovery, write a plan,
 or touch project files until the ask is recorded. Do not present a host
 inventory as proof that a reviewer is available; presence is not permission.
 
+### Inspect before asking
+
+After initialization, run `aperio inspect --json` on the folder. If the owner
+gave a public URL, also run `aperio inspect --url "<url>" --json`. Use the
+result to prefill facts and evidence, not to answer owner-only questions.
+
+`aperio discover next --json` includes `hints` from the inspection. Turn a hint
+into a question, not a silent answer:
+
+> I found React and a `tests/` folder. Should I record those as the current
+> stack and evidence?
+
+Never read `.env` values; the inspector records only names from example files.
+Never fetch a private or loopback URL unless the owner explicitly passes
+`--allow-private`.
+
 For an existing URL or repository, inspect it read-only before asking a
 question it can answer. Do not plan until the outcome, current state,
 must-haves, non-goals, success measure, and access owner are known. If the owner
@@ -226,6 +242,8 @@ Before running these, check `type aperio`. If it is a shell function, use `comma
 ```
 aperio init . --name "Project name"
 aperio ask "What the owner wants" --source owner
+aperio inspect
+aperio inspect --url "https://example.com"
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..." --evidence "..."
 aperio discover status

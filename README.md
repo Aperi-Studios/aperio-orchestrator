@@ -37,6 +37,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```bash
 aperio init . --name "My project"
 aperio ask "Build a one-page site with a working contact form" --source owner
+aperio inspect
 aperio discover next
 aperio discover status
 aperio plan plan.json
