@@ -240,6 +240,58 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(remove.returncode, 0, remove.stderr)
         self.assertFalse((prefix / "bin" / "aperio.cmd").exists())
 
+    def test_powershell_update_check_and_rollback(self) -> None:
+        if not shutil.which("pwsh"):
+            self.skipTest("pwsh is not installed")
+        prefix = self.root / "ps-update-prefix"
+        base = ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(prefix), "-NoSkill"]
+
+        install = subprocess.run(base, check=False, capture_output=True, text=True, timeout=60)
+        self.assertEqual(install.returncode, 0, install.stderr)
+
+        check = subprocess.run(base + ["-Check"], check=False, capture_output=True, text=True, timeout=30)
+        self.assertEqual(check.returncode, 0, check.stderr)
+        self.assertIn("installed:", check.stdout)
+
+        probe = prefix / "share" / "aperio" / "aperio" / "UPDATE_PROBE"
+        probe.write_text("old\n", encoding="utf-8")
+        update = subprocess.run(base + ["-Update"], check=False, capture_output=True, text=True, timeout=60)
+        self.assertEqual(update.returncode, 0, update.stderr)
+        backups = list((prefix / "share").glob("aperio.backup.*"))
+        self.assertEqual(len(backups), 1)
+        self.assertFalse(probe.exists())
+
+        rollback = subprocess.run(base + ["-Rollback"], check=False, capture_output=True, text=True, timeout=60)
+        self.assertEqual(rollback.returncode, 0, rollback.stderr)
+        self.assertTrue(probe.is_file())
+
+    def test_powershell_rollback_without_backup_is_refused(self) -> None:
+        if not shutil.which("pwsh"):
+            self.skipTest("pwsh is not installed")
+        prefix = self.root / "ps-no-backup"
+        result = subprocess.run(
+            ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(prefix), "-NoSkill", "-Rollback"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("no valid update backup", result.stderr)
+
+    def test_powershell_update_prunes_old_backups_keeping_five(self) -> None:
+        if not shutil.which("pwsh"):
+            self.skipTest("pwsh is not installed")
+        prefix = self.root / "ps-prune-prefix"
+        base = ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(prefix), "-NoSkill"]
+        install = subprocess.run(base, check=False, capture_output=True, text=True, timeout=60)
+        self.assertEqual(install.returncode, 0, install.stderr)
+        for _ in range(7):
+            update = subprocess.run(base + ["-Update"], check=False, capture_output=True, text=True, timeout=60)
+            self.assertEqual(update.returncode, 0, update.stderr)
+        backups = list((prefix / "share").glob("aperio.backup.*"))
+        self.assertEqual(len(backups), 5)
+
     def test_unsafe_prefix_is_refused(self) -> None:
         result = subprocess.run(
             ["bash", str(ROOT / "install.sh"), "--prefix", "/", "--dry-run"],

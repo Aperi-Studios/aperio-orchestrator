@@ -10,6 +10,9 @@ param(
     [string]$Prefix = $(if ($env:APERIO_PREFIX) { $env:APERIO_PREFIX } else { Join-Path $HOME ".local" }),
     [switch]$NoSkill,
     [switch]$DryRun,
+    [switch]$Check,
+    [switch]$Update,
+    [switch]$Rollback,
     [switch]$Uninstall
 )
 
@@ -33,7 +36,7 @@ if (Test-UnsafePrefix $Prefix) {
     Write-Error "install.ps1: refusing unsafe prefix: $Prefix"
     exit 2
 }
-if (-not $DryRun) {
+if (-not $DryRun -and -not $Check -and -not $Rollback) {
     New-Item -ItemType Directory -Force -Path $Prefix | Out-Null
     $Prefix = (Resolve-Path $Prefix).Path
 }
@@ -41,6 +44,39 @@ $Lib = Join-Path $Prefix "share/aperio"
 $Bin = Join-Path $Prefix "bin"
 $Launcher = Join-Path $Bin "aperio_launcher.py"
 $Cmd = Join-Path $Bin "aperio.cmd"
+
+if ($Check) {
+    $installed = if (Test-Path (Join-Path $Lib "VERSION")) {
+        (Get-Content (Join-Path $Lib "VERSION") -Raw).Trim()
+    } else {
+        "not installed"
+    }
+    Write-Host "installed: $installed"
+    Write-Host "source:    $Version"
+    if ($installed -eq $Version -and (Test-Path $Cmd)) { exit 0 }
+    exit 1
+}
+
+if ($Rollback) {
+    $share = Join-Path $Prefix "share"
+    $backup = if (Test-Path $share) {
+        Get-ChildItem -Path $share -Directory -Filter "aperio.backup.*" -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object -First 1
+    }
+    if (-not $backup -or -not (Test-Path (Join-Path $backup.FullName $Marker))) {
+        [Console]::Error.WriteLine("install.ps1: no valid update backup found under $share")
+        exit 2
+    }
+    if ($DryRun) {
+        Write-Host "would: remove $Lib"
+        Write-Host "would: restore $($backup.FullName) to $Lib"
+        exit 0
+    }
+    Remove-Item -Recurse -Force $Lib -ErrorAction SilentlyContinue
+    Move-Item -Force $backup.FullName $Lib
+    Write-Host "rolled back to $((Get-Content (Join-Path $Lib 'VERSION') -Raw).Trim())"
+    exit 0
+}
 
 function Invoke-Step([scriptblock]$Action, [string]$Label) {
     if ($DryRun) { Write-Host "would: $Label" } else { & $Action }
@@ -82,7 +118,21 @@ if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir "SKILL.md")) -and -not (T
     exit 2
 }
 
-Invoke-Step { New-Item -ItemType Directory -Force -Path $Lib, $Bin | Out-Null } "create $Lib and $Bin"
+$Backup = $null
+if ($Update -and (Test-Path (Join-Path $Lib $Marker))) {
+    $Backup = "$Lib.backup.$(Get-Date -Format 'yyyyMMddTHHmmssfffZ')_$PID"
+    Invoke-Step { Copy-Item -Recurse -Force $Lib $Backup } "back up $Lib to $Backup"
+    if (-not $DryRun) {
+        Get-ChildItem -Path (Join-Path $Prefix "share") -Directory -Filter "aperio.backup.*" -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -ne $Backup } |
+            Sort-Object Name -Descending |
+            Select-Object -Skip 4 |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+try {
+    Invoke-Step { New-Item -ItemType Directory -Force -Path $Lib, $Bin | Out-Null } "create $Lib and $Bin"
 Invoke-Step { Remove-Item -Recurse -Force (Join-Path $Lib "aperio") -ErrorAction SilentlyContinue } "clear $Lib/aperio"
 Invoke-Step { Copy-Item -Recurse -Force (Join-Path $Root "src/aperio") (Join-Path $Lib "aperio") } "copy package to $Lib"
 if (-not $DryRun) {
@@ -122,6 +172,14 @@ if (-not $NoSkill) {
         Invoke-Step { Remove-Item -Force $CommandFile } "remove legacy $CommandFile"
         if (-not $DryRun) { Write-Host "removed legacy $CommandFile" }
     }
+}
+} catch {
+    if ($Backup -and (Test-Path $Backup)) {
+        Remove-Item -Recurse -Force $Lib -ErrorAction SilentlyContinue
+        Move-Item -Force $Backup $Lib
+        Write-Error "install.ps1: update failed; restored $Lib from backup"
+    }
+    throw
 }
 
 if (-not $DryRun) { Write-Host "installed Aperio $Version"; Write-Host "  binary: $Cmd"; if (-not $NoSkill) { Write-Host "  skill:  $SkillDir" } }
