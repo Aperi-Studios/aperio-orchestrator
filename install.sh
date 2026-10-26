@@ -9,6 +9,9 @@ SKILL_HOME="${APERIO_SKILL_HOME:-$HOME/.claude/skills}"
 DO_SKILL=1
 DRY_RUN=0
 UNINSTALL=0
+CHECK=0
+UPDATE=0
+ROLLBACK=0
 
 usage() {
   cat <<'EOF'
@@ -17,6 +20,9 @@ Usage: install.sh [options]
   --prefix DIR     install prefix (default: $HOME/.local)
   --no-skill       do not install the /aperio skill
   --dry-run        print actions without changing anything
+  --check          report installed and source versions; no writes
+  --update         back up the installed library, then install
+  --rollback       restore the most recent update backup
   --uninstall      remove files installed by this script
   -h, --help       show this help
 EOF
@@ -27,6 +33,9 @@ while [ "$#" -gt 0 ]; do
     --prefix) PREFIX="${2:?--prefix needs a directory}"; shift 2 ;;
     --no-skill) DO_SKILL=0; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --check) CHECK=1; shift ;;
+    --update) UPDATE=1; shift ;;
+    --rollback) ROLLBACK=1; shift ;;
     --uninstall) UNINSTALL=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "install.sh: unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -40,7 +49,7 @@ PREFIX="$(python3 -c 'import os,sys; print(os.path.realpath(os.path.expanduser(s
 case "$PREFIX" in
   ""|"/"|".") echo "install.sh: refusing unsafe prefix: $PREFIX" >&2; exit 2 ;;
 esac
-if [ "$DRY_RUN" -eq 0 ]; then
+if [ "$DRY_RUN" -eq 0 ] && [ "$CHECK" -eq 0 ] && [ "$ROLLBACK" -eq 0 ]; then
   mkdir -p "$PREFIX"
 fi
 LIB="$PREFIX/share/aperio"
@@ -50,6 +59,41 @@ CODEX_SKILL_DIR="$HOME/.codex/skills/aperio"
 COMMAND_DIR="$HOME/.claude/commands"
 COMMAND_FILE="$COMMAND_DIR/aperio.md"
 MARKER="aperio-v2-managed"
+
+if [ "$CHECK" -eq 1 ]; then
+  if [ -f "$LIB/VERSION" ]; then
+    INSTALLED="$(cat "$LIB/VERSION")"
+  else
+    INSTALLED="not installed"
+  fi
+  printf 'installed: %s\n' "$INSTALLED"
+  printf 'source:    %s\n' "$VERSION"
+  if [ "$INSTALLED" = "$VERSION" ] && [ -x "$BIN" ]; then
+    exit 0
+  fi
+  exit 1
+fi
+
+if [ "$ROLLBACK" -eq 1 ]; then
+  if [ ! -d "$PREFIX/share" ]; then
+    echo "install.sh: no update backup found under $PREFIX/share" >&2
+    exit 2
+  fi
+  BACKUP="$(find "$PREFIX/share" -maxdepth 1 -type d -name 'aperio.backup.*' -print 2>/dev/null | sort | tail -1)"
+  if [ -z "$BACKUP" ] || [ ! -f "$BACKUP/$MARKER" ]; then
+    echo "install.sh: no valid update backup found under $PREFIX/share" >&2
+    exit 2
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "would: remove $LIB"
+    echo "would: restore $BACKUP to $LIB"
+    exit 0
+  fi
+  rm -rf "$LIB"
+  mv "$BACKUP" "$LIB"
+  echo "rolled back to $(cat "$LIB/VERSION")"
+  exit 0
+fi
 
 if [ "$DO_SKILL" -eq 1 ] && [ -f "$SKILL_DIR/SKILL.md" ] && [ ! -f "$SKILL_DIR/$MARKER" ]; then
   echo "install.sh: refusing to overwrite existing $SKILL_DIR/SKILL.md" >&2
@@ -74,6 +118,22 @@ write_text() {
     printf '%s\n' "$value" > "$target"
   fi
 }
+
+BACKUP=""
+restore_update() {
+  status=$?
+  if [ -n "$BACKUP" ] && [ -d "$BACKUP" ]; then
+    rm -rf "$LIB"
+    mv "$BACKUP" "$LIB"
+    echo "update failed; restored $LIB from backup" >&2
+  fi
+  exit "$status"
+}
+if [ "$UPDATE" -eq 1 ] && [ -f "$LIB/$MARKER" ]; then
+  BACKUP="$LIB.backup.$(date -u +%Y%m%dT%H%M%SZ).$$"
+  run cp -R "$LIB" "$BACKUP"
+  trap restore_update ERR
+fi
 
 if [ "$UNINSTALL" -eq 1 ]; then
   if [ -f "$LIB/$MARKER" ]; then
@@ -151,6 +211,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo "dry run: no files changed"
   exit 0
 fi
+trap - ERR
 echo "installed Aperio $VERSION"
 echo "  binary: $BIN"
 if [ "$DO_SKILL" -eq 1 ]; then

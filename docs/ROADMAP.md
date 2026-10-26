@@ -48,7 +48,7 @@ The order is deliberate. Do not build a large feature surface on an unproven loo
 ## M4: Installer and portability
 
 - PowerShell installer is implemented and tested under `pwsh` on macOS; native Windows `.cmd` execution is not tested.
-- Add update and recovery behavior.
+- Bash update/recovery: `--check`, `--update` with a library backup, and `--rollback` are implemented and tested. PowerShell update/recovery is not built.
 - Test fresh clone, different home, spaces in paths, read-only prefix failure, and interrupted install.
 - Remove any hard-coded home, checkout, or model path.
 

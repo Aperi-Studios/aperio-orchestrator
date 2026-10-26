@@ -133,6 +133,42 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((self.skill_home / "aperio").exists())
         self.assertFalse(command.exists())
 
+    def test_check_reports_version_without_writing(self) -> None:
+        result = subprocess.run(
+            ["bash", str(ROOT / "install.sh"), "--prefix", str(self.prefix), "--check"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=self.env,
+            cwd=str(ROOT),
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("installed: not installed", result.stdout)
+        self.assertIn("source:", result.stdout)
+        self.assertFalse(self.prefix.exists())
+
+    def test_update_backs_up_and_rolls_back(self) -> None:
+        install = self.run_install()
+        self.assertEqual(install.returncode, 0, install.stderr)
+        probe = self.prefix / "share" / "aperio" / "aperio" / "UPDATE_PROBE"
+        probe.write_text("old\n", encoding="utf-8")
+        update = self.run_install("--update")
+        self.assertEqual(update.returncode, 0, update.stderr)
+        self.assertFalse(probe.exists())
+        backups = list((self.prefix / "share").glob("aperio.backup.*"))
+        self.assertEqual(len(backups), 1)
+        self.assertTrue((backups[0] / "aperio" / "UPDATE_PROBE").is_file())
+        rollback = self.run_install("--rollback")
+        self.assertEqual(rollback.returncode, 0, rollback.stderr)
+        self.assertTrue(probe.is_file())
+        self.assertFalse(backups[0].exists())
+
+    def test_rollback_without_backup_is_refused(self) -> None:
+        result = self.run_install("--rollback")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("no update backup", result.stderr)
+
     def test_prefix_with_spaces(self) -> None:
         prefix = self.root / "prefix with spaces"
         install = subprocess.run(
