@@ -56,7 +56,7 @@ function Restore-Library([string]$BackupPath) {
         if (Test-Path $old) { Move-Item -Force $old $Lib }
         throw
     }
-    if (Test-Path $old) { Remove-Item -Recurse -Force $old }
+    if (Test-Path $old) { Remove-Item -Recurse -Force $old -ErrorAction SilentlyContinue }
 }
 
 if ($Check) {
@@ -189,7 +189,7 @@ if (-not $NoSkill) {
 } catch {
     if ($Backup -and (Test-Path $Backup)) {
         Restore-Library $Backup
-        Write-Error "install.ps1: update failed; restored $Lib from backup"
+        [Console]::Error.WriteLine("install.ps1: update failed; restored $Lib from backup")
     }
     throw
 }
