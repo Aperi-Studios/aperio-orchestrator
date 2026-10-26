@@ -9,7 +9,7 @@
 | Item | Result | Evidence |
 |---|---|---|
 | Core unit tests | 30 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 16 passed | same command; `tests/test_adapter.py` |
+| Adapter tests | 17 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
@@ -20,7 +20,7 @@
 | Audit tests | 13 passed | same command; `tests/test_audit.py` |
 | Installer tests | 10 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 137 passed | same command |
+| Total test suite | 138 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -56,6 +56,7 @@
 | Claude host adapter | real host produced `site/index.html` in a disposable copy; acceptance passed; review and done completed on current code | task `task-17fd7a83a6`, run `run-d8e491aeb4`, review `review-5cb1b3585d`; earlier run `run-2d57f0f091` |
 | Goose host adapter | command path tested with a fake binary; live Goose call failed with HTTP 500 from the local bridge | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command`; live probe output |
 | dsh host adapter | command path tested with a fake binary; live dsh blocked by missing `RIVER_API_KEY` | `tests/test_adapter.py::test_dsh_adapter_builds_a_headless_command`; live probe output |
+| OpenCode, KiloCode, Cline, agy adapters | command shapes tested with a fake binary; live runs not yet proven | `tests/test_adapter.py::test_extra_host_adapters_build_commands` |
 | Host change outside the plan | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
 | Host change outside step writes | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_step_writes_is_rejected` |
 | Host symlink | rejected; no target content is read or copied | `tests/test_adapter.py::test_host_symlink_is_rejected` |
@@ -76,7 +77,7 @@
 ## Not built
 
 - An automated vulnerability scanner or exploit runner. `aperio audit` records a bounded source review and its evidence; it does not execute target code or prove exploitability.
-- Dispatch to hosts beyond the Claude, Codex, dsh, and Goose adapters.
+- Live host dispatch for OpenCode, KiloCode, Cline, and agy; their command shapes are tested, but live runs are not yet proven.
 - A distributed or live two-host mesh; the current message store is local and persistent.
 - A real host-to-host exchange over that store.
 - CMS, media, SEO, and Astro/Lumos delivery.
@@ -88,7 +89,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 137-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 138-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.

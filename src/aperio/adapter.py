@@ -108,7 +108,12 @@ def _binary_for(host: str) -> str:
     return found
 
 
+def _model_for(host: str) -> str:
+    return os.environ.get(f"APERIO_MODEL_{host.upper()}", "").strip()
+
+
 def _command_for(host: str, binary: str, prompt: str, step: Step) -> list[str]:
+    model = _model_for(host)
     if host == "claude":
         return [
             binary,
@@ -143,7 +148,30 @@ def _command_for(host: str, binary: str, prompt: str, step: Step) -> list[str]:
             "--text",
             prompt,
         ]
-    raise HostError(f"no adapter for host: {host} (supported: claude, codex, dsh, goose)")
+    if host == "opencode":
+        command = [binary, "run", "--auto"]
+        if model:
+            command.extend(["--model", model])
+        return command + [prompt]
+    if host == "kilocode":
+        command = [binary, "run", "--auto"]
+        if model:
+            command.extend(["--model", model])
+        return command + [prompt]
+    if host == "cline":
+        command = [binary, "--auto-approve", "true", "--provider", "cline"]
+        if model:
+            command.extend(["--model", model])
+        return command + [prompt]
+    if host == "agy":
+        command = [binary, "-p", prompt, "--mode", "auto"]
+        if model:
+            command.extend(["--model", model])
+        return command
+    raise HostError(
+        "no adapter for host: "
+        f"{host} (supported: claude, codex, dsh, goose, opencode, kilocode, cline, agy)"
+    )
 
 
 def _prompt(project: Project, plan: Plan, step: Step) -> str:

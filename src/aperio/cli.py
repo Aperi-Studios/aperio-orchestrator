@@ -11,10 +11,11 @@ from typing import Any
 
 from . import __version__
 from .adapter import HostError, run_host_review
-from .audit import FINDING_STATUSES, PROFILES, SEVERITIES, UNIT_STATUSES
+from .audit import FINDING_STATUSES, PROFILES, SEVERITIES, UNIT_STATUSES, AuditError
 from .audit import add_finding as audit_add_finding
 from .audit import brief as audit_brief
 from .audit import ingest as audit_ingest
+from .audit import latest as audit_latest
 from .audit import report as audit_report
 from .audit import set_unit as audit_set_unit
 from .audit import start as audit_start
@@ -290,6 +291,13 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     return 0
 
 
+def _audit_status_safe(project: Project) -> dict[str, Any] | None:
+    try:
+        return audit_latest(project)
+    except AuditError as exc:
+        return {"invalid": str(exc)}
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     project = _project(args)
     if args.task_id:
@@ -309,6 +317,7 @@ def cmd_status(args: argparse.Namespace) -> int:
                 print(f"  note: {note}")
         return 0
     tasks = project.tasks()
+    audit = _audit_status_safe(project)
     if args.json:
         discovery = project.discovery()
         progress = discovery_status(project) if discovery is not None else None
@@ -318,6 +327,7 @@ def cmd_status(args: argparse.Namespace) -> int:
                     "project": str(project.root),
                     "state": str(project.state),
                     "discovery": progress,
+                    "audit": audit,
                     "tasks": [task.to_dict() for task in tasks],
                 },
                 indent=2,
@@ -334,6 +344,17 @@ def cmd_status(args: argparse.Namespace) -> int:
                 f"Discovery: {progress['answered']}/{progress['total']} answered"
                 f" · {progress['research']} need research"
                 f" · ready={'yes' if progress['ready'] else 'no'}"
+            )
+        if audit is None:
+            print("Audit: not recorded")
+        elif "invalid" in audit:
+            print(f"Audit: INVALID — {audit['invalid']}")
+        else:
+            print(
+                f"Audit: {audit.get('audit_id', '')} · {audit.get('run_status', 'unknown')}"
+                f" · {audit.get('checked', 0)}/{audit.get('units', 0)} checked"
+                f" · {audit.get('confirmed', 0)} confirmed"
+                f" · {audit.get('needs_validation', 0)} needs validation"
             )
         if not tasks:
             print("No tasks. Add an ask or a plan.")

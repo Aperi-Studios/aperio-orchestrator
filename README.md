@@ -86,11 +86,11 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 
 - Project initialization and append-only owner asks.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
-- Host dispatch through a disposable project copy for the Claude, Codex, dsh, and Goose adapters. Claude is proven on current code. dsh and Goose command paths are tested, but their live runs are blocked by a missing credential and an HTTP 500 bridge, respectively. Codex evidence is historical and is not the current trusted host set.
+- Host dispatch through a disposable project copy for the Claude, Codex, dsh, Goose, OpenCode, KiloCode, Cline, and agy adapters. Claude and Codex are proven on current code. dsh and Goose command paths are tested, but their live runs are blocked by a missing credential and an HTTP 500 bridge, respectively. The OpenCode, KiloCode, Cline, and agy command shapes are tested with a fake binary; live runs are not yet proven.
 - Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude reviewers confirmed verified work on current code; earlier Codex review evidence is historical.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
-- Source-anchored security audit ledger: bounded coverage units, host brief, atomic bulk ingest, structured findings, `needs_validation` for unresolved facts, and a generated report. It never executes the target and never treats an unproven finding as confirmed.
+- Source-anchored security audit ledger: bounded coverage units, host brief, atomic bulk ingest, structured findings, `needs_validation` for unresolved facts, and a generated report. Handoff and project status always surface the latest audit, including open or source-changed coverage. It never executes the target and never treats an unproven finding as confirmed.
 - Independent review enforcement by reviewer name.
 - Rollback of files captured before a run.
 - Handoff generation from actual state.
@@ -103,7 +103,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 
 ## What is not built
 
-- Dispatch to hosts beyond the Claude, Codex, dsh, and Goose adapters.
+- Live host dispatch for OpenCode, KiloCode, Cline, and agy; their command shapes are tested, but live runs are not yet proven.
 - A distributed or live two-host mesh; the current store is local.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - A web dashboard.

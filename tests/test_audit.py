@@ -24,6 +24,8 @@ from aperio.audit import (
     validate,
 )
 from aperio.cli import cmd_audit
+from aperio.handoff import build_handoff
+from aperio.model import Task, new_id
 from aperio.store import Project
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -282,6 +284,12 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(status(self.project)["run_status"], "complete")
         self.assertTrue(Path(report_result["detail"]).is_file())
         self.assertTrue(Path(report_result["needs_validation"]).is_file())
+        task = Task(id=new_id("task"), title="Audit handoff", request="Deliver with an audit record.")
+        self.project.put_task(task)
+        handoff = build_handoff(self.project, task.id)
+        self.assertIn("## Security audit", handoff)
+        self.assertIn("Status: **complete**", handoff)
+        self.assertIn("1 confirmed", handoff)
         add_finding(
             self.project,
             title="Late finding",
@@ -290,6 +298,8 @@ class AuditTests(unittest.TestCase):
             evidence="A fact arrived after the report.",
         )
         self.assertEqual(status(self.project)["run_status"], "in_progress")
+        handoff = build_handoff(self.project, task.id)
+        self.assertIn("Status: **in_progress**", handoff)
 
     def test_cli_audit_flow(self) -> None:
         env = os.environ.copy()

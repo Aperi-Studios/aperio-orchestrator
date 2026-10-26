@@ -779,6 +779,15 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
     }
 
 
+def latest(project: Project) -> dict[str, Any] | None:
+    try:
+        return status(project)
+    except AuditError as exc:
+        if str(exc).startswith("no security audit exists"):
+            return None
+        raise
+
+
 def status(project: Project, audit_id: str = "") -> dict[str, Any]:
     errors = validate(project, audit_id)
     if errors:

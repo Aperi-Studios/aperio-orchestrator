@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .audit import AuditError
+from .audit import latest as latest_audit
 from .evidence import EvidenceError
 from .evidence import entries as evidence_entries
 from .store import Project
@@ -139,6 +141,30 @@ def build_handoff(project: Project, task_id: str) -> str:
         lines.append(f"- Notes: {task.review.notes or 'None'}")
     else:
         lines.append("- No independent review recorded.")
+    lines.append("")
+
+    try:
+        audit = latest_audit(project)
+    except AuditError as exc:
+        audit = {"invalid": str(exc)}
+    lines.extend(["## Security audit", ""])
+    if audit is None:
+        lines.append("- No source audit recorded.")
+    elif "invalid" in audit:
+        lines.append(f"- **INVALID:** {audit['invalid']}")
+    else:
+        lines.append(f"- Audit: `{audit.get('audit_id', '')}`")
+        lines.append(f"- Status: **{audit.get('run_status', 'unknown')}**")
+        lines.append(f"- Coverage: {audit.get('checked', 0)}/{audit.get('units', 0)} checked")
+        lines.append(
+            f"- Findings: {audit.get('confirmed', 0)} confirmed, "
+            f"{audit.get('needs_validation', 0)} needs validation, "
+            f"{audit.get('rejected', 0)} rejected"
+        )
+        if audit.get("source_changed"):
+            lines.append("- Source changed since the audit started.")
+        if audit.get("truncated"):
+            lines.append("- Coverage was truncated.")
     lines.append("")
 
     lines.extend(

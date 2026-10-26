@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from aperio.adapter import HostError, run_host_review
+from aperio.adapter import HostError, _command_for, run_host_review
 from aperio.handoff import write_handoff
 from aperio.model import Acceptance, Approval, ModelError, Plan, Step, Task
 from aperio.runner import RunError, apply_plan, finish, review, verify
@@ -131,6 +131,28 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(result["status"], "applied", result)
         self.assertEqual(result["steps"][0]["host"], "dsh")
         self.assertIn("headless", result["steps"][0]["command"])
+
+    def test_extra_host_adapters_build_commands(self) -> None:
+        step = Step(
+            id="host-step",
+            kind="host",
+            host="opencode",
+            prompt="Create the page.",
+            writes=["site/index.html"],
+            timeout_s=30,
+            max_budget_usd=0.10,
+        )
+        with mock.patch.dict(os.environ, {"APERIO_MODEL_OPENCODE": "opencode/test-model"}):
+            command = _command_for("opencode", "/bin/host", "prompt", step)
+        self.assertEqual(command[:4], ["/bin/host", "run", "--auto", "--model"])
+        self.assertIn("opencode/test-model", command)
+        for host in ("kilocode", "cline", "agy"):
+            command = _command_for(host, "/bin/host", "prompt", step)
+            self.assertEqual(command[0], "/bin/host")
+            self.assertIn("prompt", command)
+        self.assertIn("--auto-approve", _command_for("cline", "/bin/host", "prompt", step))
+        self.assertIn("--provider", _command_for("cline", "/bin/host", "prompt", step))
+        self.assertIn("--mode", _command_for("agy", "/bin/host", "prompt", step))
 
     def test_host_review_confirms_a_verified_task(self) -> None:
         task, plan = make_plan(

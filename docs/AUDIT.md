@@ -85,6 +85,13 @@ contains a half-imported set. Unknown fields are rejected rather than ignored.
   when the source changed since the audit started. `aperio audit report` exits
   1 in those cases and 0 only for a complete report.
 
+## Handoff
+
+`aperio handoff` always includes a `Security audit` section. It says when no
+source audit was recorded, when the latest ledger is invalid, and when coverage
+or the source is incomplete. `aperio status` reports the latest audit in both
+human and `--json` output.
+
 ## Limits
 
 - The finder and the verifier should be different hosts. The ledger records
