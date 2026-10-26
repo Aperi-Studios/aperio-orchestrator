@@ -393,8 +393,8 @@ def validate(project: Project, audit_id: str = "") -> list[str]:
     return errors
 
 
-def add_finding(
-    project: Project,
+def _finding_record(
+    ledger: dict[str, Any],
     *,
     title: str,
     status: str,
@@ -404,9 +404,7 @@ def add_finding(
     severity: str = "",
     boundary: str = "",
     evidence: str = "",
-    audit_id: str = "",
 ) -> dict[str, Any]:
-    directory, _metadata, ledger, findings = load(project, audit_id)
     if not isinstance(status, str) or status not in FINDING_STATUSES:
         raise AuditError(f"finding status must be one of: {', '.join(sorted(FINDING_STATUSES))}")
     title = title.strip() if isinstance(title, str) else ""
@@ -418,7 +416,9 @@ def add_finding(
         raise AuditError("finding needs evidence")
     if line is not None and (not isinstance(line, int) or isinstance(line, bool) or line < 1):
         raise AuditError("finding line must be a positive integer")
-    if status == "confirmed" and (not isinstance(severity, str) or severity not in SEVERITIES):
+    if severity and not isinstance(severity, str):
+        raise AuditError("finding severity must be a string")
+    if status == "confirmed" and severity not in SEVERITIES:
         raise AuditError("a confirmed finding needs a severity")
     if status != "confirmed" and severity:
         raise AuditError("only a confirmed finding may have a severity")
@@ -451,8 +451,6 @@ def add_finding(
             path = normalize_rel(path)
         except PathSafetyError as exc:
             raise AuditError(f"finding path is unsafe: {exc}") from exc
-    if status == "confirmed" and not path:
-        raise AuditError("a confirmed finding needs a path")
     unit_path = next(
         (
             unit["path"]
@@ -464,11 +462,13 @@ def add_finding(
     if path and unit_path and path != unit_path:
         raise AuditError("finding path must match its coverage unit")
     if status == "confirmed":
+        if not path:
+            raise AuditError("a confirmed finding needs a path")
         if line is None:
             raise AuditError("a confirmed finding needs a source line")
         if path not in evidence:
             raise AuditError("confirmed evidence must contain the finding path")
-    finding = {
+    return {
         "id": f"finding-{uuid.uuid4().hex[:10]}",
         "status": status,
         "title": title,
@@ -476,17 +476,163 @@ def add_finding(
         "path": path,
         "line": line,
         "severity": severity,
-        "boundary": boundary.strip(),
+        "boundary": boundary,
         "evidence": evidence,
         "recorded_at": utc_now(),
     }
+
+
+def add_finding(
+    project: Project,
+    *,
+    title: str,
+    status: str,
+    unit_id: str = "",
+    path: str = "",
+    line: int | None = None,
+    severity: str = "",
+    boundary: str = "",
+    evidence: str = "",
+    audit_id: str = "",
+) -> dict[str, Any]:
+    directory, metadata, ledger, findings = load(project, audit_id)
+    finding = _finding_record(
+        ledger,
+        title=title,
+        status=status,
+        unit_id=unit_id,
+        path=path,
+        line=line,
+        severity=severity,
+        boundary=boundary,
+        evidence=evidence,
+    )
     findings.setdefault("findings", []).append(finding)
     _write(directory / "findings.json", findings)
-    _metadata["run_status"] = "in_progress"
-    _metadata.pop("reported_at", None)
-    _write(directory / "run-metadata.json", _metadata)
+    metadata["run_status"] = "in_progress"
+    metadata.pop("reported_at", None)
+    _write(directory / "run-metadata.json", metadata)
     project.append_event("audit.finding", {"audit_id": audit_id or directory.name, "finding_id": finding["id"], "status": status})
     return finding
+
+
+def brief(project: Project, audit_id: str = "") -> dict[str, Any]:
+    errors = validate(project, audit_id)
+    if errors:
+        raise AuditError("audit ledger is invalid: " + "; ".join(errors))
+    directory, metadata, ledger, _findings = load(project, audit_id)
+    units = ledger["units"]
+    lines = [
+        "# Security Audit Brief",
+        "",
+        f"**Audit:** `{directory.name}`  ",
+        f"**Scope:** `{metadata.get('scope', '.')}`  ",
+        f"**Profile:** {metadata.get('profile', '')}  ",
+        f"**Coverage units:** {len(units)}  ",
+        "",
+        "Review source only. Do not execute target code. Record a finding only when",
+        "the evidence anchors it to a coverage unit. A confirmed finding needs a",
+        "boundary, severity, positive line, and evidence containing its path.",
+        "Anything unresolved is `needs_validation` and has no severity.",
+        "",
+        "## Output",
+        "",
+        "Write one JSON object with this shape and import it with `aperio audit ingest`:",
+        "",
+        "```json",
+        "{",
+        "  \"schema\": 1,",
+        "  \"findings\": [",
+        "    {",
+        "      \"title\": \"short title\",",
+        "      \"status\": \"confirmed|needs_validation|rejected\",",
+        "      \"path\": \"relative/path.py\",",
+        "      \"line\": 12,",
+        "      \"severity\": \"critical|high|medium|low|info\",",
+        "      \"boundary\": \"what crosses what\",",
+        "      \"evidence\": \"relative/path.py:12 ...\"",
+        "    }",
+        "  ]",
+        "}",
+        "```",
+        "",
+        "## Coverage units",
+        "",
+        "| Unit | Path | Status |",
+        "|---|---|---|",
+    ]
+    lines.extend(f"| `{unit['id']}` | `{unit['path']}` | {unit['status']} |" for unit in units)
+    lines.extend(
+        [
+            "",
+            "The ledger is not a whole-repository guarantee. The host remains responsible",
+            "for the review, and a fresh reviewer must verify every confirmed finding.",
+            "",
+        ]
+    )
+    target = directory / "AUDIT-BRIEF.md"
+    _write_text(target, "\n".join(lines))
+    project.append_event("audit.brief", {"audit_id": directory.name, "units": len(units)})
+    return {"audit_id": directory.name, "brief": str(target), "units": len(units)}
+
+
+def ingest(project: Project, source: str, audit_id: str = "") -> dict[str, Any]:
+    errors = validate(project, audit_id)
+    if errors:
+        raise AuditError("audit ledger is invalid: " + "; ".join(errors))
+    directory, metadata, ledger, findings = load(project, audit_id)
+    path = Path(source).expanduser()
+    try:
+        if path.is_symlink() or not path.is_file():
+            raise AuditError("findings file must be a regular file, not a symlink")
+        if path.stat().st_size > 2_000_000:
+            raise AuditError("findings file is too large (limit 2 MB)")
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise AuditError(f"findings file is unreadable: {exc}") from exc
+    if isinstance(raw, dict):
+        if raw.get("schema") != SCHEMA_VERSION:
+            raise AuditError("findings file has an unsupported schema")
+        items = raw.get("findings")
+    elif isinstance(raw, list):
+        items = raw
+    else:
+        items = None
+    if not isinstance(items, list):
+        raise AuditError("findings file must contain a findings list")
+    if len(items) > 1000:
+        raise AuditError("findings file contains more than 1000 findings")
+    allowed = {"title", "status", "path", "line", "severity", "boundary", "evidence"}
+    records: list[dict[str, Any]] = []
+    for index, item in enumerate(items, 1):
+        if not isinstance(item, dict):
+            raise AuditError(f"finding {index}: must be an object")
+        unknown = set(item) - allowed
+        if unknown:
+            raise AuditError(f"finding {index}: unknown fields: {', '.join(sorted(unknown))}")
+        try:
+            record = _finding_record(
+                ledger,
+                title=item.get("title", ""),
+                status=item.get("status", ""),
+                path=item.get("path", ""),
+                line=item.get("line"),
+                severity=item.get("severity", ""),
+                boundary=item.get("boundary", ""),
+                evidence=item.get("evidence", ""),
+            )
+        except AuditError as exc:
+            raise AuditError(f"finding {index}: {exc}") from exc
+        records.append(record)
+    if not records:
+        raise AuditError("findings file contains no findings")
+    findings.setdefault("findings", []).extend(records)
+    _write(directory / "findings.json", findings)
+    metadata["run_status"] = "in_progress"
+    metadata.pop("reported_at", None)
+    _write(directory / "run-metadata.json", metadata)
+    project.append_event("audit.ingested", {"audit_id": directory.name, "findings": len(records)})
+    return {"audit_id": directory.name, "imported": len(records)}
 
 
 def report(project: Project, audit_id: str = "") -> dict[str, Any]:

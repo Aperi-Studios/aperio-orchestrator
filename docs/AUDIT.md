@@ -26,8 +26,10 @@ checks by itself; the host still has to review the units and record the result.
 
 ```bash
 aperio audit start --scope src --profile quick
+aperio audit brief
+aperio audit ingest --file findings.json
 aperio audit add --title "..." --status confirmed --path src/app.py --line 12 \
-  --severity high --boundary "..." --evidence "source line 12 ..."
+  --severity high --boundary "..." --evidence "src/app.py:12 ..."
 aperio audit add --title "..." --status needs_validation --path src/app.py \
   --evidence "The deployment configuration is not in this repository."
 aperio audit unit --unit-id unit-0001 --status checked
@@ -38,6 +40,32 @@ aperio audit status --json
 
 `audit add` accepts `--unit unit-0001` or resolves the unit from `--path` when
 exactly one unit matches.
+
+## Host brief and ingest
+
+`aperio audit brief` writes an audit brief with the exact coverage units and
+the JSON output shape. A host can return one object:
+
+```json
+{
+  "schema": 1,
+  "findings": [
+    {
+      "title": "short title",
+      "status": "confirmed",
+      "path": "src/app.py",
+      "line": 12,
+      "severity": "high",
+      "boundary": "what crosses what",
+      "evidence": "src/app.py:12 ..."
+    }
+  ]
+}
+```
+
+`aperio audit ingest --file findings.json` validates every record before it
+writes anything. One invalid record rejects the whole batch, so the ledger never
+contains a half-imported set. Unknown fields are rejected rather than ignored.
 
 ## Rules
 

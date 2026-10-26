@@ -14,6 +14,8 @@ from pathlib import Path
 from aperio.audit import (
     AuditError,
     add_finding,
+    brief,
+    ingest,
     load,
     report,
     set_unit,
@@ -175,6 +177,60 @@ class AuditTests(unittest.TestCase):
         second = start(self.project, scope="src")
         self.assertNotEqual(first["audit_id"], second["audit_id"])
         self.assertEqual(status(self.project)["audit_id"], first["audit_id"])
+
+    def test_brief_and_atomic_ingest(self) -> None:
+        start(self.project, scope="src")
+        result = brief(self.project)
+        text = Path(result["brief"]).read_text()
+        self.assertIn("# Security Audit Brief", text)
+        self.assertIn("src/app.py", text)
+        self.assertIn('"schema": 1', text)
+        source = self.root / "host-findings.json"
+        source.write_text(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "findings": [
+                        {
+                            "title": "Anchored finding",
+                            "status": "confirmed",
+                            "path": "src/app.py",
+                            "line": 1,
+                            "severity": "high",
+                            "boundary": "input reaches a trusted operation",
+                            "evidence": "src/app.py:1 source",
+                        },
+                        {
+                            "title": "Unresolved fact",
+                            "status": "needs_validation",
+                            "path": "src/deep/util.py",
+                            "evidence": "The deployment config is absent.",
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        imported = ingest(self.project, str(source))
+        self.assertEqual(imported["imported"], 2)
+        self.assertEqual(len(load(self.project)[3]["findings"]), 2)
+        source.write_text(
+            json.dumps(
+                [
+                    {
+                        "title": "Late valid",
+                        "status": "needs_validation",
+                        "path": "src/app.py",
+                        "evidence": "Unresolved.",
+                    },
+                    {"title": "Bad", "status": "needs_validation", "path": "src/app.py", "evidence": "x", "extra": 1},
+                ]
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaises(AuditError):
+            ingest(self.project, str(source))
+        self.assertEqual(len(load(self.project)[3]["findings"]), 2)
 
     def test_validate_rejects_orphaned_finding(self) -> None:
         start(self.project, scope="src")

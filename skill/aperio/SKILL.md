@@ -284,10 +284,8 @@ it with a bounded scope and profile, then record only findings that have evidenc
 
 ```bash
 aperio audit start --scope src --profile quick
-aperio audit add --title "Unvalidated upload path" --status confirmed \
-  --path src/upload.py --line 42 --severity high \
-  --boundary "untrusted filename reaches filesystem write" \
-  --evidence "src/upload.py:42 passes the raw filename to Path.join"
+aperio audit brief
+aperio audit ingest --file findings.json
 aperio audit add --title "Proxy header handling" --status needs_validation \
   --path src/app.py --evidence "The reverse proxy config is not in this repo"
 aperio audit unit --unit-id unit-0001 --status checked

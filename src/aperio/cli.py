@@ -13,6 +13,8 @@ from . import __version__
 from .adapter import HostError, run_host_review
 from .audit import FINDING_STATUSES, PROFILES, SEVERITIES, UNIT_STATUSES
 from .audit import add_finding as audit_add_finding
+from .audit import brief as audit_brief
+from .audit import ingest as audit_ingest
 from .audit import report as audit_report
 from .audit import set_unit as audit_set_unit
 from .audit import start as audit_start
@@ -576,6 +578,14 @@ def _cmd_audit_locked(project: Project, args: argparse.Namespace) -> int:
         )
         print(as_json(unit) if args.json else f"{unit['id']}  {unit['status']}  {unit['path']}")
         return 0
+    if args.audit_command == "brief":
+        result = audit_brief(project, args.audit_id or "")
+        print(as_json(result) if args.json else result["brief"])
+        return 0
+    if args.audit_command == "ingest":
+        result = audit_ingest(project, args.file, args.audit_id or "")
+        print(as_json(result) if args.json else f"{result['imported']} findings imported into {result['audit_id']}")
+        return 0
     if args.audit_command == "validate":
         errors = audit_validate(project, args.audit_id or "")
         if args.json:
@@ -790,6 +800,15 @@ def build_parser() -> argparse.ArgumentParser:
     audit_unit.add_argument("--audit-id", default="")
     audit_unit.add_argument("--json", action="store_true")
     audit_unit.set_defaults(func=cmd_audit)
+    audit_brief_parser = audit.add_parser("brief", help="write a host audit brief")
+    audit_brief_parser.add_argument("--audit-id", default="")
+    audit_brief_parser.add_argument("--json", action="store_true")
+    audit_brief_parser.set_defaults(func=cmd_audit)
+    audit_ingest_parser = audit.add_parser("ingest", help="import host findings atomically")
+    audit_ingest_parser.add_argument("--file", required=True)
+    audit_ingest_parser.add_argument("--audit-id", default="")
+    audit_ingest_parser.add_argument("--json", action="store_true")
+    audit_ingest_parser.set_defaults(func=cmd_audit)
     for name, help_text in (
         ("validate", "validate the ledger and findings"),
         ("report", "write the audit report"),
