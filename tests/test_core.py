@@ -30,7 +30,7 @@ def make_plan(
         request=task.request,
         allowed_paths=allowed or ["site/"],
         steps=steps,
-        acceptance=acceptance or [Acceptance(id="check", command="true")],
+        acceptance=acceptance or [Acceptance(id="check", command="test -f .aperio/project.json")],
         builder=builder,
     )
     plan.validate()
@@ -377,6 +377,23 @@ class CoreTests(unittest.TestCase):
                 Path(path).unlink()
         with self.assertRaises(RunError):
             finish(self.project, task.id)
+
+    def test_noop_acceptance_is_refused(self) -> None:
+        with self.assertRaises(ModelError):
+            Acceptance(id="noop", command="true").validate()
+        with self.assertRaises(ModelError):
+            Acceptance(id="noop", command="exit 0").validate()
+
+    def test_approver_cannot_be_the_run_actor(self) -> None:
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/index.html", content="hello")],
+            builder="agent",
+        )
+        plan.approval = Approval(approved_by="agent")
+        self.project.save_plan(plan)
+        with self.assertRaises(RunError):
+            apply_plan(self.project, plan, actor="agent")
 
     def test_plan_path_matching(self) -> None:
         self.assertTrue(path_allowed("site/index.html", ["site/"]))

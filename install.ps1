@@ -67,8 +67,9 @@ if ($Uninstall) {
         if ($DryRun) { Write-Host "would remove $Launcher" } else { Write-Host "removed $Launcher" }
     }
     if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir $Marker))) {
-        Invoke-Step { Remove-Item -Recurse -Force $SkillDir } "remove $SkillDir"
-        if ($DryRun) { Write-Host "would remove $SkillDir" } else { Write-Host "removed $SkillDir" }
+        Invoke-Step { Remove-Item -Force (Join-Path $SkillDir "SKILL.md"), (Join-Path $SkillDir "VERSION"), (Join-Path $SkillDir $Marker) -ErrorAction SilentlyContinue } "remove Aperio files in $SkillDir"
+        if (-not $DryRun) { if (Test-Path $SkillDir) { Remove-Item $SkillDir -Force -ErrorAction SilentlyContinue } }
+        if ($DryRun) { Write-Host "would remove Aperio files in $SkillDir" } else { Write-Host "removed Aperio files in $SkillDir" }
     }
     if (-not $NoSkill -and (Test-Path $CommandFile) -and (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
         Invoke-Step { Remove-Item -Force $CommandFile } "remove $CommandFile"
@@ -79,6 +80,10 @@ if ($Uninstall) {
 
 if (-not $NoSkill -and (Test-Path $CommandFile) -and -not (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
     Write-Error "install.ps1: refusing to overwrite existing $CommandFile; move it aside or use -NoSkill"
+    exit 2
+}
+if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir "SKILL.md")) -and -not (Test-Path (Join-Path $SkillDir $Marker))) {
+    Write-Error "install.ps1: refusing to overwrite existing $SkillDir/SKILL.md; move it aside or use -NoSkill"
     exit 2
 }
 

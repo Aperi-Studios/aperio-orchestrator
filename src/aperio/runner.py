@@ -324,9 +324,7 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
     task.verify_id = None
     project.put_task(task)
     if plan.approval.approved_by.strip().lower() == actor.strip().lower():
-        # An owner may also be the actor in a tiny project; record it rather than
-        # pretending it is independent review. Verification still needs a reviewer.
-        pass
+        raise RunError("the approver cannot also be the run actor")
     try:
         validate_plan_paths(plan, project.metadata.get("policy", {}).get("protected_paths"))
     except PolicyError as exc:

@@ -13,7 +13,7 @@ from pathlib import Path
 
 DOC_FILES = ["README.md", "START-HERE.md"]
 DOC_DIR = "docs"
-EXCLUDED_DOCS = {"docs/ARCHIVE.md"}
+EXCLUDED_DOCS = {"docs/ARCHIVE.md", "docs/AUDIT-CLAUDE-20261026.md"}
 PATH_PREFIXES = ("src/", "tests/", "docs/", "examples/", "skill/", "commands/", ".github/")
 PATH_SUFFIXES = (".py", ".md", ".sh", ".json", ".toml", ".yml", ".yaml")
 SKIP_TOKENS = {"src/", "tests/", "docs/", "examples/", "skill/", "commands/", ".github/"}

@@ -615,14 +615,14 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **28 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | **30 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | **15 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **5 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
-| Installer tests | **8 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **70 passed** | same command |
+| Installer tests | **10 passed** | same command; `tests/test_installer.py` |
+| Total test suite | **74 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -640,6 +640,9 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Artifact binding | **review and done refuse** if the project changed after verification | `tests/test_core.py` artifact tests |
 | Review evidence | **done refuses** if review evidence is missing | `tests/test_core.py::test_finish_requires_review_evidence` |
 | Installer dry-run uninstall | **keeps files** and reports would-remove | `tests/test_installer.py::test_dry_run_uninstall_removes_nothing` |
+| Installer user-file preservation | **uninstall keeps unrelated files** | `tests/test_installer.py::test_uninstall_preserves_user_files_in_the_skill_directory` |
+| Self-approval | **refused** when approver equals run actor | `tests/test_core.py::test_approver_cannot_be_the_run_actor` |
+| No-op acceptance | **refused** for `true` and `exit 0` | `tests/test_core.py::test_noop_acceptance_is_refused` |
 | Acceptance mutation | **fails verification** if a check changes a project file | `tests/test_core.py::test_acceptance_check_cannot_mutate_the_project` |
 | Installer dry run | **no files written** | `tests/test_installer.py::test_dry_run_writes_nothing` |
 | Installer idempotency | **second run leaves one skill** | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
@@ -665,7 +668,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
-| External audit of the whole repo | **seven Codex passes; P1s fixed or documented; Claude audit and owner approval pending** | `docs/AUDIT-CODEX-20261026.md` |
+| External audit of the whole repo | **seven Codex passes and one Claude audit; Claude F1/F3/F4/F5 fixed, F2 documented; owner approval pending** | `docs/AUDIT-CODEX-20261026.md`, `docs/AUDIT-CLAUDE-20261026.md` |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
 

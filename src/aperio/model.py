@@ -151,6 +151,9 @@ class Acceptance:
     def validate(self) -> None:
         if not self.id or not self.command.strip():
             raise ModelError("acceptance checks need an id and a command")
+        normalized = " ".join(self.command.split())
+        if normalized in {"true", ":", "exit 0", "/bin/true", "/usr/bin/true"}:
+            raise ModelError(f"acceptance {self.id}: a no-op command cannot prove the work")
 
 
 @dataclass

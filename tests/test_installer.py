@@ -60,6 +60,26 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue((self.skill_home / "aperio" / "SKILL.md").is_file())
         self.assertIn("would remove", result.stdout)
 
+    def test_uninstall_preserves_user_files_in_the_skill_directory(self) -> None:
+        install = self.run_install()
+        self.assertEqual(install.returncode, 0, install.stderr)
+        skill_dir = self.skill_home / "aperio"
+        note = skill_dir / "my-notes.md"
+        note.write_text("mine\n", encoding="utf-8")
+        remove = self.run_install("--uninstall")
+        self.assertEqual(remove.returncode, 0, remove.stderr)
+        self.assertTrue(note.is_file())
+        self.assertFalse((skill_dir / "SKILL.md").exists())
+
+    def test_existing_foreign_skill_file_is_not_overwritten(self) -> None:
+        skill_dir = self.skill_home / "aperio"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("someone else's skill\n", encoding="utf-8")
+        result = self.run_install()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("refusing to overwrite", result.stderr)
+        self.assertEqual((skill_dir / "SKILL.md").read_text(), "someone else's skill\n")
+
     def test_install_is_idempotent_and_uninstalls(self) -> None:
         first = self.run_install()
         self.assertEqual(first.returncode, 0, first.stderr)

@@ -68,7 +68,7 @@ A plan is JSON. It declares allowed paths, exact write steps, bounded run steps,
 
 ## Proof
 
-See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and output recorded on 2026-10-26. The first external Codex audit and its dispositions are in [docs/AUDIT-CODEX-20261026.md](docs/AUDIT-CODEX-20261026.md).
+See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and output recorded on 2026-10-26. The external audits and dispositions are in [docs/AUDIT-CODEX-20261026.md](docs/AUDIT-CODEX-20261026.md) and [docs/AUDIT-CLAUDE-20261026.md](docs/AUDIT-CLAUDE-20261026.md).
 
 ## What works now
 
@@ -107,11 +107,11 @@ Aperio is deliberately conservative:
 - writes must stay inside the plan's allowed paths;
 - protected paths such as `.git` and `.aperio` are refused;
 - symlink components and parent traversal are refused;
-- shell changes outside declared writes are recorded as violations;
-- a builder cannot be the only reviewer;
-- a task is `done` only after acceptance checks pass and a review is confirmed.
+- shell changes inside the scanned project are recorded as violations; writes outside the project or under excluded directories are not observed;
+- a builder label cannot be the only reviewer label; this is not authenticated identity, so use `review --host` when a separate process matters;
+- a task is `done` only after acceptance checks pass, the verified artifact and plan still match, and matching review evidence is confirmed.
 
-The shell limitation is real. A command can change a file before Aperio detects it. Do not treat path checks as an OS sandbox.
+The shell limitation is real. A command can change a file before Aperio detects it, and a write outside the scanned project is not detected at all. Do not treat path checks as an OS sandbox.
 
 ## Documentation
 

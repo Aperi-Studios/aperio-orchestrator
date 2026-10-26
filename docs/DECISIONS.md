@@ -38,7 +38,7 @@
 
 **Why:** the old project repeatedly treated self-assessment as verification.
 
-**Consequence:** a solo agent cannot finish a task alone. If no independent reviewer exists, the task is `NEEDS_REVIEW`, not done.
+**Consequence:** a completed task requires a confirmed review whose reviewer label differs from the builder label. This is a procedural gate and an audit trail, not authenticated separation: a local process can supply any label. Use `review --host` for a separate fresh-context process when actual host separation is required. A task without a confirmed review stays `NEEDS_REVIEW`, not done.
 
 ## ADR-006: Fresh public repository, old repository preserved
 

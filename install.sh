@@ -46,12 +46,18 @@ fi
 LIB="$PREFIX/share/aperio"
 BIN="$PREFIX/bin/aperio"
 SKILL_DIR="$SKILL_HOME/aperio"
+CODEX_SKILL_DIR="$HOME/.codex/skills/aperio"
 COMMAND_DIR="$HOME/.claude/commands"
 COMMAND_FILE="$COMMAND_DIR/aperio.md"
 MARKER="aperio-v2-managed"
 
 if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && ! grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
   echo "install.sh: refusing to overwrite existing $COMMAND_FILE" >&2
+  echo "Move it aside or use --no-skill." >&2
+  exit 2
+fi
+if [ "$DO_SKILL" -eq 1 ] && [ -f "$SKILL_DIR/SKILL.md" ] && [ ! -f "$SKILL_DIR/$MARKER" ]; then
+  echo "install.sh: refusing to overwrite existing $SKILL_DIR/SKILL.md" >&2
   echo "Move it aside or use --no-skill." >&2
   exit 2
 fi
@@ -86,8 +92,14 @@ if [ "$UNINSTALL" -eq 1 ]; then
     if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$BIN"; else echo "removed $BIN"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$SKILL_DIR/$MARKER" ]; then
-    run rm -rf "$SKILL_DIR"
-    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$SKILL_DIR"; else echo "removed $SKILL_DIR"; fi
+    run rm -f "$SKILL_DIR/SKILL.md" "$SKILL_DIR/VERSION" "$SKILL_DIR/$MARKER"
+    if [ "$DRY_RUN" -eq 0 ]; then rmdir "$SKILL_DIR" 2>/dev/null || true; fi
+    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove Aperio files in %s\n' "$SKILL_DIR"; else echo "removed Aperio files in $SKILL_DIR"; fi
+  fi
+  if [ "$DO_SKILL" -eq 1 ] && [ -f "$CODEX_SKILL_DIR/$MARKER" ]; then
+    run rm -f "$CODEX_SKILL_DIR/SKILL.md" "$CODEX_SKILL_DIR/VERSION" "$CODEX_SKILL_DIR/$MARKER"
+    if [ "$DRY_RUN" -eq 0 ]; then rmdir "$CODEX_SKILL_DIR" 2>/dev/null || true; fi
+    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove Aperio files in %s\n' "$CODEX_SKILL_DIR"; else echo "removed Aperio files in $CODEX_SKILL_DIR"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
     run rm -f "$COMMAND_FILE"

@@ -8,15 +8,15 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 28 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | 30 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | 15 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 5 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
-| Installer tests | 8 passed | same command; `tests/test_installer.py` |
+| Installer tests | 10 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 70 passed | same command |
+| Total test suite | 74 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -34,6 +34,9 @@
 | Artifact binding | review and done refuse if the project changes after verification | `tests/test_core.py::test_review_refuses_a_project_changed_after_verification`; `test_finish_refuses...` |
 | Review evidence | done refuses if the review evidence file is missing | `tests/test_core.py::test_finish_requires_review_evidence` |
 | Installer dry-run uninstall | reports would-remove and keeps files | `tests/test_installer.py::test_dry_run_uninstall_removes_nothing` |
+| Installer user-file preservation | uninstall leaves unrelated files in the skill directory | `tests/test_installer.py::test_uninstall_preserves_user_files_in_the_skill_directory` |
+| Self-approval | the approver cannot also be the run actor | `tests/test_core.py::test_approver_cannot_be_the_run_actor` |
+| No-op acceptance | `true` and `exit 0` are refused as acceptance checks | `tests/test_core.py::test_noop_acceptance_is_refused` |
 | Acceptance mutation | a check that changes a project file fails verification | `tests/test_core.py::test_acceptance_check_cannot_mutate_the_project` |
 | Installer dry run | no files written | `tests/test_installer.py::test_dry_run_writes_nothing` |
 | Installer idempotency | second run leaves one skill | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
@@ -72,7 +75,7 @@
 
 ## Known limits
 
-- Seven external Codex passes found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 70-test suite is not a whole-repository audit. Claude's independent audit and the owner's approval are still pending. See `docs/AUDIT-CODEX-20261026.md`.
+- Seven external Codex passes and one Claude audit found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 74-test suite is not a whole-repository audit. Claude's F1, F3, F4, and F5 are fixed; F2 (reviewer identity is a label) remains documented, not solved. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.
