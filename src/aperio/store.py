@@ -102,7 +102,12 @@ class Project:
         if schema is None:
             data["schema"] = SCHEMA_VERSION
             if path.is_file():
-                self._write_json(path, data)
+                try:
+                    self._write_json(path, data)
+                except OSError:
+                    # read-only mount or permissions: keep the migrated schema
+                    # in memory so pure reads still work; the next write persists it
+                    pass
         elif schema != SCHEMA_VERSION:
             raise StoreError(
                 f"unsupported state schema {schema} in {path}; this build supports {SCHEMA_VERSION}"
