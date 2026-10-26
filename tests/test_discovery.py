@@ -16,6 +16,7 @@ from aperio.discovery import (
     WAIVER_CONFIRM,
     DiscoveryError,
     answer_question,
+    format_status,
     next_question,
     parse_choices,
     status,
@@ -196,6 +197,7 @@ class DiscoveryTests(unittest.TestCase):
             review_at="2026-11-30",
         )
         self.assertTrue(status(self.project)["ready"])
+        self.assertIn("1 waived", format_status(self.project))
         plan = ROOT / "examples" / "demo-site-plan.json"
         args = argparse.Namespace(project=str(self.root), file=str(plan))
         output = io.StringIO()

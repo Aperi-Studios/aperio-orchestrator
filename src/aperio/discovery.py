@@ -622,6 +622,12 @@ def format_question(project: Project, question: Question) -> str:
 def format_status(project: Project) -> str:
     result = status(project)
     if result["ready"]:
+        if result["waived"]:
+            return (
+                f"Discovery: ready ({result['answered']} answered, "
+                f"{len(result['waived'])} waived). Ready to plan.\n"
+                "Waived: " + ", ".join(result["waived"])
+            )
         return f"Discovery: complete ({result['total']} of {result['total']} answered). Ready to plan."
     parts = [
         f"Discovery: {result['answered']}/{result['total']} answered",
