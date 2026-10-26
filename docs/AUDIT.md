@@ -101,8 +101,8 @@ human and `--json` output.
 
 ## Limits
 
-- The finder and the verifier should be different hosts. The ledger records
-  findings; it does not authenticate who recorded them.
+- The finder and the verifier must be different hosts. The ledger records
+  findings and verification verdicts; it does not authenticate who recorded them.
 - A confirmed finding is not proof of exploitability.
 - The files are local and not cryptographically signed or tamper-evident.
 - The report is not a whole-repository security guarantee.

@@ -115,6 +115,14 @@ class AuditTests(unittest.TestCase):
         )
         self.assertEqual(finding["status"], "needs_validation")
         self.assertEqual(finding["severity"], "")
+        with self.assertRaisesRegex(AuditError, "only a confirmed finding"):
+            verify_finding(
+                self.project,
+                finding["id"],
+                by="peer",
+                verdict="confirmed",
+                evidence="This must not verify an unresolved record.",
+            )
 
     def test_confirmed_requires_boundary_line_and_anchored_evidence(self) -> None:
         start(self.project, scope="src")

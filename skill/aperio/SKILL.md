@@ -309,7 +309,7 @@ Rules:
 - `aperio audit report` exits 1 while coverage is still open, truncated, the
   source changed after the audit started, or any finding is unverified,
   contradicted, or unresolved; 0 means complete.
-- A fresh reviewer should verify every confirmed finding; the finder is not the
+- A fresh reviewer must verify every confirmed finding; the finder is not the
   verifier.
 
 ## Plan file
