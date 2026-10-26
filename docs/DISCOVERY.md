@@ -33,6 +33,8 @@ The intake must not force a label before it understands the work. Facets can be 
 8. **Depth follows risk and combination, not a fixed scenario.**
 9. **Stop when the plan is safe.** Do not ask every possible question.
 10. **No LLM judge decides completeness.** The gate is explicit fields, evidence levels, and owner decisions.
+11. **Conversation before questionnaire.** Start with a greeting and an open “what do you want to make?” A blank folder is not a business questionnaire; an existing project starts with inspection and “what do you want to change?” Numbered menus are for details after the idea is clear.
+12. **Do not ask what the agent can see.** An empty folder already answers “what exists.” A repository can answer stack, tests, and routes before the owner is asked.
 
 ## 3. The facet profile
 
@@ -132,24 +134,54 @@ The SEO row carries more than seven practical fields. It is shown as one domain 
 
 ## 5. The interview
 
-### 5.1 Universal first turn
+### 5.1 First contact: do not start with a questionnaire
 
-Ask these **one at a time**, in plain language. Reflect each answer back before the next.
+When `/aperio` starts, inspect the target read-only. Change nothing.
 
-1. When this is finished, what should be different, and why does it matter now?
-2. What exists today: a URL, a folder, a repository, screenshots, a document, or nothing?
-3. Which of these apply? It can be more than one: new build, change, redesign, repair, audit, migration, SEO/growth, performance, accessibility, other.
-4. Who is the primary person this is for, and what one action must they be able to take?
-5. What are the three must-haves for the first release, and what is explicitly not included?
-6. How will you know it worked?
-7. What is fixed: deadline, budget, brand, technology, hosting, legal or privacy rules, languages, or accessibility target?
-8. Who owns the domain, hosting, repository, content, analytics, and final approval? What access exists, without sharing any secret value?
-9. What evidence can you show: analytics or Search Console export, brand assets, examples, screenshots, logs, or a current process document?
-10. What should the project be called?
+Then greet and state what you found:
 
-Do not ask all ten in one message. A good first turn is question 1 plus a one-sentence reason.
+- **Blank folder:** “Hi — I’m Aperio. This folder is empty, so we’re starting from scratch. I’ll help turn the idea into a small plan, then build and verify it.”
+- **Existing project:** “Hi — I’m Aperio. I looked at the folder; I found … I won’t change anything until you approve a plan.”
 
-### 5.2 Selecting the next question
+Ask one open question and stop:
+
+- **Blank folder:** “In one or two sentences, what do you want to make?”
+- **Existing project:** “What do you want to change or fix?”
+
+Do not show a menu on the first turn. Do not ask “which business outcome?” before you know what the thing is. Do not say “Question 1 of 10.”
+
+Reflect the answer back:
+
+> So you want to make …, and the reason is … Is that right?
+
+If the answer is vague, ask for an example or the problem, not an abstract business metric. If the owner hesitates, offer a short help menu:
+
+1. A website
+2. A web app or tool
+3. An internal tool
+4. Fix or change something existing
+5. Not sure — research and recommend
+6. Other — type it
+
+Once the idea is clear, use the structured follow-up below, one question at a time.
+
+### 5.2 Universal follow-up
+
+Ask these only after the idea is clear. Reflect each answer before the next.
+
+1. Who is the primary person this is for, and what one action should they be able to take?
+2. What should be different when it is finished?
+3. What are the three must-haves for the first release, and what is explicitly not included?
+4. How will you know it worked?
+5. What is fixed: deadline, budget, brand, technology, hosting, legal or privacy rules, languages, or accessibility target?
+6. Who owns the domain, hosting, repository, content, analytics, and final approval? What access exists, without sharing any secret value?
+7. What evidence can you show: analytics or Search Console export, brand assets, examples, screenshots, logs, or a current process document?
+8. Which labels apply: new, change, redesign, repair, audit, migration, SEO, performance, accessibility, other?
+9. What should the project be called?
+
+Do not ask what you already inspected. A blank folder has already answered “what exists.” An existing project should be inspected before asking about its stack, routes, or tests.
+
+### 5.3 Selecting the next question
 
 After the first answers, create the facet profile and load the core pack plus every triggered module.
 
@@ -168,7 +200,7 @@ Stop asking when:
 - every non-goal and fixed constraint is recorded;
 - the gate expression for the loaded modules is satisfied.
 
-### 5.3 Follow-up techniques
+### 5.4 Follow-up techniques
 
 Use these only when the first answer is vague:
 
@@ -185,7 +217,7 @@ Use these only when the first answer is vague:
 
 Avoid “Would you like…?” and “Do you want it modern?” Ask what happened, what exists, what was measured, and what was rejected.
 
-### 5.4 Owner-only versus discoverable
+### 5.5 Owner-only versus discoverable
 
 | Owner-only | Agent can inspect |
 |---|---|
@@ -193,22 +225,23 @@ Avoid “Would you like…?” and “Do you want it modern?” Ask what happene
 
 If a fact can be inspected, do not make the owner retype it. Record the inspection command or URL and ask the owner only to confirm the interpretation.
 
-### 5.5 Presentation format and the research fallback
+### 5.6 Presentation format and the research fallback
 
-A blank question puts the work on the owner. Present each answerable question as a short numbered menu:
+A blank question puts the work on the owner. After the idea is clear, present each answerable question as a short numbered menu:
 
 ```text
-Which outcome matters most? Choose one or more:
+What is fixed? Choose all that apply:
 
-1. More customers, leads, or sales
-2. Save time or reduce manual work
-3. Fix a problem or reduce errors
-4. Launch a new product or service
-5. Improve search visibility
-6. Improve speed, accessibility, or usability
-7. Reduce risk, compliance, or cost
-8. Not sure — research and recommend
-9. Other — type it
+1. Deadline
+2. Budget
+3. Brand or design
+4. Existing technology or stack
+5. Hosting or domain
+6. Legal, privacy, or compliance
+7. Languages or localization
+8. Accessibility target
+9. Nothing is fixed
+10. Not sure — research and recommend
 ```
 
 Rules:
