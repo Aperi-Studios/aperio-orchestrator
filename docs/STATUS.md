@@ -73,7 +73,7 @@
 - OS sandbox for host or shell steps.
 - Remote deployment.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer passes under `pwsh` on macOS.
-- Adaptive discovery intake with twelve domains, evidence levels, and a plan gate; the specification is in `docs/DISCOVERY.md`, but no CLI command records it yet.
+- Adaptive discovery intake with eighteen domains, 138 base fields, and a plan gate; the specification is in `docs/DISCOVERY.md`, but no CLI command records it yet.
 
 ## Known limits
 

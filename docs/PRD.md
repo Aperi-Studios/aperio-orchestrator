@@ -222,9 +222,9 @@ Record every substantive owner instruction, amendment, constraint, rejection, an
 
 ### FR-04: Adaptive intake (P0)
 
-Ask one question at a time and branch on the answer. The first branch distinguishes new build, redesign, migration, repair, audit, or another task. Collect purpose, audience, features, content, stack, CMS, auth, data, integrations, hosting, budget, localization, accessibility, SEO, maintenance, and deployment constraints. Do not use a form when a conversation is enough.
+Ask one question at a time and build a facet profile rather than forcing one project type. A project can combine change, surface, lifecycle, content, user, data, commerce, discovery, quality, delivery, AI, locale, integration, risk, stage, team, budget, and timeline facets. Collect purpose, audience, features, content, stack, CMS, auth, data, integrations, hosting, budget, localization, accessibility, SEO, maintenance, and deployment constraints. Do not use a form when a conversation is enough.
 
-The question model, twelve domains, evidence levels, and scenario gates are specified in [Discovery and Evidence Intake](DISCOVERY.md).
+The question model, eighteen domains, 138 base fields, facet profiles, evidence levels, and module gates are specified in [Discovery and Evidence Intake](DISCOVERY.md).
 
 **Acceptance:** every required answer is answered or explicitly marked `N/A` or `Assumed` with a reason; placeholders fail.
 

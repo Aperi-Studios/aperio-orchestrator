@@ -1,303 +1,392 @@
 # Discovery and Evidence Intake
 
-**Status:** research and specification. The questionnaire model below is not yet a CLI command; the current product records only the free-text ask. This document defines what the next intake slice must implement.
+**Version:** 2 (facet-based)
+
+**Status:** research and specification. The product still records only the free-text ask; this defines the next intake slice. Do not treat it as implemented.
 
 **Research date:** 2026-10-26
 
-**Purpose:** collect enough truthful evidence from a non-technical owner to write a bounded, testable plan without inventing requirements.
+**Design rule:** there is no fixed list of project types. A project is a **profile of independent facets**, and the question set is assembled from those facets. A project can be a redesign + SEO + CMS + migration + accessibility at the same time.
 
-## 1. What discovery must produce
+## 1. Why the first version was too narrow
 
-Discovery is not a form and it is not planning. It ends when Aperio can answer, with evidence:
+A list such as “new site, redesign, migration, repair, audit, SEO” is easy to explain but wrong at the edges:
 
-1. What outcome the owner wants, and why now.
-2. Who the user is and what that user must be able to do.
-3. What exists today: nothing, a repository, a live site, a partial build, or a broken system.
-4. What is in the first release, what is explicitly out, and what can wait.
-5. How success will be measured.
-6. What constraints are fixed: time, money, brand, technology, hosting, law, privacy, language, accessibility.
-7. Who owns the content, accounts, approvals, and launch.
-8. What evidence the owner can provide, and what the agent can inspect directly.
+- a redesign can also be a CMS migration;
+- an SEO project can include a replatform;
+- a repair can require an accessibility remediation;
+- a “new site” can include an API, a booking engine, and a payment flow;
+- a CLI, a data pipeline, an AI assistant, or an internal tool is not a website;
+- the owner may not know which label fits.
 
-The output is a **discovery record**, not a conversation transcript. The record separates facts, assumptions, decisions, constraints, and acceptance criteria. Planning begins only when the critical fields are covered or explicitly marked unknown with an owner and a risk.
+The intake must not force a label before it understands the work. Facets can be added, combined, or marked unknown without changing the gate logic.
 
-Research basis: GOV.UK says discovery must understand users, constraints, the policy or business intent, and opportunities, and should not start building; NN/g defines discovery as reaching consensus on the problem and desired outcomes when unknowns block progress; requirements-elicitation research treats questionnaires as early, focused aids that must be combined with interviews and document study, not as a substitute for them.
+## 2. Design principles
 
-## 2. Operating principles
+1. **One question at a time.** Never send the owner a 60-field form.
+2. **Inspect before asking.** If a repository or URL exists, read it first. Ask only for intent, constraints, access, decisions, and owner-only facts.
+3. **Record the owner’s words and the normalized fact separately.**
+4. **Every fact has a source and an evidence level.** An owner estimate is not a measurement.
+5. **Unknown is a valid state.** It becomes a risk with an owner and a follow-up, not an invented answer.
+6. **Contradictions are shown, not averaged.**
+7. **No secrets in chat.** Ask which access exists and who can authorize it; never ask for a password, key, card number, or recovery code.
+8. **Depth follows risk and combination, not a fixed scenario.**
+9. **Stop when the plan is safe.** Do not ask every possible question.
+10. **No LLM judge decides completeness.** The gate is explicit fields, evidence levels, and owner decisions.
 
-1. **Ask one question at a time.** A non-technical owner should never receive a 60-question form.
-2. **Inspect before asking.** If the owner gives a repository or URL, read it first. Ask the owner only for intent, constraints, access, and decisions that cannot be discovered.
-3. **Capture the owner's words.** Store the raw answer and a normalized fact separately. Do not silently turn "make it modern" into a design requirement.
-4. **Record the source.** Every fact names whether it came from the owner, a document, a URL, a repository, a command, or an independent review.
-5. **Separate fact from assumption.** "The site gets 40 leads a month" is a fact only with an export or dashboard. Otherwise it is an owner estimate.
-6. **Allow "I do not know."** An explicit unknown is safer than an invented answer. It becomes a risk or a research task.
-7. **Do not ask for secrets.** Ask which accounts exist and who can authorize access. Never ask the owner to paste passwords, API keys, card data, or recovery codes into chat.
-8. **Contradictions are recorded, not averaged.** If two answers conflict, show both and ask the owner to resolve them.
-9. **Stop when the plan is safe, not when every field is full.** Depth is driven by risk and scenario, not by a fixed question count.
-10. **Do not use discovery to sell a solution.** Start with the problem and the outcome; propose a stack or design only after the constraints are known.
+## 3. The facet profile
 
-## 3. The first questionnaire
+A profile is a small JSON object. Facet values are examples, not a closed enum; add a new value when the work needs it.
 
-These eight questions are universal. Ask them in order, one per message. Reflect each answer back in one sentence before moving on.
+```json
+{
+  "id": "profile-example",
+  "labels": ["redesign", "seo", "cms-migration"],
+  "facets": {
+    "change": ["redesign", "migrate"],
+    "surface": ["website", "cms"],
+    "lifecycle": ["active", "legacy"],
+    "content": ["cms", "localized"],
+    "users": ["public"],
+    "data": ["personal"],
+    "commerce": ["none"],
+    "discovery": ["seo"],
+    "quality": ["accessibility", "performance", "privacy"],
+    "delivery": ["hosted", "ci-cd", "handoff"],
+    "integration": ["analytics", "crm"],
+    "ai": ["none"],
+    "locale": ["multi"],
+    "risk": ["medium"],
+    "stage": ["discovery"],
+    "team": ["client"],
+    "budget": ["range"],
+    "timeline": ["fixed"]
+  },
+  "notes": "Example only; not a project type."
+}
+```
 
-| # | Question | Why it matters | Evidence to request |
+### 3.1 Facet catalog
+
+| Facet | Example values | What it changes |
+|---|---|---|
+| `change` | new, extend, redesign, repair, audit, migrate, optimize, replace, decommission, research, operate | Which evidence and rollback rules apply |
+| `surface` | website, web-app, api, cli, library, desktop, mobile, game, data-pipeline, automation, ai-feature, docs, email, integration, marketplace, cms, commerce, dashboard, internal-tool, firmware | Which delivery and test modules load |
+| `lifecycle` | idea, greenfield, active, legacy, maintenance, sunset | How much current-state inspection is needed |
+| `content` | none, static, cms, ugc, media, localized, regulated | Content, editorial, rights, and workflow questions |
+| `users` | public, authenticated, roles, b2b, internal, multi-tenant, children, vulnerable | Auth, permissions, consent, and usability |
+| `data` | none, content, personal, financial, health, children, regulated, large, realtime | Privacy, security, retention, backup, and scale |
+| `commerce` | none, catalog, payments, subscription, booking, donation, marketplace | Checkout, tax, shipping, inventory, refunds |
+| `discovery` | private, seo, paid, app-store, marketplace, internal-search | SEO, ASO, analytics, and measurement |
+| `quality` | accessibility, performance, security, reliability, compliance, ai-safety | Targets, tests, and acceptance |
+| `delivery` | hosted, self-hosted, ci-cd, multiple-envs, support, handoff, decommission | Deployment, operations, and ownership |
+| `ai` | none, assistant, generation, classification, rag, agent, fine-tune | Model, data, evaluation, and human review |
+| `locale` | single, multi, rtl, cjk | Translation, layout, and content workflow |
+| `integration` | crm, email, payments, booking, erp, webhooks, analytics | Contracts, auth, failures, and monitoring |
+| `risk` | low, medium, high, critical | Depth, evidence, and approval level |
+| `stage` | discovery, build, launch, operate, maintain | What the current gate is for |
+| `team` | solo, team, client, regulated | Stakeholders, approvals, and handoff |
+| `budget` | fixed, range, unknown, ongoing | Scope and vendor decisions |
+| `timeline` | fixed, flexible, unknown | Sequencing and risk |
+
+A facet can also be `unknown`. Unknown is not “none”; it loads a clarification module and creates a risk.
+
+### 3.2 Adding a new facet or module
+
+To support a new kind of work, add a facet value and a module with:
+
+- a trigger expression (for example `surface=game` or `ai=agent`);
+- required fields;
+- evidence hints;
+- acceptance checks;
+- the gate condition.
+
+No central “project type” switch needs to change.
+
+## 4. The eighteen domains and 138 base fields
+
+The reference model has **18 domains** and **138 base fields**, plus conditional fields added by modules. A field is a question with a stable ID, not a paragraph.
+
+| # | Domain | Base fields |
+|---|---|---|
+| 1 | Intent, outcome, value | problem, trigger, desired outcome, business value, priority, success statement, non-goals |
+| 2 | Stakeholders and governance | owner, sponsor, approver, decision rights, conflicts, communication, escalation |
+| 3 | Users, roles, jobs | primary user, secondary users, jobs, current workaround, barriers, frequency, accessibility needs |
+| 4 | Current state and assets | existing URL/repo, stack, hosting, domain, accounts, known failures, baseline evidence |
+| 5 | Scope and priorities | must, should, could, won’t, first-release boundary, dependencies, change control |
+| 6 | Content and information architecture | pages/screens, content inventory, owner, source, tone, media rights, localization |
+| 7 | Brand and experience | references, anti-references, visual direction, tone, responsive behavior, motion, design owner |
+| 8 | Functional behavior | user flows, states, validation, errors, empty states, admin actions, notifications |
+| 9 | Data and domain model | entities, relationships, ownership, lifecycle, retention, export, deletion, quality |
+| 10 | Integrations and APIs | systems, contracts, auth, rate limits, retries, failure states, monitoring |
+| 11 | CMS and editorial | editors, roles, content types, workflow, preview, scheduling, publishing, rollback |
+| 12 | Commerce and payments | catalog, checkout, payments, tax, shipping, inventory, refunds, fraud, PCI scope |
+| 13 | SEO and discoverability | goals, queries, competitors, baseline, URL inventory, redirects, metadata, schema, internal links, measurement |
+| 14 | Analytics and experimentation | events, conversions, dashboards, consent, attribution, reporting owner, experiment rules |
+| 15 | Accessibility, inclusion, localization | target standard, keyboard, screen reader, contrast, captions, languages, RTL, content readability |
+| 16 | Performance, reliability, scale | Core Web Vitals, budgets, traffic, peak load, uptime, recovery, degradation, monitoring |
+| 17 | Security, privacy, legal, AI risk | data classes, auth, authorization, retention, consent, compliance, threats, model risks, human review |
+| 18 | Delivery, operations, support, handoff | environments, CI/CD, deployment, backups, support, documentation, training, decommission |
+
+The SEO row carries more than seven practical fields. It is shown as one domain because the **module** expands it; the base table is a map, not a cap.
+
+## 5. The interview
+
+### 5.1 Universal first turn
+
+Ask these **one at a time**, in plain language. Reflect each answer back before the next.
+
+1. When this is finished, what should be different, and why does it matter now?
+2. What exists today: a URL, a folder, a repository, screenshots, a document, or nothing?
+3. Which of these apply? It can be more than one: new build, change, redesign, repair, audit, migration, SEO/growth, performance, accessibility, other.
+4. Who is the primary person this is for, and what one action must they be able to take?
+5. What are the three must-haves for the first release, and what is explicitly not included?
+6. How will you know it worked?
+7. What is fixed: deadline, budget, brand, technology, hosting, legal or privacy rules, languages, or accessibility target?
+8. Who owns the domain, hosting, repository, content, analytics, and final approval? What access exists, without sharing any secret value?
+9. What evidence can you show: analytics or Search Console export, brand assets, examples, screenshots, logs, or a current process document?
+10. What should the project be called?
+
+Do not ask all ten in one message. A good first turn is question 1 plus a one-sentence reason.
+
+### 5.2 Selecting the next question
+
+After the first answers, create the facet profile and load the core pack plus every triggered module.
+
+For each unanswered required field, compute:
+
+```text
+risk = impact (1..5) × uncertainty (1..5) × dependency (1..5)
+```
+
+Ask the highest-risk field whose prerequisites are answered. If two fields are equally risky, prefer the one that can unlock the most other fields. Do not follow a fixed script.
+
+Stop asking when:
+
+- every blocking field is answered, evidenced, or explicitly unknown with an owner and risk;
+- every must-have has an acceptance check and evidence source;
+- every non-goal and fixed constraint is recorded;
+- the gate expression for the loaded modules is satisfied.
+
+### 5.3 Follow-up techniques
+
+Use these only when the first answer is vague:
+
+| Technique | Question | What it exposes |
+|---|---|---|
+| Critical incident | “Tell me about the last time this happened. What did you do, and what was the result?” | Real behavior, not a hypothetical |
+| Laddering | “Why does that matter?” then “What happens today instead?” | Underlying outcome and workaround |
+| Observation | “Can you show me the current screen, file, or process?” | Evidence and hidden steps |
+| Five whys | “Why does that happen?” repeated until a cause or a boundary appears | Root cause, not symptom |
+| Pre-mortem | “It is six months later and this failed. What went wrong?” | Risks and missing owners |
+| Rejection test | “What would make you reject the result?” | Quality bar and non-goals |
+| Handoff test | “If you disappeared for a month, who would run this and what would they need?” | Operations, documentation, ownership |
+| Evidence challenge | “How do you know that number?” | Distinguishes estimate from measurement |
+
+Avoid “Would you like…?” and “Do you want it modern?” Ask what happened, what exists, what was measured, and what was rejected.
+
+### 5.4 Owner-only versus discoverable
+
+| Owner-only | Agent can inspect |
+|---|---|
+| business goal, audience intent, budget, deadline, approvals, brand preference, legal constraints, risk tolerance, content ownership | repository structure, stack, tests, routes, metadata, links, page speed, console errors, accessibility tree, analytics if access is granted, public pages, sitemaps, robots, redirects |
+
+If a fact can be inspected, do not make the owner retype it. Record the inspection command or URL and ask the owner only to confirm the interpretation.
+
+## 6. Modules that expand the base fields
+
+A module is a conditional question pack. These are examples; the trigger can be combined.
+
+| Module | Trigger examples | Adds | Gate examples |
 |---|---|---|---|
-| 1 | Is this a new build, a change or redesign of something existing, a repair, an audit, a migration, or SEO/growth work? | Selects the branch and the required depth. | A short choice; no artifact needed. |
-| 2 | When this is finished, what should be different, and why does it matter now? | Defines the outcome, not the requested feature. | The owner's own words; examples of the current problem. |
-| 3 | What exists today: a URL, a folder, a repository, screenshots, a document, or nothing? | Prevents planning in a vacuum and tells the agent what to inspect. | URL, path, repository link, screenshots, or "nothing yet". |
-| 4 | Who is the primary person this is for, and what is the one action they must be able to take? | Separates the audience from the owner's preferences. | A named user group and one primary action; current journey if available. |
-| 5 | What are the three must-haves for the first release, and what is explicitly not included? | Creates scope and non-goals before design or code. | Owner list; existing pages or features that must be preserved. |
-| 6 | How will you know it worked? | Produces measurable acceptance criteria instead of "looks good". | A number, a user action, a conversion, a search/metrics export, or a concrete check. |
-| 7 | What is fixed: deadline, budget, brand, technology, hosting, legal or privacy rules, languages, or accessibility target? | Separates real constraints from preferences. | Contracts, brand guide, policy, existing stack, target standard. |
-| 8 | Who owns the domain, hosting, repository, content, analytics, and final approval? What access exists? | Establishes authority and avoids blocked work later. | Role names and access confirmation only; never secret values. |
+| Current-state audit | change in extend/repair/redesign/migrate/audit | repository, tests, routes, logs, baseline, preserved behavior | current state inspected; tests or explicit gap |
+| Scope and change control | always | must/should/could/won’t, waiver owner, change path | non-goals recorded; approver named |
+| Content inventory | content != none | pages, source, owner, freshness, rights, metadata | content source and owner exist |
+| Design system | surface includes website/web-app/mobile | brand, references, tokens, components, responsive, motion | references and design owner confirmed |
+| Frontend quality | surface includes website/web-app | routes, forms, states, responsive, browser/device, analytics | primary journeys and breakpoints tested |
+| Application core | surface includes web-app/internal-tool | roles, auth, permissions, workflows, errors, audit log | roles and one end-to-end flow proven |
+| API and integrations | surface includes api or integration != none | contract, auth, limits, retries, webhooks, monitoring | contract and failure behavior recorded |
+| CMS | content includes cms or surface includes cms | editors, roles, content types, workflow, preview, publish, rollback | edit → preview → publish → rollback |
+| Commerce | commerce != none | catalog, cart, checkout, tax, shipping, inventory, refunds, fraud, PCI | payment path and responsibility confirmed |
+| Booking | commerce includes booking | availability, calendar, deposit, reminders, cancellation | booking and cancellation flow proven |
+| SEO | discovery includes seo | queries, competitors, baseline, URLs, redirects, metadata, schema, internal links, content gaps, measurement | baseline and URL map captured |
+| Analytics | measurement is required or discovery != private | events, conversions, dashboards, consent, owner | event plan and access confirmed |
+| Migration | change includes migrate or replace | URL map, data map, DNS, redirects, freeze, rollback | URL/data map and rollback proven |
+| Accessibility | quality includes accessibility or users include vulnerable | target, keyboard, screen reader, contrast, captions, forms | target level and pages defined; tests run |
+| Performance | quality includes performance | baseline, budgets, pages, devices, third parties | baseline and target pages recorded |
+| Reliability | quality includes reliability or data is large/realtime | traffic, uptime, peak, recovery, degradation, monitoring | failure and recovery behavior defined |
+| Security | quality includes security or data != none | data classes, auth, authorization, threats, secrets, logging | threat model and access boundaries |
+| Privacy and legal | data includes personal/regulated or locale multi | lawful basis, consent, retention, export, deletion, DPA, cookies | data map and retention owner |
+| AI feature | ai != none | model, provider, data, prompts, evaluation, human review, cost, latency, fallback | eval set and human review path |
+| Localization | locale != single | languages, RTL, translation owner, workflow, fallback | language list and owner |
+| Operations | delivery includes hosted/support/handoff | environments, CI/CD, backup, monitoring, incident, support, training | deploy and rollback path |
+| Documentation and handoff | always at launch | audience, runbook, setup, known limits, ownership | fresh-reader test |
 
-After question 8, ask one evidence question:
+A project can trigger many modules. A design cannot be “locked” to one row.
 
-> What can you show me that would let us verify this: an existing URL, analytics or Search Console export, brand assets, examples you like, a screenshot, an error message, or a current process document?
+## 7. Evidence model
 
-Do not ask all nine at once. A good first turn is question 1 plus a plain-language explanation of why it is being asked.
-
-## 4. The twelve domains and 68 evidence fields
-
-The working model has **12 domains** and **68 fields**. Not every field applies to every project. The scenario branch decides which fields are required.
-
-| # | Domain | Core fields | Usually owner-only? |
-|---|---|---|---|
-| 1 | Outcome and value | problem, trigger, desired outcome, business value, priority, non-goals | Yes |
-| 2 | Users and jobs | primary user, secondary users, jobs to be done, current workaround, barriers | Mostly yes |
-| 3 | Current state and access | scenario, existing URL/repo, stack, hosting, domain, accounts, known failures | Mixed; inspect first |
-| 4 | Scope and priorities | must/should/could/won't, first-release boundary, preserved behavior, dependencies | Yes |
-| 5 | Content and information architecture | pages, content inventory, owner, source, tone, media, localization, migration | Mixed |
-| 6 | Brand and experience | references, anti-references, visual direction, tone, responsive expectations, design owner | Yes |
-| 7 | Functional and data | user flows, roles, forms, data model, validation, error states, admin actions | Mixed |
-| 8 | Integrations and CMS | CMS, editors, publishing, CRM, email, payments, booking, APIs, webhooks | Mixed |
-| 9 | SEO and discoverability | goals, queries, locations, competitors, baseline, URL map, redirects, metadata, schema, internal links, measurement | Mixed |
-| 10 | Quality attributes | accessibility target, performance budget, browsers/devices, content freshness, analytics | Mixed |
-| 11 | Security, privacy, legal | personal data, authentication, authorization, retention, consent, compliance, threat model | Yes, with inspection |
-| 12 | Delivery and handoff | deadline, budget, approvers, launch owner, deployment, backup/rollback, maintenance, training | Yes |
-
-The 68 fields are a checklist, not a script. For a simple new brochure site, about 14 to 18 fields are enough. A redesign or SEO project usually needs 25 to 35. A web application, CMS migration, or ecommerce project usually needs 45 to 60. The aim is coverage of risk, not a perfect score.
-
-## 5. Evidence model
-
-Every recorded answer should carry these fields:
+### 7.1 Fields
 
 | Field | Meaning |
 |---|---|
-| `fact_id` | Stable ID, for example `outcome.primary`. |
-| `domain` | One of the twelve domains. |
+| `fact_id` | Stable ID, for example `seo.url_inventory`. |
+| `domain` | One of the eighteen domains. |
 | `statement` | Normalized one-sentence fact. |
-| `owner_words` | The owner's original wording, kept separately. |
-| `kind` | `fact`, `assumption`, `decision`, `constraint`, `preference`, or `acceptance`. |
-| `source` | `owner`, `document`, `repository`, `url`, `command`, `analytics`, or `review`. |
+| `owner_words` | The owner’s exact wording. |
+| `kind` | fact, assumption, decision, constraint, preference, or acceptance. |
+| `source` | owner, document, repository, URL, command, analytics, observation, or review. |
 | `evidence_ref` | Path, URL, export, screenshot, command output, or review record. |
-| `evidence_level` | E0 to E4, defined below. |
-| `confidence` | `confirmed`, `likely`, `unknown`, or `contradicted`. |
-| `sensitivity` | `public`, `internal`, `personal`, or `secret-adjacent`. |
+| `evidence_level` | E0–E4. |
+| `confidence` | confirmed, likely, unknown, contradicted. |
+| `freshness` | captured date and expected review date. |
+| `sensitivity` | public, internal, personal, secret-adjacent. |
 | `owner` | Who can confirm or change it. |
-| `captured_at` | Timestamp. |
+| `dependency` | Other facts that must be true first. |
 | `follow_up` | What remains to inspect or ask. |
 
-### Evidence levels
+### 7.2 Evidence levels
 
-| Level | Meaning | Use |
+| Level | Meaning | Permitted use |
 |---|---|---|
-| E0 | No evidence; not recorded. | Cannot support a requirement. |
-| E1 | Owner statement or estimate. | Useful for intent, not proof of current behavior. |
-| E2 | Owner-provided artifact: URL, file, screenshot, export, document. | Minimum for a factual current-state claim. |
-| E3 | Agent inspected or reproduced it read-only. | Stronger; records command or URL and timestamp. |
-| E4 | Independent reviewer or measurement confirmed it. | Required for a "verified" claim where review is in scope. |
+| E0 | Missing | Cannot support a requirement. |
+| E1 | Owner statement or estimate | Intent and hypotheses; not a measured baseline. |
+| E2 | Owner-provided artifact | Minimum for a current-state factual claim. |
+| E3 | Agent inspected or reproduced read-only | Stronger; include command, URL, and timestamp. |
+| E4 | Independent reviewer or measurement confirmed | Required for a verified claim where review is in scope. |
 
-A plan must not turn E1 into E2 in its own wording. "The owner believes traffic is 10k/month" remains an owner estimate until an analytics export or dashboard is recorded.
+### 7.3 Evidence quality checks
 
-### Secrets rule
+- **Freshness:** analytics, rankings, dependency versions, and security claims expire.
+- **Completeness:** a screenshot of one page does not prove a site.
+- **Independence:** the builder’s assertion is not an independent review.
+- **Reproducibility:** a command with no output is not evidence.
+- **Sensitivity:** redact personal data; record only credential names.
+- **Contradiction:** keep both values and ask the owner to resolve them.
 
-Ask **which access exists and who can authorize it**, not for the secret itself. Never accept a password, API key, card number, recovery code, or private token in chat. Use the owner's existing vault or environment injection, and record only the credential **name** and the fact that access was confirmed.
+### 7.4 Assumption and unknown registers
 
-## 6. Scenario branches
+Every unresolved item gets:
 
-The first answer selects the branch. Each branch adds required fields and changes the acceptance evidence.
+- an owner;
+- a risk if wrong;
+- a way to resolve it;
+- a due date or a decision point;
+- the gate it blocks.
 
-| Scenario | First branch question | Required extras | Gate before planning |
+A plan may proceed with an unknown only when the owner explicitly accepts the risk. “Assumed” without an owner is a placeholder and must fail the gate.
+
+## 8. Coverage and gates
+
+A field is `missing`, `claimed` (E1), `evidenced` (E2/E3), or `verified` (E4). A module gate is a boolean expression over its required fields, for example:
+
+```text
+core.outcome and core.scope and core.success
+and (current_state.inspected or current_state.owner_accepts_unknown)
+and seo.baseline and seo.url_inventory
+and migration.url_map and migration.rollback
+```
+
+The plan gate refuses when a blocking field is missing. The owner can waive a field only by recording:
+
+- the field ID;
+- the reason;
+- the risk;
+- the person accepting it;
+- the expiry or review point.
+
+No waiver is implied by silence.
+
+## 9. Simulation: composite profiles
+
+These are **test profiles**, not a closed taxonomy. Each combines facets and loads different modules; the point is that no two need a special project-type switch.
+
+| Profile | Facets | Modules that load | Expected gate |
 |---|---|---|---|
-| New static site | New build with no existing code | audience, pages, content owner, domain/hosting, SEO basics, analytics, launch owner | Outcome, pages, content source, primary action, SEO/analytics decision, owner |
-| New web application | New build with users and data | roles, workflows, data model, auth, integrations, error states, deployment | Users/roles, must-have flows, data sensitivity, auth, hosting, acceptance |
-| Existing feature | Change an existing repository | current behavior, tests, affected paths, regression risk, deployment | Repo inspected, current tests, preserved behavior, rollback |
-| Redesign | Change an existing site or app's experience | current URL, analytics/GSC baseline, content inventory, brand, redirects, accessibility | Baseline, URL inventory, preserve/retire decisions, redirect owner |
-| Repair | Fix a defect | reproduction, environment, logs, recent changes, severity, expected behavior | Reproduction, impact, acceptance check, rollback |
-| Audit | Review without changing yet | scope, standards, access, evidence format, reviewer independence | Scope, standards, access, report format |
-| Migration | Move platform, domain, CMS, or data | source/target, URL map, data map, DNS, redirects, rollback, SEO baseline | URL/data map, redirect plan, rollback, owner |
-| SEO/growth | Improve discoverability | goals, queries, locations, competitors, GSC/analytics, URL inventory, content gaps, measurement | Baseline, target intent, URL/metadata plan, measurement |
-| Performance | Improve speed | baseline Core Web Vitals, pages, devices, third parties, budget | Baseline, target pages, budget, measurement method |
-| Accessibility | Meet an accessibility standard | target level, pages, assistive technologies, current audit, remediation owner | Target (for example WCAG 2.2 AA), scope, test method |
-| CMS | Add or change content management | editors, roles, content types, workflow, preview, media, publishing, backup | Roles, content model, workflow, publish/rollback |
-| Ecommerce | Sell products or services | catalog, payments, tax, shipping, inventory, email, fraud, PCI scope | Catalog, payment path, tax/shipping, security, returns |
-| API/integration | Connect systems | endpoints, auth, contracts, rate limits, errors, retries, observability | Contract, auth, failure behavior, owner |
-| Documentation/handoff | Explain or transfer a system | audience, runbooks, setup, deployment, known limits | Audience, source of truth, verification |
+| Portfolio site | website, new, static, public, seo | core, content, design, frontend, seo, analytics, ops | ready after content/hosting/SEO decisions |
+| Marketing site + blog + CMS | website, new, cms, localized, seo | core, content, cms, design, frontend, seo, analytics, localization, ops | blocked until editors, languages, URL plan |
+| SaaS dashboard | web-app, new, auth, roles, personal, api | core, app, auth, data, api, design, frontend, security, privacy, ops | blocked until roles and data map |
+| Public API | api, new, integration, docs | core, api, auth, data, docs, observability, ops | ready after contract and failure behavior |
+| CLI tool | cli, new, none, docs | core, cli, docs, tests, release, ops | ready after install and rollback |
+| Library | library, new, docs | core, api, docs, compatibility, release | ready after supported versions and tests |
+| Mobile app | mobile, new, auth, personal, app-store | core, mobile, auth, data, design, privacy, release | blocked until store/privacy/device matrix |
+| Desktop app | desktop, new, local-data | core, desktop, data, update, security, release | ready after update and backup path |
+| AI assistant | ai-feature, new, rag, personal | core, ai, data, privacy, security, eval, human-review, ops | blocked until eval set and data policy |
+| Data pipeline | data-pipeline, new, large, integration | core, data, integration, reliability, observability, security | ready after schema, failure, and retention |
+| Internal tool | internal-tool, new, auth, roles, internal | core, app, auth, data, accessibility, ops | ready after roles and support owner |
+| Existing feature | web-app, extend, active, auth | core, current-state, app, tests, rollback, ops | ready after reproduction and regression baseline |
+| Redesign + CMS + SEO + migration | website, redesign, migrate, cms, seo, localized | core, current-state, content, cms, seo, migration, design, accessibility, analytics | blocked until URL/data map and redirect owner |
+| Repair + accessibility | website, repair, active, accessibility | core, current-state, reproduction, accessibility, tests, rollback | ready after reproduction and target page list |
+| Security audit | web-app, audit, personal, security | core, current-state, security, privacy, evidence, review | ready after scope and access; no code change |
+| SEO-only | website, optimize, seo, active | core, current-state, seo, analytics, content, performance | blocked until baseline and target intent |
+| Performance-only | website, optimize, performance, active | core, current-state, performance, analytics, frontend | ready after baseline and target pages |
+| Accessibility remediation | website, repair, accessibility, active | core, current-state, accessibility, frontend, tests | ready after target level and page scope |
+| CMS migration | cms, migrate, content, active | core, current-state, content, cms, migration, redirects, ops | blocked until content model and rollback |
+| Ecommerce launch | commerce, new, payments, personal, seo | core, commerce, payments, tax, shipping, security, privacy, seo, ops | blocked until payment/tax/returns ownership |
+| Subscription membership | commerce, new, subscription, auth, personal | core, commerce, payments, auth, data, privacy, email, ops | blocked until billing and cancellation flow |
+| Booking site | commerce, booking, calendar, payments | core, booking, payments, email, privacy, ops | ready after availability/cancellation policy |
+| Marketplace | marketplace, multi-tenant, payments, content, seo | core, marketplace, auth, data, commerce, trust, moderation, seo, ops | blocked until trust and payout model |
+| Documentation/handoff | docs, existing, handoff | core, current-state, docs, runbook, training, verification | ready after fresh-reader test |
+| Decommission/replacement | replace, decommission, active | core, current-state, data, migration, redirects, rollback, support | blocked until data export and rollback |
 
-## 7. Branch question bank
-
-### 7.1 Existing site or repository
-
-1. What is the URL or repository path, and may I inspect it read-only?
-2. What works today that must not break?
-3. What is the current stack, build command, and deploy path?
-4. Which tests exist, and what do they actually cover?
-5. What are the top three user journeys or pages by importance?
-6. What are the top three by traffic, conversion, or revenue, if known?
-7. What changed recently that might explain the problem?
-8. Who can approve a change, and who can deploy it?
-9. What is the rollback path?
-10. What evidence can you provide: analytics, Search Console, error logs, screenshots, support messages?
-
-### 7.2 New project
-
-1. What is the one job the first release must do?
-2. Who is the primary user, and what do they do before and after?
-3. What are the pages or screens in the first release?
-4. What content exists, and who writes the missing content?
-5. What brand assets and examples exist?
-6. What domain, hosting, and analytics accounts exist?
-7. Does it need a CMS, forms, payments, accounts, or integrations?
-8. What is explicitly out of scope?
-9. What is the launch date and the approval path?
-10. What would make you say this was a waste of money?
-
-### 7.3 Redesign or migration
-
-1. Why redesign or migrate now?
-2. What must be preserved: URLs, rankings, content, integrations, brand, data?
-3. Do you have Search Console, analytics, and a full URL inventory?
-4. Which pages bring traffic, leads, or revenue?
-5. Which pages will be kept, merged, redirected, or retired?
-6. Who owns the redirect map and who tests it?
-7. What is the CMS and editorial workflow after launch?
-8. What is the rollback plan if launch fails?
-9. What accessibility and performance targets apply?
-10. How will success be measured at 30, 60, and 90 days?
-
-### 7.4 SEO/growth
-
-1. What business outcome should search produce: leads, sales, bookings, calls, or something else?
-2. Which services, products, locations, or questions should you be found for?
-3. Who is the intended searcher, and what do they need to believe before acting?
-4. Who are the three most relevant competitors, and why?
-5. Do you have Search Console, analytics, and Bing Webmaster access?
-6. What are the top pages by impressions, clicks, conversions, and revenue?
-7. Which URLs, rankings, or backlinks would be costly to lose?
-8. Will URLs change, and who owns the redirect map?
-9. Which titles, descriptions, headings, internal links, and structured data need work?
-10. How will results be measured, and over what period?
-
-SEO acceptance must be based on a baseline and a measurement plan, not a promise of a ranking. Google explicitly says meeting its requirements does not guarantee crawling, indexing, or serving, and that changes can take weeks or months to show.
-
-### 7.5 Repair or audit
-
-1. What exactly happens, and what did you expect instead?
-2. Can you reproduce it? On which device, browser, account, and environment?
-3. When did it start, and what changed?
-4. What is the impact: blocked work, lost data, lost revenue, security, or cosmetic?
-5. What logs, screenshots, or error messages exist?
-6. What is the smallest acceptable fix, and what must not change?
-7. Who can approve an emergency change?
-8. For an audit, which standard and which evidence format are required?
-
-### 7.6 CMS, ecommerce, and web applications
-
-Add these to the relevant branch:
-
-- Roles and permissions: who can create, edit, approve, publish, delete, and roll back?
-- Content model: types, fields, relationships, required metadata, media, localization.
-- Workflow: draft, review, schedule, publish, unpublish, archive.
-- Commerce: catalog, variants, prices, tax, shipping, inventory, refunds, fraud, PCI scope.
-- Application: authentication, authorization, audit log, data retention, export, deletion.
-- Integrations: owner, contract, auth method, rate limits, retry behavior, failure state, monitoring.
-
-## 8. Coverage and stop rule
-
-Use four levels per field: `missing`, `claimed` (E1), `evidenced` (E2/E3), and `verified` (E4). A simple first-release gate is:
-
-- all universal fields answered or explicitly marked unknown;
-- every must-have has an owner, an acceptance check, and at least E2 evidence for the current-state claim;
-- every non-goal is recorded;
-- every required account/access is confirmed by role, not by secret value;
-- every critical unknown has an owner, a follow-up, and a risk;
-- the scenario-specific gate is satisfied.
-
-Do not require every field. Do not let an agent mark a field "answered" from its own inference. The owner confirms owner-only facts; the agent records inspected facts with a command or URL.
-
-## 9. Simulated scenarios
-
-These are design simulations, not live host runs. Each row shows the minimum path and the expected gate result.
-
-| Scenario | Starting evidence | Simulated path | Depth | Gate result |
-|---|---|---|---|---|
-| New static site | Empty folder, owner wants a portfolio | 8 universal + pages, content, domain, analytics, SEO basics | 18 fields | Ready with assumptions for content and hosting |
-| New web app | Idea only | 8 universal + roles, flows, data, auth, integrations, deployment | 42 fields | Blocked until roles and data sensitivity are known |
-| Existing feature | Repository and issue link | Inspect tests and routes; ask preserved behavior, acceptance, rollback | 22 fields | Ready after reproduction and test baseline |
-| Redesign | Live URL and GSC access | Baseline traffic, URL inventory, preserve/retire, design, redirects | 34 fields | Blocked until redirect owner and content inventory exist |
-| Repair | Screenshot and error text | Reproduce, environment, recent change, impact, smallest fix | 12 fields | Ready after reproduction and rollback |
-| Audit | Repository, standard, read-only access | Scope, standards, evidence format, reviewer | 20 fields | Ready; no code change |
-| Migration | Old and new platforms | URL/data map, DNS, redirects, rollback, SEO baseline | 38 fields | Blocked until data and redirect maps exist |
-| SEO/growth | Live site and GSC export | Queries, competitors, top pages, URL map, metadata, schema, measurement | 26 fields | Blocked until baseline and target intent are recorded |
-| Performance | Live URL and page list | Core Web Vitals baseline, devices, third parties, budget | 17 fields | Ready after baseline and target pages |
-| Accessibility | Live URL, target standard | WCAG target, pages, keyboard/screen-reader checks, remediation owner | 16 fields | Ready after target level and scope |
-| CMS | Existing content and editors | Roles, content model, workflow, preview, publish, rollback | 24 fields | Blocked until roles and workflow are confirmed |
-| Ecommerce | Product list and payment idea | Catalog, checkout, tax, shipping, inventory, security, returns | 40 fields | Blocked until payment and tax ownership are clear |
-| API/integration | Endpoint docs or sample | Contract, auth, rate limits, errors, retries, monitoring | 20 fields | Ready after contract and failure behavior |
-| Documentation | Existing repository | Audience, setup, deploy, known limits, verification | 12 fields | Ready after a fresh-reader test |
-
-The numbers are planning estimates, not a quota. The important result is the **blocked** cases: a plan written without those facts would be guesswork.
+A new surface can be added without editing the profile list: add a facet value, a module, and a test profile.
 
 ## 10. Anti-patterns
 
-- A single giant form sent before any inspection.
-- Asking a non-technical owner to choose a framework, database, or hosting provider without explaining trade-offs.
-- Asking "Do you want a modern design?" instead of asking what is wrong with the current one.
-- Treating an owner's guess as a measured baseline.
-- Accepting "make it fast", "make it SEO-friendly", or "make it accessible" as acceptance criteria without a target and a test.
-- Asking for passwords or API keys in chat.
-- Recording only the normalized answer and losing the owner's original words.
-- Letting the agent answer its own question and calling it discovery.
-- Planning before the current state is inspected.
-- Treating a host binary's presence as proof that a reviewer is available or permitted.
+- A fixed “project type” list that cannot express combinations.
+- A 60-question form sent before any inspection.
+- Asking a non-technical owner to choose a framework or database without trade-offs.
+- “Do you want it modern?” instead of asking what is wrong today.
+- Treating a preference as a requirement or an estimate as a measurement.
+- Accepting “make it fast”, “make it SEO-friendly”, or “make it accessible” without a target and a test.
+- Asking for passwords, keys, card numbers, or recovery codes.
+- Recording only the normalized answer and losing the owner’s words.
+- Letting the agent answer its own question.
+- Planning before current state is inspected.
+- Treating a host binary as proof of a reviewer.
+- Claiming “all scenarios covered” from a handful of demos.
 
 ## 11. Agent behavior contract
 
-1. Open with the scenario question; do not dump a questionnaire.
-2. Explain why the current question matters in one sentence.
-3. Offer examples and an explicit "I do not know" option.
-4. After each answer, restate it and ask for correction.
-5. Inspect a provided URL or repository read-only before asking questions it can answer.
-6. Record raw answer, normalized fact, source, evidence level, and confidence.
-7. At the end of each domain, show a short summary and the remaining unknowns.
-8. Stop and ask the owner to resolve contradictions.
-9. Do not write a plan until the gate is met or the owner explicitly accepts a named risk.
-10. Never claim that a field is verified because a document says so; verify with a command, export, or independent review.
+1. Start with the outcome, not a project-type label.
+2. Reflect each answer back in plain language.
+3. Build the facet profile; show it when asked.
+4. Inspect existing URLs/repositories read-only before asking what they can prove.
+5. Ask the highest-risk missing field next; explain why in one sentence.
+6. Offer “I do not know”, “you decide”, and “later” as valid choices.
+7. Record raw words, normalized fact, source, evidence level, confidence, owner, and follow-up.
+8. At the end of each domain, show a short summary and unresolved items.
+9. Stop and ask the owner to resolve contradictions.
+10. Do not plan until the gate is met or a named risk is accepted.
+11. Never claim verification from documentation alone.
 
-## 12. Next implementation slice
+## 12. Implementation order
 
-The product currently records a free-text ask only. The next slice should add, in order:
+1. **Discovery record:** stable field IDs, raw words, sources, evidence levels, confidence, sensitivity, owner, and follow-up.
+2. **Facet profile:** validated facet values, extensible custom values, and module selection.
+3. **Question engine:** deterministic next-question ordering, prerequisites, and “unknown” handling.
+4. **Coverage report:** missing, claimed, evidenced, verified; per domain and per module.
+5. **Plan gate:** block or waive with a recorded owner decision.
+6. **Scenario fixtures:** composite profiles above, run against the real gate.
+7. **Read-only inspectors:** repository, URL, analytics, Search Console, sitemap, redirects, accessibility, performance.
+8. **Evidence attachments:** hashes, redaction, expiry, and a manifest.
 
-1. A discovery record with stable field IDs, raw owner words, normalized facts, source, evidence reference, level, and confidence.
-2. A deterministic question bank for the twelve domains and the scenario branches.
-3. A coverage report that prints missing, claimed, evidenced, and verified fields per domain.
-4. A plan gate that refuses to plan when a required field is missing, unless the owner records an explicit waiver and risk.
-5. Scenario fixtures that run the gate against all fourteen scenarios above.
-6. A read-only inspection adapter that records repository, URL, and metrics evidence without asking the owner to retype it.
-
-Do not add an LLM judge to decide whether discovery is complete. Use explicit fields, evidence levels, and owner decisions. The agent can conduct the interview; the gate must be deterministic.
+Do not add an LLM judge to decide whether discovery is complete. The agent conducts the interview; the gate is deterministic.
 
 ## 13. Sources
 
 - GOV.UK Service Manual, “How the discovery phase works”: https://www.gov.uk/service-manual/agile-delivery/how-the-discovery-phase-works
 - Nielsen Norman Group, “Discovery: Definition”: https://www.nngroup.com/articles/discovery-phase/
 - Zowghi and Coulin, “Requirements Elicitation: A Survey of Techniques, Approaches, and Tools”: https://web.eecs.umich.edu/~weimerw/2022-481W/readings/requirements.pdf
+- U.S. OPM, structured interviews and critical-incident method: https://www.opm.gov/policy-data-oversight/assessment-and-selection/structured-interviews/guide/
 - Google Search Central, “Search Essentials”: https://developers.google.com/search/docs/essentials
 - Google Search Central, “SEO Starter Guide”: https://developers.google.com/search/docs/fundamentals/seo-starter-guide
 - Google Search Central, “Redirects and Google Search”: https://developers.google.com/search/docs/crawling-indexing/301-redirects
-- web.dev, “Web Vitals” (LCP, INP, CLS thresholds): https://web.dev/articles/vitals
+- web.dev, “Web Vitals”: https://web.dev/articles/vitals
 - W3C WAI, “How to Meet WCAG 2.2”: https://www.w3.org/WAI/WCAG22/quickref/
 - Schema.org vocabulary: https://schema.org/
 - OWASP Application Security Verification Standard: https://owasp.org/www-project-application-security-verification-standard/
-- Web discovery question bank example (practitioner source, used only for coverage ideas): https://yourwebteam.io/website-discovery-questionnaire/
+- NIST AI Risk Management Framework: https://www.nist.gov/itl/ai-risk-management-framework
+- NIST Generative AI Profile: https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf
+- European Commission, GDPR principles: https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/principles-gdpr_en
+- European Data Protection Board, data protection by design and by default: https://www.edpb.europa.eu/system/files/documents/2026-02/edpb-summary-gdpr-data-protection-design-default_en.pdf
