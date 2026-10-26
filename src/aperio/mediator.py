@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -134,7 +135,7 @@ def mediate(project: Project, task_id: str) -> dict[str, Any]:
     }
     directory = project.state / "mediations"
     directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{task_id}-{record['at'].replace(':', '-')}.json"
+    path = directory / f"{task_id}-{record['at'].replace(':', '-')}-{uuid.uuid4().hex[:6]}.json"
     path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     record["evidence_path"] = str(path)
     project.append_event("mediation.recorded", {"task_id": task_id, "disposition": disposition})

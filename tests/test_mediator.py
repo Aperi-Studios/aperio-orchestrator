@@ -66,6 +66,15 @@ class MediatorTests(unittest.TestCase):
         self.assertEqual(record["disposition"], "REFUTED")
         self.assertIn("changed after verification", record["reason"])
 
+    def test_mediation_records_are_not_overwritten(self) -> None:
+        apply_plan(self.project, self.plan)
+        verify(self.project, self.task.id)
+        review(self.project, self.task.id, "qa", "confirmed", notes="checked")
+        first = mediate(self.project, self.task.id)
+        second = mediate(self.project, self.task.id)
+        self.assertNotEqual(first["evidence_path"], second["evidence_path"])
+        self.assertEqual(len(list((self.project.state / "mediations").glob("*.json"))), 2)
+
     def test_later_failed_verification_is_refuted(self) -> None:
         apply_plan(self.project, self.plan)
         verify(self.project, self.task.id)
