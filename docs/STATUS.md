@@ -15,13 +15,13 @@
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 7 passed | same command; `tests/test_cli.py` |
 | Discovery tests | 25 passed | same command; `tests/test_discovery.py` |
-| Inspection tests | 15 passed | same command; `tests/test_inspect.py` |
+| Inspection tests | 14 passed | same command; `tests/test_inspect.py` |
 | Evidence tests | 6 passed | same command; `tests/test_evidence.py` |
 | Audit tests | 16 passed | same command; `tests/test_audit.py` |
 | Repo tests | 3 passed | same command; `tests/test_repo.py` |
-| Installer tests | 13 passed | same command; `tests/test_installer.py` |
-| PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 148 passed | same command |
+| Installer tests | 17 passed | same command; `tests/test_installer.py` |
+| PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
+| Total test suite | 151 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -46,7 +46,7 @@
 | Review evidence | done refuses if the review evidence file is missing | `tests/test_core.py::test_finish_requires_review_evidence` |
 | Installer dry-run uninstall | reports would-remove and keeps files | `tests/test_installer.py::test_dry_run_uninstall_removes_nothing` |
 | Installer user-file preservation | uninstall leaves unrelated files in the skill directory | `tests/test_installer.py::test_uninstall_preserves_user_files_in_the_skill_directory` |
-| Installer update/recovery | `--check`, `--update` with library backup, and `--rollback` restore; Bash only | `tests/test_installer.py::test_check_reports_version_without_writing`, `test_update_backs_up_and_rolls_back` |
+| Installer update/recovery | `--check`, `--update` with a bounded library backup, and `--rollback` restore; Bash and PowerShell both covered | `tests/test_installer.py::test_check_reports_version_without_writing`, `test_update_backs_up_and_rolls_back`, `test_powershell_update_check_and_rollback` |
 | Self-approval | the approver cannot also be the run actor | `tests/test_core.py::test_approver_cannot_be_the_run_actor` |
 | No-op acceptance | `true` and `exit 0` are refused as acceptance checks | `tests/test_core.py::test_noop_acceptance_is_refused` |
 | Acceptance mutation | a check that changes a project file fails verification | `tests/test_core.py::test_acceptance_check_cannot_mutate_the_project` |
@@ -87,12 +87,12 @@
 - Web dashboard.
 - OS sandbox for host or shell steps.
 - Remote deployment.
-- Native Windows execution of `aperio.cmd`; the PowerShell installer passes under `pwsh` on macOS.
+- Native Windows execution of `aperio.cmd`; the PowerShell installer and update/rollback pass under `pwsh` on macOS.
 - Full 138-field discovery module catalog and expanded read-only inspectors; the `discover` command records 10 universal and 10 conditional questions, evidence references, research requests, explicit owner waivers with review dates, readiness, and blocks `plan` until discovery is ready. The full domain catalog is not loaded.
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 148-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 151-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.

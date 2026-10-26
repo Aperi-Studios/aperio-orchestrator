@@ -103,7 +103,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Local durable message store with send, read, reply, ack, filters, and restart persistence. Real Claude and Codex processes both read and replied through it; Codex is historical evidence, not the current trusted host set.
 - Mediator disposition from run, verify, and review evidence: `CONFIRMED`, `REFUTED`, or `BLOCKED`.
 - Installer, idempotent reinstall, dry run, uninstall, version check, update backup, and rollback.
-- PowerShell installer tested under `pwsh` 7.6.7 on macOS; native Windows `.cmd` execution is not tested.
+- PowerShell installer and update/rollback tested under `pwsh` 7.6.7 on macOS; native Windows `.cmd` execution is not tested.
 - Read-only host detection.
 
 ## What is not built
