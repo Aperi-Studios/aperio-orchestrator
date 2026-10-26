@@ -31,6 +31,7 @@ class MeshTests(unittest.TestCase):
         self.assertEqual(reply["recipient"], "builder")
         acked = self.store.ack(first["id"], "reviewer")
         self.assertIsNotNone(acked["ack_at"])
+        self.assertIsNotNone(acked["read_at"])
         self.assertEqual(self.store.stats()["messages"], 2)
 
     def test_recipient_and_task_filters(self) -> None:

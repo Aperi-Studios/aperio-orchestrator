@@ -125,10 +125,16 @@ class MeshStore:
         return [_row(row) for row in rows]
 
     def ack(self, message_id: int, actor: str) -> dict[str, Any]:
+        if not isinstance(actor, str) or not actor.strip():
+            raise MeshError("acknowledging requires an actor")
         row = self.connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
         if row is None:
             raise MeshError(f"unknown message: {message_id}")
-        self.connection.execute("UPDATE messages SET ack_at = ? WHERE id = ?", (utc_now(), message_id))
+        now = utc_now()
+        self.connection.execute(
+            "UPDATE messages SET ack_at = ?, read_at = COALESCE(read_at, ?) WHERE id = ?",
+            (now, now, message_id),
+        )
         self.connection.commit()
         row = self.connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
         return _row(row)
