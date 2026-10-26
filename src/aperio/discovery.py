@@ -314,6 +314,7 @@ def _new_state() -> dict[str, Any]:
         "created_at": now,
         "updated_at": now,
         "answers": {},
+        "waivers": {},
     }
 
 
@@ -325,6 +326,8 @@ def _state(project: Project) -> dict[str, Any]:
         return data
     if not isinstance(data, dict) or not isinstance(data.get("answers"), dict):
         raise DiscoveryError("discovery state is malformed")
+    if not isinstance(data.get("waivers"), dict):
+        data["waivers"] = {}
     return data
 
 
@@ -342,7 +345,10 @@ def _applicable(data: dict[str, Any]) -> list[Question]:
 
 def next_question(project: Project) -> Question | None:
     data = _state(project)
+    waivers = data.get("waivers", {})
     for question in _applicable(data):
+        if question.id in waivers:
+            continue
         answer = data["answers"].get(question.id)
         if answer is None or answer.get("status") == "research":
             return question
@@ -422,9 +428,48 @@ def answer_question(
         "status": status,
         "recorded_at": utc_now(),
     }
+    data.setdefault("waivers", {}).pop(question.id, None)
     data["updated_at"] = utc_now()
     project.save_discovery(data)
     return data["answers"][question.id]
+
+
+WAIVER_CONFIRM = "I accept this risk"
+
+
+def waive_question(
+    project: Project,
+    question_id: str,
+    by: str,
+    risk: str,
+    confirm: str,
+) -> dict[str, Any]:
+    question = QUESTION_BY_ID.get(question_id)
+    if question is None:
+        raise DiscoveryError(f"unknown question: {question_id}")
+    if confirm != WAIVER_CONFIRM:
+        raise DiscoveryError(f"confirmation must be exactly: {WAIVER_CONFIRM}")
+    if not by.strip():
+        raise DiscoveryError("waiver needs an owner name")
+    if not risk.strip():
+        raise DiscoveryError("waiver needs a stated risk")
+    data = _state(project)
+    if question.requires and not all(label in _labels(data) for label in question.requires):
+        raise DiscoveryError(f"{question_id}: answer the labels question first")
+    existing = data.get("answers", {}).get(question_id, {})
+    if existing.get("status") == "answered":
+        raise DiscoveryError(f"{question_id}: already answered; a waiver is not needed")
+    waiver = {
+        "by": by.strip(),
+        "risk": risk.strip(),
+        "accepted_at": utc_now(),
+        "confirm": confirm,
+        "status": "waived",
+    }
+    data.setdefault("waivers", {})[question_id] = waiver
+    data["updated_at"] = utc_now()
+    project.save_discovery(data)
+    return waiver
 
 
 def status(project: Project) -> dict[str, Any]:
@@ -436,40 +481,60 @@ def status(project: Project) -> dict[str, Any]:
             "answered": 0,
             "research": 0,
             "missing": [question.id for question in applicable],
+            "waived": [],
             "ready": False,
             "next": applicable[0].id,
             "answers": {},
+            "waivers": {},
         }
     answers = data.get("answers", {})
+    waivers = data.get("waivers", {})
     applicable = _applicable(data)
-    missing = [question.id for question in applicable if question.id not in answers]
+    missing = [
+        question.id
+        for question in applicable
+        if question.id not in answers and question.id not in waivers
+    ]
     research = [
         question.id
         for question in applicable
-        if answers.get(question.id, {}).get("status") == "research"
+        if question.id in answers
+        and question.id not in waivers
+        and answers.get(question.id, {}).get("status") == "research"
     ]
     answered = [
         question.id
         for question in applicable
         if answers.get(question.id, {}).get("status") == "answered"
     ]
+    waived = [question.id for question in applicable if question.id in waivers]
     ready = not missing and not research
     return {
         "total": len(applicable),
         "answered": len(answered),
         "research": len(research),
         "missing": missing,
+        "waived": waived,
         "ready": ready,
         "next": missing[0] if missing else (research[0] if research else None),
         "answers": answers,
+        "waivers": waivers,
     }
 
 
 def summary(project: Project) -> str:
     data = project.discovery() or {}
     answers = data.get("answers", {})
+    waivers = data.get("waivers", {})
     lines = ["# Discovery summary", ""]
     for question in _applicable(data):
+        waiver = waivers.get(question.id)
+        if waiver:
+            lines.append(
+                f"- **{SUMMARY_LABELS.get(question.id, question.domain)}:** "
+                f"WAIVED by {waiver.get('by', 'unknown')} — {waiver.get('risk', 'no risk stated')}"
+            )
+            continue
         answer = answers.get(question.id)
         if not answer:
             lines.append(f"- **{SUMMARY_LABELS.get(question.id, question.domain)}:** missing")
@@ -514,7 +579,11 @@ def format_status(project: Project) -> str:
         f"{result['research']} need research",
         f"{len(result['missing'])} missing",
     ]
+    if result["waived"]:
+        parts.append(f"{len(result['waived'])} waived")
     lines = [" · ".join(parts), "Ready: no"]
+    if result["waived"]:
+        lines.append("Waived: " + ", ".join(result["waived"]))
     if result["next"]:
         question = QUESTION_BY_ID[result["next"]]
         lines.append(f"Next: {question.id} — {question.prompt}")

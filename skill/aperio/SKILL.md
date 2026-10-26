@@ -144,10 +144,13 @@ only in chat:
   records the owner's answer.
 - `aperio discover status --json` reports answered, research, missing, and ready.
 - `aperio discover summary` prints the recorded interview.
+- `aperio discover waive <question-id> --by owner --risk "..." --confirm "I accept this risk"` records an explicit owner waiver.
 
 A `research` answer is not complete. Research it, present the recommendation,
 and record the owner's decision before planning. Do not write a plan while
-`ready` is false unless the owner explicitly accepts a named risk.
+`ready` is false unless the owner explicitly accepts a named risk. The agent
+must never waive a question on the owner's behalf; only the owner can use the
+exact waiver confirmation.
 
 ### Program-sized requests
 
@@ -246,6 +249,7 @@ aperio inspect
 aperio inspect --url "https://example.com"
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..." --evidence "..."
+aperio discover waive <question-id> --by owner --risk "..." --confirm "I accept this risk"
 aperio discover status
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"

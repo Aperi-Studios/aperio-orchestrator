@@ -8,17 +8,19 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from aperio.cli import cmd_plan
 from aperio.discovery import (
+    WAIVER_CONFIRM,
     DiscoveryError,
     answer_question,
     next_question,
     parse_choices,
     status,
     summary,
+    waive_question,
 )
 from aperio.store import Project
 
@@ -125,6 +127,61 @@ class DiscoveryTests(unittest.TestCase):
         answer_question(self.project, "commerce_returns", choices=["business"])
         answer_question(self.project, "name", text="Jersey Valley")
         self.assertTrue(status(self.project)["ready"])
+
+    def test_waiver_requires_exact_confirmation(self) -> None:
+        answer_question(self.project, "idea", text="A small site")
+        with self.assertRaises(DiscoveryError):
+            waive_question(self.project, "users", by="owner", risk="unknown", confirm="yes")
+        waiver = waive_question(
+            self.project,
+            "users",
+            by="owner",
+            risk="user is not known yet",
+            confirm=WAIVER_CONFIRM,
+        )
+        self.assertEqual(waiver["status"], "waived")
+        self.assertIn("users", status(self.project)["waived"])
+        self.assertIn("WAIVED", summary(self.project))
+
+    def test_answered_question_cannot_be_waived(self) -> None:
+        answer_question(self.project, "idea", text="A small site")
+        with self.assertRaises(DiscoveryError):
+            waive_question(
+                self.project,
+                "idea",
+                by="owner",
+                risk="already answered",
+                confirm=WAIVER_CONFIRM,
+            )
+
+    def test_waiver_allows_plan_and_warns(self) -> None:
+        for question_id, choices, text in [
+            ("idea", [], "A small site"),
+            ("users", [], "Visitors"),
+            ("success", ["launch"], ""),
+            ("must_haves", [], "One page"),
+            ("non_goals", [], "No login"),
+            ("constraints", ["none"], ""),
+            ("ownership", ["owner"], ""),
+            ("evidence", ["none"], ""),
+            ("labels", ["new"], ""),
+        ]:
+            answer_question(self.project, question_id, choices=choices, text=text)
+        waive_question(
+            self.project,
+            "name",
+            by="owner",
+            risk="working name is not decided",
+            confirm=WAIVER_CONFIRM,
+        )
+        self.assertTrue(status(self.project)["ready"])
+        plan = ROOT / "examples" / "demo-site-plan.json"
+        args = argparse.Namespace(project=str(self.root), file=str(plan))
+        output = io.StringIO()
+        errors = io.StringIO()
+        with redirect_stdout(output), redirect_stderr(errors):
+            self.assertEqual(cmd_plan(args), 0)
+        self.assertIn("discovery waivers accepted: name", errors.getvalue())
 
     def test_plan_refuses_incomplete_discovery(self) -> None:
         plan = ROOT / "examples" / "demo-site-plan.json"

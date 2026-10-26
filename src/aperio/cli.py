@@ -20,6 +20,7 @@ from .discovery import (
     format_status,
     next_question,
     parse_choices,
+    waive_question,
 )
 from .discovery import (
     status as discovery_status,
@@ -88,6 +89,11 @@ def cmd_plan(args: argparse.Namespace) -> int:
         if not progress["ready"]:
             missing = ", ".join(progress["missing"]) or "research answers"
             raise DiscoveryError(f"discovery is incomplete; finish or resolve: {missing}")
+        if progress["waived"]:
+            print(
+                "WARNING: discovery waivers accepted: " + ", ".join(progress["waived"]),
+                file=sys.stderr,
+            )
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -369,6 +375,20 @@ def cmd_discover(args: argparse.Namespace) -> int:
             else:
                 print(format_status(project))
         return 0
+    if args.discover_command == "waive":
+        waiver = waive_question(
+            project,
+            args.question_id,
+            by=args.by,
+            risk=args.risk,
+            confirm=args.confirm,
+        )
+        if args.json:
+            print(as_json({"waiver": waiver, "status": discovery_status(project)}))
+        else:
+            print(f"{args.question_id} waived by {waiver['by']}")
+            print(format_status(project))
+        return 0
     if args.discover_command == "status":
         progress = discovery_status(project)
         print(as_json(progress) if args.json else format_status(project))
@@ -527,6 +547,13 @@ def build_parser() -> argparse.ArgumentParser:
     discover_answer.add_argument("--evidence", default="", help="path, URL, or reference")
     discover_answer.add_argument("--json", action="store_true")
     discover_answer.set_defaults(func=cmd_discover)
+    discover_waive = discover.add_parser("waive", help="record an explicit owner waiver")
+    discover_waive.add_argument("question_id")
+    discover_waive.add_argument("--by", required=True)
+    discover_waive.add_argument("--risk", required=True)
+    discover_waive.add_argument("--confirm", required=True)
+    discover_waive.add_argument("--json", action="store_true")
+    discover_waive.set_defaults(func=cmd_discover)
     discover_status = discover.add_parser("status", help="show discovery coverage")
     discover_status.add_argument("--json", action="store_true")
     discover_status.set_defaults(func=cmd_discover)
