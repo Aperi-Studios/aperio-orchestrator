@@ -56,10 +56,10 @@ function Restore-Library([string]$BackupPath) {
         Move-Item -Force $BackupPath $Lib
     } catch {
         # could not complete the restore: put the moved-aside copy back and
-        # report the outcome instead of throwing
+        # report the outcome instead of throwing. Never delete $old here —
+        # on a rollback that copy is the only current library left.
         if ($movedAside -and -not (Test-Path $Lib)) {
             Move-Item -Force $old $Lib -ErrorAction SilentlyContinue
-            Remove-Item -Recurse -Force $old -ErrorAction SilentlyContinue
         }
         return $false
     }

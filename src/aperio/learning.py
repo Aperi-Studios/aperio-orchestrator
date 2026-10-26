@@ -12,6 +12,7 @@ import hashlib
 import json
 import re
 import subprocess
+import time
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -343,6 +344,7 @@ def record_proof(project: Project, command: str, *, timeout: int = PROOF_TIMEOUT
     if len(command) > MAX_COMMAND:
         raise LearningError(f"proof command is longer than {MAX_COMMAND} characters")
     data = _read(project)
+    started = time.perf_counter()
     try:
         completed = subprocess.run(
             command,
@@ -365,11 +367,12 @@ def record_proof(project: Project, command: str, *, timeout: int = PROOF_TIMEOUT
         stderr = raw_stderr.decode("utf-8", errors="replace") if isinstance(raw_stderr, bytes) else (raw_stderr or "")
         stdout = stdout[:MAX_OUTPUT]
         stderr = (stderr[:MAX_OUTPUT] + f"\nproof timed out after {timeout}s").strip()
+    duration_ms = round((time.perf_counter() - started) * 1000)
     payload = (stdout + "\x00" + stderr).encode("utf-8", errors="replace")
-    data["proof"] = {
+    proof = {
         "command": command,
         "exit_code": exit_code,
-        "duration_ms": 0,
+        "duration_ms": duration_ms,
         "stdout_tail": stdout[-2000:],
         "stderr_tail": stderr[-2000:],
         "output_sha256": hashlib.sha256(payload).hexdigest(),
@@ -377,6 +380,10 @@ def record_proof(project: Project, command: str, *, timeout: int = PROOF_TIMEOUT
         "recorded_by": PROOF_MARKER,
     }
     with project.lock():
+        # re-read under the lock: a concurrent `learn import --replace` during
+        # the proof command must not be silently reverted by this write
+        data = _read(project)
+        data["proof"] = proof
         _write(project, data)
         project.append_event(
             "learning.proof",

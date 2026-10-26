@@ -174,6 +174,9 @@ class LearningTests(unittest.TestCase):
         command = f'{sys.executable} -c "print(123)"'
         result = record_proof(self.project, command)
         self.assertTrue(result["ready"], result)
+        data = json.loads((self.project.root / ".aperio" / "learning.json").read_text(encoding="utf-8"))
+        self.assertIsInstance(data["proof"]["duration_ms"], int)
+        self.assertGreaterEqual(data["proof"]["duration_ms"], 0)
         result = record_proof(self.project, f'{sys.executable} -c "raise SystemExit(1)"')
         self.assertFalse(result["ready"])
         self.assertTrue(any("exit_code" in issue for issue in result["issues"]))
