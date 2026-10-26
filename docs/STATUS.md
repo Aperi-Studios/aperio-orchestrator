@@ -9,14 +9,14 @@
 | Item | Result | Evidence |
 |---|---|---|
 | Core unit tests | 30 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 15 passed | same command; `tests/test_adapter.py` |
+| Adapter tests | 16 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 5 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
 | Installer tests | 10 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 74 passed | same command |
+| Total test suite | 75 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -43,8 +43,9 @@
 | Installer paths with spaces | install and launcher version pass | `tests/test_installer.py::test_prefix_with_spaces` |
 | Installer uninstall | removes binary, library, and skill | same test |
 | Host detection | reads installed host names and versions | `aperio hosts`; presence is not permission |
-| Claude host adapter | real host produced `site/index.html` in a disposable copy; acceptance passed; review and done completed | real-host proof 3, `run-2d57f0f091`; evidence held in the temporary project |
+| Claude host adapter | real host produced `site/index.html` in a disposable copy; acceptance passed; review and done completed on current code | task `task-17fd7a83a6`, run `run-d8e491aeb4`, review `review-5cb1b3585d`; earlier run `run-2d57f0f091` |
 | Goose host adapter | command path tested with a fake binary; live Goose call failed with HTTP 500 from the local bridge | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command`; live probe output |
+| dsh host adapter | command path tested with a fake binary; live dsh blocked by missing `RIVER_API_KEY` | `tests/test_adapter.py::test_dsh_adapter_builds_a_headless_command`; live probe output |
 | Host change outside the plan | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
 | Host change outside step writes | rejected before it reached the real project | `tests/test_adapter.py::test_host_change_outside_step_writes_is_rejected` |
 | Host symlink | rejected; no target content is read or copied | `tests/test_adapter.py::test_host_symlink_is_rejected` |
@@ -64,7 +65,7 @@
 
 ## Not built
 
-- Dispatch to hosts beyond the Claude, Codex, and Goose adapters.
+- Dispatch to hosts beyond the Claude, Codex, dsh, and Goose adapters.
 - A distributed or live two-host mesh; the current message store is local and persistent.
 - A real host-to-host exchange over that store.
 - CMS, media, SEO, and Astro/Lumos delivery.

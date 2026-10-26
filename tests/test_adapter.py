@@ -119,6 +119,19 @@ class AdapterTests(unittest.TestCase):
             self.assertIn("workspace-write", result["steps"][0]["command"])
             self.assertEqual((self.root / "site/index.html").read_text(), "<h1>from host</h1>")
 
+    def test_dsh_adapter_builds_a_headless_command(self) -> None:
+        with mock.patch.dict(os.environ, {"APERIO_HOST_DSH": str(self.host)}):
+            _task, plan = make_plan(
+                self.project,
+                host="dsh",
+                prompt="Create the page.",
+                writes=["site/index.html"],
+            )
+            result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(result["steps"][0]["host"], "dsh")
+        self.assertIn("headless", result["steps"][0]["command"])
+
     def test_host_review_confirms_a_verified_task(self) -> None:
         task, plan = make_plan(
             self.project,
@@ -142,6 +155,7 @@ class AdapterTests(unittest.TestCase):
         self.assertIsNotNone(stored.review)
         assert stored.review is not None
         self.assertEqual(stored.review.reviewer, "claude")
+        self.assertEqual(finish(self.project, task.id)["status"], "done")
 
     def test_reviewer_cannot_change_the_project(self) -> None:
         task, plan = make_plan(self.project, prompt="Create the page.", writes=["site/index.html"])

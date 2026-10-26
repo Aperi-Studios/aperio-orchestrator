@@ -74,15 +74,15 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 
 - Project initialization and append-only owner asks.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
-- Host dispatch through a disposable project copy for the Claude, Codex, and Goose adapters. Claude and Codex were proven end to end; Goose's command path is tested, but its local bridge returned HTTP 500 during this run.
-- Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude and Codex reviewers both confirmed verified work.
+- Host dispatch through a disposable project copy for the Claude, Codex, dsh, and Goose adapters. Claude is proven on current code. dsh and Goose command paths are tested, but their live runs are blocked by a missing credential and an HTTP 500 bridge, respectively. Codex evidence is historical and is not the current trusted host set.
+- Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude reviewers confirmed verified work on current code; earlier Codex review evidence is historical.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
 - Independent review enforcement by reviewer name.
 - Rollback of files captured before a run.
 - Handoff generation from actual state.
 - Deterministic documentation drift checks: links and inline paths that do not exist fail `aperio drift`.
-- Local durable message store with send, read, reply, ack, filters, and restart persistence. Real Claude and Codex processes both read and replied through it.
+- Local durable message store with send, read, reply, ack, filters, and restart persistence. Real Claude and Codex processes both read and replied through it; Codex is historical evidence, not the current trusted host set.
 - Mediator disposition from run, verify, and review evidence: `CONFIRMED`, `REFUTED`, or `BLOCKED`.
 - Installer, idempotent reinstall, dry run, and uninstall.
 - PowerShell installer tested under `pwsh` 7.6.7 on macOS; native Windows `.cmd` execution is not tested.
@@ -90,7 +90,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 
 ## What is not built
 
-- Dispatch to hosts beyond the Claude, Codex, and Goose adapters.
+- Dispatch to hosts beyond the Claude, Codex, dsh, and Goose adapters.
 - A distributed or live two-host mesh; the current store is local.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - A web dashboard.

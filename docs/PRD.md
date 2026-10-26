@@ -616,13 +616,13 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Item | Result | Command or evidence |
 |---|---|---|
 | Core unit tests | **30 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | **15 passed** | same command; `tests/test_adapter.py` |
+| Adapter tests | **16 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **5 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
 | Installer tests | **10 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **74 passed** | same command |
+| Total test suite | **75 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -650,18 +650,19 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Host detection | **reports installed names and versions** | `aperio hosts`; presence is not permission |
 | `/aperio` command file | **installed**; host load not verified | `~/.claude/commands/aperio.md` |
 | Skill file | **installed**; host load not verified | `~/.claude/skills/aperio/SKILL.md` |
-| Claude host adapter | **real dispatch proven**: produced `site/index.html`, acceptance passed, review confirmed, done | real-host proof 3; evidence in the temporary project |
+| Claude host adapter | **real dispatch proven on current code**: produced `site/index.html`, acceptance passed, review confirmed, done | task `task-17fd7a83a6`, run `run-d8e491aeb4`, review `review-5cb1b3585d` |
 | Host change outside plan | **rejected before apply** | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
 | Host change outside step writes | **rejected before apply** | `tests/test_adapter.py::test_host_change_outside_step_writes_is_rejected` |
 | Host symlink | **rejected without reading the target** | `tests/test_adapter.py::test_host_symlink_is_rejected` |
 | Goose host adapter | **command path tested** with a fake binary; live call blocked by local bridge HTTP 500 | `tests/test_adapter.py::test_goose_adapter_builds_a_run_command` |
+| dsh host adapter | **command path tested** with a fake binary; live call blocked by missing `RIVER_API_KEY` | `tests/test_adapter.py::test_dsh_adapter_builds_a_headless_command` |
 | Codex host adapter | **real Codex built a page**; fresh Claude review confirmed and the task finished | task `task-116b1d078e`, run `run-d86056766a`, review `review-5fcf72b5e9` |
 | Codex host review | **real Codex reviewer confirmed** a verified task | review `review-138f0f9a9f` |
 | Fresh-context host review | **real Claude review confirmed** a verified task from a brief-only workspace | review `review-973d3a5fb8` in the temporary goldfish project |
 | Documentation drift | **clean**: links and inline paths resolve | `aperio drift` |
 | Local message store | **implemented**; real Claude and Codex processes read and replied | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
 | Mediator disposition | **implemented** from the current task state and latest evidence | `tests/test_mediator.py` |
-| Host dispatch beyond Claude/Codex/Goose | **not built** | no adapter in `src/aperio/adapter.py` for other hosts |
+| Host dispatch beyond Claude/Codex/dsh/Goose | **not built** | no adapter in `src/aperio/adapter.py` for other hosts |
 | Distributed/live two-host mesh | **not built**; local durable message store and mediator are implemented | `src/aperio/mesh.py`, `src/aperio/mediator.py` |
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
 | OS sandbox for host or shell steps | **not built**; undeclared writes are detected after execution | `docs/ARCHITECTURE.md` limits |

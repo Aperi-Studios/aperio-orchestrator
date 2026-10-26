@@ -130,6 +130,8 @@ def _command_for(host: str, binary: str, prompt: str, step: Step) -> list[str]:
             "workspace-write",
             prompt,
         ]
+    if host == "dsh":
+        return [binary, "headless", prompt]
     if host == "goose":
         return [
             binary,
@@ -141,7 +143,7 @@ def _command_for(host: str, binary: str, prompt: str, step: Step) -> list[str]:
             "--text",
             prompt,
         ]
-    raise HostError(f"no adapter for host: {host} (supported: claude, codex, goose)")
+    raise HostError(f"no adapter for host: {host} (supported: claude, codex, dsh, goose)")
 
 
 def _prompt(project: Project, plan: Plan, step: Step) -> str:
@@ -393,6 +395,8 @@ def _review_command(host: str, binary: str, prompt: str, timeout_s: int, budget_
             "read-only",
             prompt,
         ]
+    if host == "dsh":
+        return [binary, "headless", prompt]
     if host == "goose":
         return [
             binary,
@@ -404,7 +408,7 @@ def _review_command(host: str, binary: str, prompt: str, timeout_s: int, budget_
             "--text",
             prompt,
         ]
-    raise HostError(f"no reviewer adapter for host: {host} (supported: claude, codex, goose)")
+    raise HostError(f"no reviewer adapter for host: {host} (supported: claude, codex, dsh, goose)")
 
 
 def _parse_review(text: str) -> dict[str, Any]:
@@ -568,6 +572,7 @@ def run_host_review(
         "review_id": review_id,
         "task_id": task_id,
         "host": host,
+        "reviewer": host,
         "verdict": parsed["verdict"],
         "findings": parsed["findings"],
         "notes": parsed["notes"],

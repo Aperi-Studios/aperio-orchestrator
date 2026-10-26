@@ -88,6 +88,22 @@ Evidence: review `review-138f0f9a9f`, verdict `confirmed`, findings `[]`. The
 reviewer saw `tree/site/index.html` and the brief; it did not see a builder
 conversation.
 
+## Owner-directed host set
+
+The owner named Claude, dsh, and Goose as the trusted hosts on 2026-10-26. The
+results below are from direct commands, not from host documentation.
+
+| Host | Command | Result |
+|---|---|---|
+| Claude | real Aperio host step + fresh review | **Worked on current code:** task `task-17fd7a83a6`, run `run-d8e491aeb4`, verify `verify-0e1844781d`, review `review-5cb1b3585d`, `done`. |
+| dsh | `dsh headless 'Reply with exactly: DSH OK'` | **Blocked:** `MISSING_CREDENTIAL: llm-pi-ai: no credential for provider route "river"; its profile resolves RIVER_API_KEY, which is not set`. The adapter command shape is unit-tested with a fake binary; no live dsh run is claimed. |
+| Goose | `goose run --no-session --max-turns 2 --quiet -t '...'` | **Blocked:** `Server error (500 Internal Server Error) at http://127.0.0.1:4012/v1/chat/completions`. The adapter command shape is unit-tested; no live Goose run is claimed. |
+
+Other detected CLIs (`opencode`, `agy`, `kilocode`, `cline`) were probed with a
+trivial prompt, but their output is not treated as evidence for this project and
+they are not part of the trusted host set. Codex evidence earlier in this file is
+historical; it is not used to override the owner's host choice.
+
 ## What these proofs do not cover
 
 - No OS sandbox. Host changes outside the plan are detected after execution,
