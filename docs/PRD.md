@@ -83,6 +83,10 @@ Reviews the builder's diff and evidence, reruns decisive checks, and classifies 
 
 Research, UX and visual design, frontend architecture, backend and CMS, SEO, security, test engineering, content review, release engineering. Roles are assigned by capability, not by a fixed host name. A host name in a roster is not proof that the host is alive, permitted, or suitable.
 
+### 2.6 Teacher and competency owner
+
+Aperio is the teacher and gatekeeper for every executing agent. It owns the learning dossier, the teach-back review, the local proof, and the competency record. It may narrow, pause, or refuse a task when the agent has not demonstrated the required stack, design, security, or tooling knowledge.
+
 ---
 
 ## 3. Goals
@@ -96,9 +100,10 @@ Research, UX and visual design, frontend architecture, backend and CMS, SEO, sec
 7. Ship CMS-backed experiences only when the project requires a CMS, and then ship the public surface and admin controls together.
 8. Make SEO, accessibility, performance, and security claims testable and scoped to the approved project contract.
 9. Protect client data, credentials, private history, and owner work.
-10. Keep the product portable across hosts, stacks, operating systems, and installation paths.
-11. Keep the owner informed with plain-language status and exact evidence.
-12. Leave maintainable state: one current handoff, one queue, one active plan, one requirement matrix, and archived history.
+10. Force stack mastery and teaching evidence before implementation; a confident agent claim is not knowledge.
+11. Keep the product portable across hosts, stacks, operating systems, and installation paths.
+12. Keep the owner informed with plain-language status and exact evidence.
+13. Leave maintainable state: one current handoff, one queue, one active plan, one requirement matrix, and archived history.
 
 ## 4. Non-goals
 
@@ -510,21 +515,25 @@ Aperio must not claim a system is “impenetrable.” Security is proven by a th
 
 **Acceptance:** the threat model exists; authorization and injection negative tests pass; secrets and dependency scans are recorded; headers and transport are verified on the deployed shape; unresolved critical/high findings block completion; the report states what was not tested.
 
-### FR-41: Task sizing, checkpoints, and handoff readiness (P0)
+### FR-41: Work decomposition, per-task approval, and handoff readiness (P0)
 
-Every approved plan declares, per chunk, the maximum files, elapsed time, host runs, and spend. The default is one vertical slice per chunk, at most five changed files, one host run, and thirty minutes of agent work, adjustable by the owner or the approved plan. A chunk that exceeds its limit pauses for a checkpoint; it does not silently continue.
+Every approved project begins with a **todo list derived from the owner's request**. Every requested deliverable must appear as a concrete task; there is no “miscellaneous” bucket and no silent omission. Each task is the smallest independently reviewable unit of work, not an arbitrary time slice. A website, for example, is decomposed into initialization, shell/navigation design, each page or section, data or CMS wiring, tests, deployment preparation, and handoff as separate tasks.
+
+Each task records: ID, deliverable, files or areas, acceptance command, evidence, dependencies, rollback note, estimated effort, approval owner, and status. The task is done only when its acceptance and evidence pass. The next task does not start until the current task is accepted and explicitly approved by the owner or the approver named in the approved plan. Trivial mechanical substeps may be grouped only with explicit approval.
+
+File count, time, host runs, and spend are **safety ceilings**, not the decomposition method. Do not split work merely because a clock expired, and do not merge unrelated work merely because it touches few files. If a task cannot be stated with one clear acceptance test, it is still too large and must be split by work.
 
 Every checkpoint records the diff, tests, evidence, learning updates, new risks, and the next action. Stop and ask when:
 
 - a security, credential, destructive, deployment, or public-release boundary is reached;
 - the same failure repeats twice without new evidence;
 - the plan’s scope or stack must change;
-- the task exceeds its declared size or budget;
+- a safety ceiling or approved budget is reached;
 - required data, access, or approval is missing.
 
-Before handoff, verify: no unresolved TODO or placeholder, dependencies and versions are recorded, tests and known limits are current, docs and commands match behavior, deployment and after-sales data exist, rollback is possible, and another agent can resume from repository state.
+Before handoff, verify: no unresolved TODO or placeholder, every todo item is accepted or explicitly deferred, dependencies and versions are recorded, tests and known limits are current, docs and commands match behavior, deployment and after-sales data exist, rollback is possible, and another agent can resume from repository state.
 
-**Acceptance:** an oversize plan is split or refused; a missing checkpoint blocks the next chunk; the two-failure rule produces a replan rather than an endless retry; the handoff checklist is complete; a cold-start agent can resume without private chat history.
+**Acceptance:** every owner ask maps to a todo item; no task is skipped; no task starts before its predecessor is accepted and approved; a task without one clear acceptance is split; the two-failure rule produces a replan rather than an endless retry; the handoff checklist is complete; a cold-start agent can resume without private chat history.
 
 ### FR-42: Teaching contract and competency evidence (P0)
 
@@ -618,7 +627,7 @@ A task is `DONE` only when all applicable statements are true:
 14. Every installed MCP, package, CLI, or skill has provenance, permission, version, and fallback recorded; a created skill has a passing test.
 15. The applicable application-class design contract, reference board, and review checklist exist; no award is claimed without evidence.
 16. The threat model exists and no unresolved critical or high security finding is hidden.
-17. Every chunk stayed within its declared file, time, host-run, and spend limits; checkpoints are recorded.
+17. Every todo task is accepted or explicitly deferred; no task started before its predecessor was approved; safety ceilings were respected.
 18. Pre-flight, deployment, and after-sales data are complete, or the missing item has a dated owner waiver.
 
 ---
@@ -665,7 +674,7 @@ Give the system a task on a stack with no bundled skill. Prove that it refuses t
 
 ### E2E-10: Design, security, chunking, and handoff
 
-Run one vertical slice through the application-class design contract, threat model, and declared chunk limits. Force an oversize chunk and a repeated failure; prove the system pauses, replans, and records the checkpoint. Verify the final handoff contains pre-flight, deployment, after-sales, rollback, known limits, and a cold-start competency record.
+Run one vertical slice through the application-class design contract, threat model, and a todo list of minimal tasks. Force a task that is too coarse and a repeated failure; prove the system splits it by work, pauses at checkpoints, gets per-task approval, and replans rather than retrying forever. Verify the final handoff contains pre-flight, deployment, after-sales, rollback, known limits, and a cold-start competency record.
 
 ---
 
@@ -683,7 +692,7 @@ Run one vertical slice through the application-class design contract, threat mod
 8. Deliver one real selected project end to end.
 9. Enforce the learning dossier, teach-back, local proof, and competency record before plan approval.
 10. Enforce toolchain provenance and project-scoped skill creation.
-11. Enforce task chunk limits, checkpoints, and the two-failure replan rule.
+11. Enforce todo decomposition and per-task acceptance/approval before the next task.
 12. Re-run tests and validators from the current checkout; label sandbox denials and stale checks.
 13. Keep privacy and release operations blocked until the owner approves after evidence.
 
@@ -728,7 +737,7 @@ Track from actual runs, not estimates:
 - toolchain provenance: every installed or created tool has source, version, license, permissions, and fallback; target 100%;
 - design coverage: design contract, reference board, class checklist, mobile/desktop inspection, and accessibility/performance checks; target 100% of applicable surfaces;
 - security coverage: threat model, negative tests, secret/dependency scans, and unresolved critical/high findings; target zero hidden high-risk findings;
-- chunk compliance: tasks completed within declared file, time, host-run, and spend limits; target 100% or an explicit replan;
+- chunk compliance: every owner ask appears in the todo list; tasks are accepted and approved one by one; safety ceilings are respected; target 100% or an explicit replan;
 - handoff readiness: pre-flight, deployment, after-sales, rollback, docs, and cold-start resume data present; target 100% for production handoffs;
 - test discovery integrity: no zero-test pass, no omitted module without a decision, counts match actual discovery;
 - portability: explicit pass, fail, or unavailable per OS and shell;
@@ -963,7 +972,7 @@ These are recorded with defaults so work can continue. The owner can override an
 4. **Public release.** Default: stay private until the owner approves after a clean history and branch audit. No force-push without explicit approval.
 5. **Budget.** Default: zero new spend on models, APIs, hosting, or dependencies unless the owner approves an exception.
 6. **Tool installation consent.** Default: project-scoped MCPs, packages, and skills may be installed after provenance and security checks when they need no credentials, elevated permissions, payment, or broad network access. Global installation, credential-bearing tools, paid services, and elevated permissions require explicit owner approval.
-7. **Default chunk limits.** Default: one vertical slice, at most five changed files, one host run, and thirty minutes of agent work per chunk. The owner may set a stricter or looser limit per project.
+7. **Task decomposition.** Default: derive a todo list from the owner's request, split into the smallest independently reviewable work units, and require acceptance plus explicit approval before the next task. Do not split by an arbitrary clock; file, time, host-run, and spend limits are safety ceilings only.
 8. **“Award-winning” standard.** Default: a researched design contract, reference board, originality review, accessibility, performance, and real mobile/desktop inspection. Never claim an award or a prize without evidence.
 9. **Surface scope.** Default: teach the principles for marketing sites, web apps, CMS, CRM/ERP, mobile, and desktop; implement and prove only the surface classes the owner selects for the current project.
 
