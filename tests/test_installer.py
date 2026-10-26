@@ -280,6 +280,84 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(rollback.returncode, 2, rollback.stderr)
         self.assertTrue((self.prefix / "share" / "aperio" / "VERSION").is_file())
 
+    def test_rollback_restore_back_survives_a_failed_backup_move(self) -> None:
+        # Deep injection N1: a read-only share only reaches the "move the current
+        # library aside" failure. The inner branch (library moved aside, then the
+        # backup move fails) is forced via a PATH shim that fails exactly the
+        # moves whose source is a backup directory.
+        install = self.run_install()
+        self.assertEqual(install.returncode, 0, install.stderr)
+        update = self.run_install("--update")
+        self.assertEqual(update.returncode, 0, update.stderr)
+        lib = self.prefix / "share" / "aperio"
+        backups_before = sorted((self.prefix / "share").glob("aperio.backup.*"))
+        self.assertTrue(backups_before)
+        wrapper = self.root / "fakebin-rollback"
+        wrapper.mkdir()
+        (wrapper / "mv").write_text(
+            "#!/bin/sh\n"
+            'case "$1" in *aperio.backup.*) exit 1 ;; esac\n'
+            'exec /bin/mv "$@"\n',
+            encoding="utf-8",
+        )
+        (wrapper / "mv").chmod(0o755)
+        env = dict(self.env, PATH=f"{wrapper}:{os.environ['PATH']}")
+        rollback = subprocess.run(
+            ["bash", str(ROOT / "install.sh"), "--prefix", str(self.prefix), "--rollback"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=60,
+        )
+        self.assertEqual(rollback.returncode, 2, rollback.stderr)
+        # the previously-installed library came back and the backup was not consumed
+        self.assertTrue((lib / "VERSION").is_file())
+        self.assertEqual(sorted((self.prefix / "share").glob("aperio.backup.*")), backups_before)
+
+    def test_update_failure_restore_survives_a_failed_backup_move(self) -> None:
+        # Deep injection N1, update path: the shim fails the launcher move (so the
+        # update aborts and the ERR trap fires) AND any move whose source is a
+        # backup directory, forcing restore_update through its inner branch: the
+        # moved-aside library must come back even though the backup cannot be
+        # moved into place.
+        install = self.run_install()
+        self.assertEqual(install.returncode, 0, install.stderr)
+        update = self.run_install("--update")
+        self.assertEqual(update.returncode, 0, update.stderr)
+        backups_before = sorted((self.prefix / "share").glob("aperio.backup.*"))
+        self.assertTrue(backups_before)
+        wrapper = self.root / "fakebin-update"
+        wrapper.mkdir()
+        (wrapper / "mv").write_text(
+            "#!/bin/sh\n"
+            'case "$1" in *aperio.backup.*|*.aperio-wrapper.tmp) exit 1 ;; esac\n'
+            'exec /bin/mv "$@"\n',
+            encoding="utf-8",
+        )
+        (wrapper / "mv").chmod(0o755)
+        env = dict(self.env, PATH=f"{wrapper}:{os.environ['PATH']}")
+        update = subprocess.run(
+            ["bash", str(ROOT / "install.sh"), "--prefix", str(self.prefix), "--update"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=60,
+        )
+        self.assertEqual(update.returncode, 1, update.stderr)
+        self.assertIn("could not restore", update.stderr)
+        # with the backup move forced to fail, restore_update guarantees a working
+        # library (the moved-aside copy comes back), not the pre-update content
+        lib = self.prefix / "share" / "aperio"
+        self.assertTrue((lib / "VERSION").is_file())
+        self.assertTrue((lib / "aperio-v2-managed").is_file())
+        # every pre-existing backup survives; the failed update leaves its own
+        # backup behind (slice-free compare: sort order is not load-bearing)
+        backups_after = sorted((self.prefix / "share").glob("aperio.backup.*"))
+        self.assertEqual(set(backups_before), set(backups_after) - {max(backups_after)})
+        self.assertEqual(len(backups_after), len(backups_before) + 1)
+
     def test_powershell_rollback_without_backup_is_refused(self) -> None:
         if not shutil.which("pwsh"):
             self.skipTest("pwsh is not installed")
