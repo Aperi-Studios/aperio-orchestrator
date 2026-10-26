@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 import tempfile
@@ -60,6 +61,41 @@ class CoreTests(unittest.TestCase):
     def test_init_refuses_second_initialization(self) -> None:
         with self.assertRaises(StoreError):
             Project.init(self.root, name="again")
+
+    def test_legacy_queue_schema_is_migrated(self) -> None:
+        queue = self.project.state / "queue.json"
+        data = json.loads(queue.read_text(encoding="utf-8"))
+        data.pop("schema", None)
+        queue.write_text(json.dumps(data), encoding="utf-8")
+        self.assertEqual(self.project.tasks(), [])
+        migrated = json.loads(queue.read_text(encoding="utf-8"))
+        self.assertEqual(migrated["schema"], 1)
+
+    def test_future_queue_schema_is_refused(self) -> None:
+        queue = self.project.state / "queue.json"
+        data = json.loads(queue.read_text(encoding="utf-8"))
+        data["schema"] = 999
+        queue.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaises(StoreError) as caught:
+            self.project.tasks()
+        self.assertIn("unsupported state schema", str(caught.exception))
+
+    def test_future_project_schema_is_refused(self) -> None:
+        project_file = self.project.state / "project.json"
+        data = json.loads(project_file.read_text(encoding="utf-8"))
+        data["schema"] = 999
+        project_file.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaises(StoreError) as caught:
+            Project.open(self.root)
+        self.assertIn("unsupported state schema", str(caught.exception))
+
+    def test_legacy_discovery_schema_is_migrated(self) -> None:
+        path = self.project.state / "discovery.json"
+        path.write_text(json.dumps({"answers": {}, "questions": []}), encoding="utf-8")
+        result = self.project.discovery()
+        assert result is not None
+        self.assertEqual(result["schema"], 1)
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["schema"], 1)
 
     def test_ask_is_append_only(self) -> None:
         first = self.project.add_ask("Build a page")
@@ -200,6 +236,22 @@ class CoreTests(unittest.TestCase):
         )
         with self.assertRaises(PolicyError):
             validate_plan_paths(plan, [])
+
+    def test_read_step_shape_is_rejected_by_the_model(self) -> None:
+        # kind="read" validation branches (PRD: read-only steps cannot change the project)
+        with self.assertRaises(ModelError) as raised:
+            Step(id="read-0", kind="read").validate()
+        self.assertIn("read needs a command", str(raised.exception))
+        with self.assertRaises(ModelError) as raised:
+            Step(id="read-1", kind="read", command="true", writes=["out.txt"]).validate()
+        self.assertIn("read must not declare writes", str(raised.exception))
+        with self.assertRaises(ModelError) as raised:
+            Step(id="read-2", kind="read", command="true", content="x").validate()
+        self.assertIn("read cannot write fixed content or use a host", str(raised.exception))
+        with self.assertRaises(ModelError) as raised:
+            Step(id="read-3", kind="read", command="true", host="claude", prompt="behave").validate()
+        self.assertIn("read cannot write fixed content or use a host", str(raised.exception))
+        Step(id="read-ok", kind="read", command="true").validate()  # the valid shape passes
 
     def test_reviewer_must_differ_from_builder(self) -> None:
         with self.assertRaises(PolicyError):

@@ -33,6 +33,39 @@ class SkillgenTests(unittest.TestCase):
             body="The agent must cite the official source before running the scaffold.",
         )
 
+    def test_frontmatter_survives_quotes_and_newlines_in_purpose(self) -> None:
+        # N3 regression: the description used to be interpolated unescaped, so a
+        # quote or newline in the purpose broke the YAML header; validate could
+        # not detect it because it never parsed the frontmatter.
+        purpose = 'stack with "quotes" and\na newline'
+        record = create(self.project, "quoted-purpose", purpose=purpose, triggers=["when quoted"], body="Body.")
+        issues = validate(self.project, "quoted-purpose")
+        self.assertEqual(issues, [], issues)
+        text = (self.root / record["path"] / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn('description: "stack with \\"quotes\\" and\\na newline"', text)
+
+    def test_validate_flags_a_hand_tampered_frontmatter(self) -> None:
+        record = self.make()
+        skill_file = self.root / record["path"] / "SKILL.md"
+        tampered = skill_file.read_text(encoding="utf-8").replace(
+            '"Build and verify the custom stack"',
+            "Build and verify the custom stack: pay me",
+        )
+        skill_file.write_text(tampered, encoding="utf-8")
+        issues = validate(self.project, "custom-stack")
+        self.assertTrue(any("valid quoted string" in issue for issue in issues), issues)
+
+    def test_validate_flags_a_description_that_drifts_from_the_registry(self) -> None:
+        record = self.make()
+        skill_file = self.root / record["path"] / "SKILL.md"
+        tampered = skill_file.read_text(encoding="utf-8").replace(
+            '"Build and verify the custom stack"',
+            '"Something entirely different"',
+        )
+        skill_file.write_text(tampered, encoding="utf-8")
+        issues = validate(self.project, "custom-stack")
+        self.assertTrue(any("does not match the registry purpose" in issue for issue in issues), issues)
+
     def test_create_writes_a_valid_project_skill(self) -> None:
         record = self.make()
         path = self.root / record["path"] / "SKILL.md"

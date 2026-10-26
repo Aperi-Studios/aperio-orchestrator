@@ -139,7 +139,7 @@ def _require_preflight(project: Project) -> None:
     issues = validate_preflight(project)
     if issues:
         raise ReadinessError(
-            "pre-flight readiness is required before planning: " + "; ".join(issues[:6])
+            "pre-flight readiness is required before planning, approval, or run: " + "; ".join(issues[:6])
         )
 
 
@@ -315,6 +315,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     plan = project.get_plan(task.plan_id)
     _require_current_learning(project, plan)
     _require_current_discovery(project, plan)
+    _require_preflight(project)
     if plan.todo_id:
         todo = todo_status(project)
         linked = next((item for item in todo["tasks"] if item["id"] == plan.todo_id), None)

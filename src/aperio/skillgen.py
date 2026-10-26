@@ -63,7 +63,7 @@ def _skill_md(name: str, purpose: str, triggers: list[str], body: str) -> str:
     return (
         "---\n"
         f"name: {name}\n"
-        f"description: \"{purpose}\"\n"
+        f"description: {json.dumps(purpose, ensure_ascii=False)}\n"
         "version: 0.1.0\n"
         "scope: project\n"
         "---\n\n"
@@ -106,29 +106,31 @@ def create(
         raise SkillError("at least one skill trigger is required")
     target = _root(project) / name
     skill_file = target / "SKILL.md"
-    data = _read_registry(project)
-    existing = next((item for item in data["skills"] if item.get("name") == name), None)
-    if skill_file.exists() and not replace:
-        raise SkillError(f"skill already exists: {name}; pass --replace to update an owned skill")
-    if skill_file.exists() and existing is None:
-        raise SkillError("refusing to overwrite a skill not owned by this project registry")
-    target.mkdir(parents=True, exist_ok=True)
-    replace_text_atomic(skill_file, _skill_md(name, purpose, cleaned, body))
-    record = {
-        "name": name,
-        "purpose": purpose,
-        "triggers": cleaned,
-        "path": f"{SKILLS_DIR}/{name}",
-        "scope": "project",
-        "version": "0.1.0",
-        "status": "draft",
-        "created_at": existing.get("created_at") if existing else utc_now(),
-        "updated_at": utc_now(),
-    }
-    data["skills"] = [item for item in data["skills"] if item.get("name") != name]
-    data["skills"].append(record)
-    data["skills"].sort(key=lambda item: item["name"])
     with project.lock():
+        # read and mutate under one lock: a concurrent create must not silently
+        # overwrite this update's registry entry
+        data = _read_registry(project)
+        existing = next((item for item in data["skills"] if item.get("name") == name), None)
+        if skill_file.exists() and not replace:
+            raise SkillError(f"skill already exists: {name}; pass --replace to update an owned skill")
+        if skill_file.exists() and existing is None:
+            raise SkillError("refusing to overwrite a skill not owned by this project registry")
+        target.mkdir(parents=True, exist_ok=True)
+        replace_text_atomic(skill_file, _skill_md(name, purpose, cleaned, body))
+        record = {
+            "name": name,
+            "purpose": purpose,
+            "triggers": cleaned,
+            "path": f"{SKILLS_DIR}/{name}",
+            "scope": "project",
+            "version": "0.1.0",
+            "status": "draft",
+            "created_at": existing.get("created_at") if existing else utc_now(),
+            "updated_at": utc_now(),
+        }
+        data["skills"] = [item for item in data["skills"] if item.get("name") != name]
+        data["skills"].append(record)
+        data["skills"].sort(key=lambda item: item["name"])
         _write_registry(project, data)
         project.append_event("skill.created", {"name": name, "path": record["path"]})
     return record
@@ -150,6 +152,32 @@ def validate(project: Project, name: str) -> list[str]:
             issues.append(f"skill is missing {heading}")
     if not text.startswith("---\n"):
         issues.append("skill frontmatter is missing")
+        return issues
+    # the frontmatter is emitted by _skill_md with a JSON-encoded description;
+    # re-derive it here so a hand-tampered or malformed header is flagged
+    lines = text.splitlines()
+    closing = next((index for index, line in enumerate(lines[1:], start=1) if line == "---"), None)
+    if closing is None:
+        issues.append("skill frontmatter is not closed")
+        return issues
+    meta: dict[str, str] = {}
+    for line in lines[1:closing]:
+        key, separator, value = line.partition(": ")
+        if separator:
+            meta[key.strip()] = value
+    if meta.get("name") != name:
+        issues.append("skill frontmatter name does not match the registry")
+    if meta.get("scope") != "project":
+        issues.append("skill frontmatter scope must be project")
+    if meta.get("version") != str(record.get("version", "")):
+        issues.append("skill frontmatter version does not match the registry")
+    try:
+        described = json.loads(meta.get("description", ""))
+    except ValueError:
+        issues.append("skill description is not a valid quoted string")
+        described = None
+    if described is not None and described != record.get("purpose"):
+        issues.append("skill description does not match the registry purpose")
     return issues
 
 

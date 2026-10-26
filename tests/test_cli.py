@@ -360,6 +360,30 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("pre-flight readiness is required", result.stderr)
 
+    def test_run_rejects_readiness_that_vanished_after_approval(self) -> None:
+        # F1: readiness used to be validated only at plan time, so a record
+        # deleted or replaced after approval still let `run` execute.
+        self.init()
+        self.complete_discovery()
+        plan = {
+            "title": "Readiness vanishes after approval",
+            "request": "Readiness vanishes after approval",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        task_id, plan_id = result.stdout.splitlines()[0].split()[:2]
+        result = self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        (self.root / ".aperio" / "readiness.json").unlink()
+        result = self.cli("run", task_id)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("pre-flight readiness is required", result.stderr)
+
     def test_plan_without_discovery_is_refused(self) -> None:
         self.init()
         plan = {

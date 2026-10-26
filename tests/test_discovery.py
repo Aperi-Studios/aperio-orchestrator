@@ -357,7 +357,7 @@ class DiscoveryTests(unittest.TestCase):
         data = self.project.discovery()
         assert data is not None
         data["schema"] = 99
-        self.project.save_discovery(data)
+        (self.project.state / "discovery.json").write_text(json.dumps(data), encoding="utf-8")
         with self.assertRaises(DiscoveryError):
             status(self.project)
 

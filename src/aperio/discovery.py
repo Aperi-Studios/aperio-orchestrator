@@ -14,7 +14,7 @@ from datetime import date
 from typing import Any
 
 from .model import ModelError, utc_now
-from .store import Project
+from .store import Project, StoreError
 
 SCHEMA_VERSION = 1
 DISCOVERY_FILE = "discovery.json"
@@ -322,7 +322,7 @@ def _new_state() -> dict[str, Any]:
 
 
 def _state(project: Project) -> dict[str, Any]:
-    data = project.discovery()
+    data = _load(project)
     if data is None:
         data = _new_state()
         project.save_discovery(data)
@@ -397,8 +397,15 @@ def _applicable(data: dict[str, Any]) -> list[Question]:
     ]
 
 
+def _load(project: Project) -> dict[str, Any] | None:
+    try:
+        return project.discovery()
+    except StoreError as exc:
+        raise DiscoveryError(str(exc)) from exc
+
+
 def _read_or_new(project: Project) -> dict[str, Any]:
-    data = project.discovery()
+    data = _load(project)
     return _new_state() if data is None else _read_state(data)
 
 
@@ -559,7 +566,7 @@ def waive_question(
 
 
 def digest(project: Project) -> str:
-    data = project.discovery()
+    data = _load(project)
     if data is None:
         raise DiscoveryError("discovery state is missing")
     data = _read_state(data)
@@ -573,7 +580,7 @@ def digest(project: Project) -> str:
 
 
 def status(project: Project) -> dict[str, Any]:
-    data = project.discovery()
+    data = _load(project)
     if data is None:
         applicable = _applicable({})
         return {
@@ -645,7 +652,8 @@ def status(project: Project) -> dict[str, Any]:
 
 
 def summary(project: Project) -> str:
-    data = _read_state(project.discovery()) if project.discovery() is not None else {}
+    raw = _load(project)
+    data = _read_state(raw) if raw is not None else {}
     answers = data.get("answers", {})
     waivers = data.get("waivers", {})
     lines = ["# Discovery summary", ""]

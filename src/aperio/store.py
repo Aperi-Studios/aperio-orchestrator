@@ -69,7 +69,10 @@ class Project:
                 },
             },
         )
-        project._write_json(project.state / "queue.json", {"tasks": [], "updated_at": utc_now()})
+        project._write_json(
+            project.state / "queue.json",
+            {"schema": SCHEMA_VERSION, "tasks": [], "updated_at": utc_now()},
+        )
         (project.state / "asks.jsonl").touch()
         (project.state / "events.jsonl").touch()
         project.append_event("project.initialized", {"name": name or root_path.name})
@@ -80,9 +83,30 @@ class Project:
         project = cls(Path(root).expanduser())
         if not (project.state / "project.json").is_file():
             raise StoreError(f"not an Aperio project: {project.root} (run aperio init)")
+        project._read_state_json(project.state / "project.json")
         return project
 
     # ---- low-level JSON -------------------------------------------------
+
+    def _read_state_json(self, path: Path, default: Any = None) -> Any:
+        """Read a versioned state file, migrating a missing schema on read.
+
+        A state file written by a newer build is refused rather than guessed at.
+        Existing v1 files predate the schema field, so they are migrated in place.
+        """
+        data = self._read_json(path, default)
+        if not isinstance(data, dict):
+            raise StoreError(f"state file must contain an object: {path}")
+        schema = data.get("schema")
+        if schema is None:
+            data["schema"] = SCHEMA_VERSION
+            if path.is_file():
+                self._write_json(path, data)
+        elif schema != SCHEMA_VERSION:
+            raise StoreError(
+                f"unsupported state schema {schema} in {path}; this build supports {SCHEMA_VERSION}"
+            )
+        return data
 
     def _write_json(self, path: Path, data: Any) -> None:
         if path.is_symlink():
@@ -194,9 +218,11 @@ class Project:
         path = self.state / "discovery.json"
         if not path.is_file():
             return None
-        return self._read_json(path)
+        return self._read_state_json(path)
 
     def save_discovery(self, data: dict[str, Any]) -> None:
+        data = dict(data)
+        data["schema"] = SCHEMA_VERSION
         self._write_json(self.state / "discovery.json", data)
         self.append_event("discovery.updated", {"answered": len(data.get("answers", {}))})
 
@@ -204,9 +230,11 @@ class Project:
         path = self.state / "inspection.json"
         if not path.is_file():
             return None
-        return self._read_json(path)
+        return self._read_state_json(path)
 
     def save_inspection(self, data: dict[str, Any]) -> None:
+        data = dict(data)
+        data["schema"] = SCHEMA_VERSION
         self._write_json(self.state / "inspection.json", data)
         self.append_event("inspection.updated", {"kind": data.get("kind", "unknown")})
 
@@ -224,13 +252,17 @@ class Project:
     # ---- queue and tasks ------------------------------------------------
 
     def tasks(self) -> list[Task]:
-        data = self._read_json(self.state / "queue.json", {"tasks": []})
+        data = self._read_state_json(self.state / "queue.json", {"tasks": []})
         return [Task.from_dict(row) for row in data.get("tasks", [])]
 
     def save_tasks(self, tasks: list[Task]) -> None:
         self._write_json(
             self.state / "queue.json",
-            {"tasks": [task.to_dict() for task in tasks], "updated_at": utc_now()},
+            {
+                "schema": SCHEMA_VERSION,
+                "tasks": [task.to_dict() for task in tasks],
+                "updated_at": utc_now(),
+            },
         )
 
     def get_task(self, task_id: str) -> Task:
@@ -258,14 +290,16 @@ class Project:
 
     def save_plan(self, plan: Plan) -> None:
         plan.validate()
-        self._write_json(self.plan_path(plan.id), plan.to_dict())
+        data = plan.to_dict()
+        data["schema"] = SCHEMA_VERSION
+        self._write_json(self.plan_path(plan.id), data)
 
     def get_plan(self, plan_id: str) -> Plan:
         path = self.plan_path(plan_id)
         if not path.is_file():
             raise StoreError(f"unknown plan: {plan_id}")
         try:
-            return Plan.from_dict(self._read_json(path))
+            return Plan.from_dict(self._read_state_json(path))
         except ModelError as exc:
             raise StoreError(f"invalid plan {plan_id}: {exc}") from exc
 
@@ -273,8 +307,8 @@ class Project:
         result: list[Plan] = []
         for path in sorted((self.state / "plans").glob("*.json")):
             try:
-                result.append(Plan.from_dict(self._read_json(path)))
-            except (ModelError, StoreError):
+                result.append(Plan.from_dict(self._read_state_json(path)))
+            except ModelError:
                 continue
         return result
 
@@ -286,7 +320,9 @@ class Project:
     def save_evidence(self, task_id: str, run_id: str, evidence: dict[str, Any]) -> Path:
         directory = self.evidence_dir(task_id)
         path = resolve_inside(directory, f"{run_id}.json")
-        self._write_json(path, evidence)
+        payload = dict(evidence)
+        payload.setdefault("schema", SCHEMA_VERSION)
+        self._write_json(path, payload)
         return path
 
     def evidence(self, task_id: str) -> list[dict[str, Any]]:
@@ -295,7 +331,7 @@ class Project:
             return []
         rows: list[dict[str, Any]] = []
         for path in sorted(directory.glob("*.json")):
-            rows.append(self._read_json(path))
+            rows.append(self._read_state_json(path))
         return rows
 
     # ---- paths ----------------------------------------------------------
