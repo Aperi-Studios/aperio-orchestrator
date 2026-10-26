@@ -353,10 +353,10 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue((lib / "VERSION").is_file())
         self.assertTrue((lib / "aperio-v2-managed").is_file())
         # every pre-existing backup survives; the failed update leaves its own
-        # backup behind (slice-free compare: sort order is not load-bearing)
+        # backup behind (set comparison: name sort order is not load-bearing)
         backups_after = sorted((self.prefix / "share").glob("aperio.backup.*"))
-        self.assertEqual(set(backups_before), set(backups_after) - {max(backups_after)})
-        self.assertEqual(len(backups_after), len(backups_before) + 1)
+        self.assertTrue(set(backups_before).issubset(set(backups_after)))
+        self.assertEqual(len(set(backups_after) - set(backups_before)), 1)
 
     def test_powershell_rollback_without_backup_is_refused(self) -> None:
         if not shutil.which("pwsh"):

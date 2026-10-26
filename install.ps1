@@ -47,16 +47,24 @@ $Cmd = Join-Path $Bin "aperio.cmd"
 
 function Restore-Library([string]$BackupPath) {
     $old = "$Lib.restore-old.$(Get-Date -Format 'yyyyMMddTHHmmssfffZ')_$PID"
-    if (Test-Path $Lib) {
-        Move-Item -Force $Lib $old
-    }
+    $movedAside = $false
     try {
+        if (Test-Path $Lib) {
+            Move-Item -Force $Lib $old
+            $movedAside = $true
+        }
         Move-Item -Force $BackupPath $Lib
     } catch {
-        if (Test-Path $old) { Move-Item -Force $old $Lib }
-        throw
+        # could not complete the restore: put the moved-aside copy back and
+        # report the outcome instead of throwing
+        if ($movedAside -and -not (Test-Path $Lib)) {
+            Move-Item -Force $old $Lib -ErrorAction SilentlyContinue
+            Remove-Item -Recurse -Force $old -ErrorAction SilentlyContinue
+        }
+        return $false
     }
     if (Test-Path $old) { Remove-Item -Recurse -Force $old -ErrorAction SilentlyContinue }
+    return $true
 }
 
 if ($Check) {
@@ -86,9 +94,7 @@ if ($Rollback) {
         Write-Host "would: restore $($backup.FullName) to $Lib"
         exit 0
     }
-    try {
-        Restore-Library $backup.FullName
-    } catch {
+    if (-not (Restore-Library $backup.FullName)) {
         [Console]::Error.WriteLine("install.ps1: could not restore the backup to $Lib")
         exit 2
     }
@@ -193,8 +199,11 @@ if (-not $NoSkill) {
 }
 } catch {
     if ($Backup -and (Test-Path $Backup)) {
-        Restore-Library $Backup
-        [Console]::Error.WriteLine("install.ps1: update failed; restored $Lib from backup")
+        if (Restore-Library $Backup) {
+            [Console]::Error.WriteLine("install.ps1: update failed; restored $Lib from backup")
+        } else {
+            [Console]::Error.WriteLine("install.ps1: update failed; the library could not be restored from the backup; backup kept at $Backup")
+        }
     }
     throw
 }
