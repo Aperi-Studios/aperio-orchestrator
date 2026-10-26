@@ -358,6 +358,17 @@ design contracts; it also requires a threat model, controls, scans, headers,
 incident handling, and no unresolved high/critical risk. Readiness validation
 does not deploy anything.
 
+If the stack has no dedicated skill, create one in the project:
+
+```bash
+aperio skill create custom-stack --purpose "..." --trigger "When the stack is used"
+aperio skill validate custom-stack
+```
+
+The file is written under `.aperio/skills/` and is never allowed to overwrite a
+skill the project registry does not own. Host loading is not proven until a
+fresh session loads it.
+
 ## Plan file
 
 ```json

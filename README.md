@@ -61,6 +61,8 @@ aperio todo start <todo-id>
 aperio todo accept <todo-id> --by owner --evidence "command exit 0" --confirm "I accept this task"
 aperio readiness import readiness.json
 aperio readiness validate
+aperio skill create custom-stack --purpose "..." --trigger "When the custom stack is used"
+aperio skill validate custom-stack
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder
@@ -100,6 +102,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Mandatory learning dossier with stack/version, official-source, skill/MCP, local-proof, teach-back, and competency validation; `plan`, `approve`, and `run` refuse until it is ready.
 - Owner-visible todo ledger with ordered, minimal tasks; `plan` refuses an empty todo list, and the next task cannot start until the previous task is accepted with evidence.
 - Readiness record for pre-flight, deployment, after-sales, design, and security facts; `aperio readiness validate` refuses gaps and high/critical unresolved risk.
+- Project-scoped skill creation: `aperio skill create` writes a validated scaffold under `.aperio/skills/` and refuses to overwrite a foreign skill.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
 - Host dispatch through a disposable project copy for the Claude, Codex, dsh, Goose, OpenCode, KiloCode, Cline, and agy adapters. Claude and Codex are proven on current code. dsh and Goose command paths are tested, but their live runs are blocked by a missing credential and an HTTP 500 bridge, respectively. The OpenCode, KiloCode, Cline, and agy command shapes are tested with a fake binary; live runs are not yet proven.
 - Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude reviewers confirmed verified work on current code; earlier Codex review evidence is historical.
