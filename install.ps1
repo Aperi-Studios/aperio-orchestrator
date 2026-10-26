@@ -33,7 +33,7 @@ function Test-UnsafePrefix([string]$Value) {
 }
 
 if (Test-UnsafePrefix $Prefix) {
-    Write-Error "install.ps1: refusing unsafe prefix: $Prefix"
+    [Console]::Error.WriteLine("install.ps1: refusing unsafe prefix: $Prefix")
     exit 2
 }
 if (-not $DryRun -and -not $Check -and -not $Rollback) {
@@ -44,6 +44,20 @@ $Lib = Join-Path $Prefix "share/aperio"
 $Bin = Join-Path $Prefix "bin"
 $Launcher = Join-Path $Bin "aperio_launcher.py"
 $Cmd = Join-Path $Bin "aperio.cmd"
+
+function Restore-Library([string]$BackupPath) {
+    $old = "$Lib.restore-old.$(Get-Date -Format 'yyyyMMddTHHmmssfffZ')_$PID"
+    if (Test-Path $Lib) {
+        Move-Item -Force $Lib $old
+    }
+    try {
+        Move-Item -Force $BackupPath $Lib
+    } catch {
+        if (Test-Path $old) { Move-Item -Force $old $Lib }
+        throw
+    }
+    if (Test-Path $old) { Remove-Item -Recurse -Force $old }
+}
 
 if ($Check) {
     $installed = if (Test-Path (Join-Path $Lib "VERSION")) {
@@ -72,8 +86,7 @@ if ($Rollback) {
         Write-Host "would: restore $($backup.FullName) to $Lib"
         exit 0
     }
-    Remove-Item -Recurse -Force $Lib -ErrorAction SilentlyContinue
-    Move-Item -Force $backup.FullName $Lib
+    Restore-Library $backup.FullName
     Write-Host "rolled back to $((Get-Content (Join-Path $Lib 'VERSION') -Raw).Trim())"
     exit 0
 }
@@ -175,8 +188,7 @@ if (-not $NoSkill) {
 }
 } catch {
     if ($Backup -and (Test-Path $Backup)) {
-        Remove-Item -Recurse -Force $Lib -ErrorAction SilentlyContinue
-        Move-Item -Force $Backup $Lib
+        Restore-Library $Backup
         Write-Error "install.ps1: update failed; restored $Lib from backup"
     }
     throw

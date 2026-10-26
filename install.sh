@@ -89,9 +89,20 @@ if [ "$ROLLBACK" -eq 1 ]; then
     echo "would: restore $BACKUP to $LIB"
     exit 0
   fi
-  rm -rf "$LIB"
-  mv "$BACKUP" "$LIB"
-  echo "rolled back to $(cat "$LIB/VERSION")"
+  failed_lib="$LIB.rollback-old.$$"
+  rm -rf "$failed_lib"
+  if [ -e "$LIB" ] && ! mv "$LIB" "$failed_lib" 2>/dev/null; then
+    echo "install.sh: could not move the current $LIB aside" >&2
+    exit 2
+  fi
+  if mv "$BACKUP" "$LIB" 2>/dev/null; then
+    rm -rf "$failed_lib"
+    echo "rolled back to $(cat "$LIB/VERSION")"
+  else
+    if [ -e "$failed_lib" ]; then mv "$failed_lib" "$LIB" 2>/dev/null || true; fi
+    echo "install.sh: could not restore $BACKUP to $LIB" >&2
+    exit 2
+  fi
   exit 0
 fi
 
@@ -123,9 +134,17 @@ BACKUP=""
 restore_update() {
   status=$?
   if [ -n "$BACKUP" ] && [ -d "$BACKUP" ]; then
-    rm -rf "$LIB"
-    mv "$BACKUP" "$LIB"
-    echo "update failed; restored $LIB from backup" >&2
+    failed_lib="$LIB.failed-restore.$$"
+    rm -rf "$failed_lib"
+    if [ -e "$LIB" ] && ! mv "$LIB" "$failed_lib" 2>/dev/null; then
+      echo "update failed; could not move the partial $LIB aside" >&2
+    elif mv "$BACKUP" "$LIB" 2>/dev/null; then
+      rm -rf "$failed_lib"
+      echo "update failed; restored $LIB from backup" >&2
+    else
+      if [ -e "$failed_lib" ]; then mv "$failed_lib" "$LIB" 2>/dev/null || true; fi
+      echo "update failed; could not restore $LIB from backup" >&2
+    fi
   fi
   exit "$status"
 }

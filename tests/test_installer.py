@@ -292,6 +292,20 @@ class InstallerTests(unittest.TestCase):
         backups = list((prefix / "share").glob("aperio.backup.*"))
         self.assertEqual(len(backups), 5)
 
+    def test_powershell_unsafe_prefix_is_refused(self) -> None:
+        if not shutil.which("pwsh"):
+            self.skipTest("pwsh is not installed")
+        for prefix in ("/", "/.."):
+            result = subprocess.run(
+                ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", prefix, "-DryRun"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("unsafe prefix", result.stderr)
+
     def test_unsafe_prefix_is_refused(self) -> None:
         result = subprocess.run(
             ["bash", str(ROOT / "install.sh"), "--prefix", "/", "--dry-run"],
