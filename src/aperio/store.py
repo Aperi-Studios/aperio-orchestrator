@@ -141,10 +141,28 @@ class Project:
         try:
             try:
                 import fcntl
-
-                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             except ImportError:
-                pass
+                fcntl = None  # type: ignore[assignment]
+            if fcntl is not None:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            else:
+                # Windows has no fcntl. Lock one byte through msvcrt; native
+                # Windows execution remains untested, so treat failures as
+                # best-effort rather than claiming a guarantee.
+                try:
+                    import msvcrt
+
+                    locking = getattr(msvcrt, "locking", None)
+                    flag = getattr(msvcrt, "LK_LOCK", None)
+                    if locking is not None and flag is not None:
+                        handle.seek(0)
+                        if not handle.read(1):
+                            handle.write("\0")
+                            handle.flush()
+                        handle.seek(0)
+                        locking(handle.fileno(), flag, 1)
+                except (ImportError, OSError):
+                    pass
             yield
         finally:
             try:
@@ -152,7 +170,16 @@ class Project:
 
                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
             except ImportError:
-                pass
+                try:
+                    import msvcrt
+
+                    locking = getattr(msvcrt, "locking", None)
+                    flag = getattr(msvcrt, "LK_UNLCK", None)
+                    if locking is not None and flag is not None:
+                        handle.seek(0)
+                        locking(handle.fileno(), flag, 1)
+                except (ImportError, OSError):
+                    pass
             handle.close()
 
     def append_event(self, event: str, data: dict[str, Any] | None = None) -> None:
