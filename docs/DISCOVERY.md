@@ -497,7 +497,7 @@ A new surface can be added without editing the profile list: add a facet value, 
 5. **Plan gate:** implemented for every project; `plan` refuses until discovery is ready and warns when an explicit owner waiver is used. A plan records a digest of the discovery state, so approval and run are refused if discovery changes afterward. Waivers require the exact confirmation phrase, a stated risk, and a review date; `labels` cannot be waived.
 6. **Scenario fixtures:** not implemented.
 7. **Read-only inspectors:** implemented for folder facts and single-page URL metadata; analytics/Search Console, sitemap/crawl, browser rendering, and accessibility-tree inspection are not implemented.
-8. **Evidence attachments:** evidence references are recorded as text; hashes, redaction, expiry, and a manifest are not implemented.
+8. **Evidence attachments:** text references are recorded on discovery answers; `aperio evidence add` records a path, size, and SHA-256 in a manifest without copying file contents. Redaction and expiry are not implemented.
 
 Do not add an LLM judge to decide whether discovery is complete. The agent conducts the interview; the gate is deterministic.
 

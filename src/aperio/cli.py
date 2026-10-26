@@ -33,6 +33,9 @@ from .discovery import (
 )
 from .drift import check as drift_check
 from .drift import format_findings as format_drift
+from .evidence import add as evidence_add
+from .evidence import entries as evidence_entries
+from .evidence import format_entries as format_evidence
 from .handoff import write_handoff
 from .hosts import detect_hosts
 from .inspect import InspectionError
@@ -445,6 +448,20 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_evidence(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.evidence_command == "add":
+        entry = evidence_add(project, args.path, label=args.label)
+        if args.json:
+            print(as_json(entry))
+        else:
+            print(f"{entry['id']}  {entry['path']}  {entry['sha256']}")
+        return 0
+    data = evidence_entries(project)
+    print(as_json(data) if args.json else format_evidence(data))
+    return 0
+
+
 def cmd_message(args: argparse.Namespace) -> int:
     project = _project(args)
     store = MeshStore(project)
@@ -605,6 +622,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--allow-private", action="store_true", help="allow a private or loopback URL")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_inspect)
+
+    p = sub.add_parser("evidence", help="record file evidence as a path and hash")
+    evidence = p.add_subparsers(dest="evidence_command", required=True)
+    evidence_add = evidence.add_parser("add", help="record a file reference and hash")
+    evidence_add.add_argument("path")
+    evidence_add.add_argument("--label", default="")
+    evidence_add.add_argument("--json", action="store_true")
+    evidence_add.set_defaults(func=cmd_evidence)
+    evidence_list = evidence.add_parser("list", help="show recorded evidence files")
+    evidence_list.add_argument("--json", action="store_true")
+    evidence_list.set_defaults(func=cmd_evidence)
 
     p = sub.add_parser("message", help="local durable message store")
     msg = p.add_subparsers(dest="message_command", required=True)

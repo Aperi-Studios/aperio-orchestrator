@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .evidence import EvidenceError
+from .evidence import entries as evidence_entries
 from .store import Project
 
 
@@ -67,6 +69,19 @@ def build_handoff(project: Project, task_id: str) -> str:
             if isinstance(item, dict)
         ]
         lines.extend(["## Discovery waivers", "", _bullets(waiver_rows), ""])
+
+    try:
+        manifest = evidence_entries(project)
+    except EvidenceError:
+        manifest = {"entries": []}
+    manifest_rows = [
+        f"`{item.get('id', '?')}` {item.get('label', '')} — `{item.get('path', '')}` "
+        f"sha256 `{str(item.get('sha256', ''))[:16]}`"
+        for item in manifest.get("entries", [])
+        if isinstance(item, dict)
+    ]
+    if manifest_rows:
+        lines.extend(["## Evidence files", "", _bullets(manifest_rows), ""])
 
     if plan:
         lines.extend(

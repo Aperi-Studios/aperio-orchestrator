@@ -63,6 +63,9 @@ class CliTests(unittest.TestCase):
     def test_full_cli_flow(self) -> None:
         self.init()
         self.complete_discovery()
+        (self.root / "notes.md").write_text("owner notes\n", encoding="utf-8")
+        result = self.cli("evidence", "add", "notes.md", "--label", "Brief")
+        self.assertEqual(result.returncode, 0, result.stderr)
         result = self.cli("ask", "Build a page")
         self.assertEqual(result.returncode, 0, result.stderr)
         plan = {
@@ -115,6 +118,7 @@ class CliTests(unittest.TestCase):
         result = self.cli("handoff", task_id, "--print")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("## Verification", result.stdout)
+        self.assertIn("## Evidence files", result.stdout)
         self.assertIn("done", result.stdout)
 
     def test_plan_without_discovery_is_refused(self) -> None:

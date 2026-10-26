@@ -251,6 +251,8 @@ aperio init . --name "Project name"
 aperio ask "What the owner wants" --source owner
 aperio inspect
 aperio inspect --url "https://example.com"
+aperio evidence add notes.md --label "Owner brief"
+aperio evidence list --json
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..." --evidence "..."
 aperio discover waive <question-id> --by owner --risk "..." --review-at "YYYY-MM-DD" --confirm "I accept this risk"
