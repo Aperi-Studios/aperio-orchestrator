@@ -11,18 +11,92 @@ independent review.
 
 ## Start of a session
 
-If `/aperio` is invoked without a complete request, ask one question at a time
-and stop after each answer. Start with the outcome, then what exists:
+Ask one question at a time. Give numbered choices whenever the answer can be
+enumerated. Always include a **not sure — research and recommend** choice and an
+**other** choice. Use multi-select when more than one answer can apply.
 
-1. When this is finished, what should be different, and why does it matter now?
-2. What exists today: a URL, a folder, a repository, screenshots, a document, or nothing?
-3. Which of these apply? It can be more than one: new build, change, redesign, repair, audit, migration, SEO/growth, performance, accessibility, or another label.
-4. Who is the primary person this is for, and what one action must they be able to take?
+Start with the outcome:
+
+1. Which outcome matters most? Choose one or more:
+   1. More customers, leads, or sales
+   2. Save time or reduce manual work
+   3. Fix a problem or reduce errors
+   4. Launch a new product or service
+   5. Improve search visibility
+   6. Improve speed, accessibility, or usability
+   7. Reduce risk, compliance, or cost
+   8. Not sure — research and recommend
+   9. Other — type it
+
+Then continue, one at a time:
+
+2. What exists today?
+   1. Nothing
+   2. A live URL
+   3. A folder or repository
+   4. A live site and a repository
+   5. Screenshots or documents only
+   6. Not sure — research and recommend
+   7. Other — type it
+
+3. Which labels apply? Choose all that apply:
+   1. New build
+   2. Change or extend
+   3. Redesign
+   4. Repair
+   5. Audit
+   6. Migration or replacement
+   7. SEO or growth
+   8. Performance or accessibility
+   9. Other — type it
+
+4. Who is the primary user?
+   1. Consumers or the public
+   2. Businesses or clients
+   3. An internal team
+   4. Members or a community
+   5. Not sure — research and recommend
+   6. Other — type it
+
 5. What are the three must-haves for the first release, and what is explicitly not included?
+
 6. How will you know it worked?
-7. What is fixed: deadline, budget, brand, technology, hosting, legal or privacy rules, languages, or accessibility target?
-8. Who owns the domain, hosting, repository, content, analytics, and final approval? What access exists, without sharing any secret value?
-9. What evidence can you show: an existing URL, analytics or Search Console export, brand assets, examples, screenshots, logs, or an error message?
+   1. More leads, sales, or bookings
+   2. Less manual work or fewer errors
+   3. A launch by a specific date
+   4. Better search visibility
+   5. Better speed, accessibility, or usability
+   6. Not sure — research and recommend
+   7. Other — type it
+
+7. What is fixed? Choose all that apply:
+   1. Deadline
+   2. Budget
+   3. Brand or design
+   4. Existing technology or stack
+   5. Hosting or domain
+   6. Legal, privacy, or compliance
+   7. Languages or localization
+   8. Accessibility target
+   9. Nothing is fixed
+   10. Not sure — research and recommend
+
+8. Who owns the domain, hosting, repository, content, analytics, and final approval?
+   1. I own everything
+   2. My team owns it
+   3. A client owns it
+   4. Not sure — research and recommend
+   5. Other — type it
+
+9. What evidence can you show? Choose all that apply:
+   1. An existing URL
+   2. A repository or folder
+   3. Analytics or Search Console
+   4. Brand assets or examples
+   5. Screenshots, logs, or error messages
+   6. Nothing yet
+   7. Not sure — research and recommend
+
 10. What should the project be called?
 
 Do not force one project type. Record every applicable facet; a project can be
@@ -36,6 +110,21 @@ question it can answer. Do not plan until the outcome, current state,
 must-haves, non-goals, success measure, and access owner are known. If the owner
 cannot answer, record `unknown` with the risk; do not invent an answer. Never
 ask for a password, API key, card number, or recovery code.
+
+### When the owner does not know
+
+Do not repeat the question. Do bounded research:
+
+1. Inspect available assets read-only.
+2. Research two or three credible options, references, or competitors.
+3. Compare them on fit, cost, time, risk, maintenance, and evidence.
+4. Recommend one in plain language, with assumptions and trade-offs.
+5. Ask the owner to accept, change, or defer the recommendation.
+6. Record the decision and its evidence.
+
+Never silently choose for the owner. If research needs a paid service, account,
+or purchase, ask first. If there is no information at all, start with a small
+discovery: examples, constraints, and what a bad outcome would look like.
 
 ## Commands
 

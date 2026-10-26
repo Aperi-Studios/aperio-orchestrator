@@ -193,6 +193,60 @@ Avoid “Would you like…?” and “Do you want it modern?” Ask what happene
 
 If a fact can be inspected, do not make the owner retype it. Record the inspection command or URL and ask the owner only to confirm the interpretation.
 
+### 5.5 Presentation format and the research fallback
+
+A blank question puts the work on the owner. Present each answerable question as a short numbered menu:
+
+```text
+Which outcome matters most? Choose one or more:
+
+1. More customers, leads, or sales
+2. Save time or reduce manual work
+3. Fix a problem or reduce errors
+4. Launch a new product or service
+5. Improve search visibility
+6. Improve speed, accessibility, or usability
+7. Reduce risk, compliance, or cost
+8. Not sure — research and recommend
+9. Other — type it
+```
+
+Rules:
+
+- number every option;
+- allow multiple selections when appropriate;
+- always include **not sure — research and recommend** and **other**;
+- keep the menu short; put examples in one sentence, not a paragraph;
+- reflect the choice back before moving to the next question.
+
+If the owner chooses “not sure”:
+
+1. Inspect whatever exists read-only.
+2. Research two or three credible options, references, or competitors.
+3. Compare them on outcome fit, cost, time, risk, maintenance, and evidence.
+4. Recommend one, in plain language, with the assumptions and what would change the recommendation.
+5. Ask the owner to accept, change, or defer it.
+6. Record the decision, alternatives, and evidence.
+
+Example:
+
+```text
+I do not know which platform to use.
+
+Agent: I checked the empty folder and your goal: publish a small portfolio
+without a developer. I compared three options:
+
+A. Static site, no CMS — fastest and cheapest, but every text change needs
+   a developer.
+B. Static site plus a small CMS — slightly more setup, but you can edit.
+C. Full web application — unnecessary for this scope and costs more.
+
+Recommendation: B. It meets the editing requirement without the cost of C.
+Assumption: you want to edit text yourself. If you will never edit it, choose A.
+```
+
+The agent must not silently choose, and must not recommend a paid product or service without asking first. “Best” means best against the owner’s stated outcome and constraints, not the agent’s favorite stack.
+
 ## 6. Modules that expand the base fields
 
 A module is a conditional question pack. These are examples; the trigger can be combined.
