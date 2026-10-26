@@ -2,7 +2,7 @@
 
 **Version:** 2 (facet-based)
 
-**Status:** core CLI implemented: 10 universal questions, persistent answers, evidence references, research status, readiness, and a plan gate that refuses an incomplete record (`aperio discover`). The full 138-field module catalog, owner-waiver flow, and read-only inspectors remain specifications.
+**Status:** core CLI implemented: 10 universal and 10 conditional questions, persistent answers, evidence references, research status, readiness, and a plan gate that refuses an incomplete record (`aperio discover`). The full 138-field module catalog, owner-waiver flow, and read-only inspectors remain specifications.
 
 **Research date:** 2026-10-26
 
@@ -490,9 +490,9 @@ A new surface can be added without editing the profile list: add a facet value, 
 
 ## 13. Implementation order
 
-1. **Discovery record:** implemented for 10 universal questions in `.aperio/discovery.json`.
-2. **Facet profile:** not implemented; the current labels are recorded but do not select modules.
-3. **Question engine:** implemented for the 10 core questions; conditional modules are not loaded.
+1. **Discovery record:** implemented for 10 universal and 10 conditional questions in `.aperio/discovery.json`.
+2. **Facet profile:** partial; labels load conditional packs for commerce, CMS, SEO, migration, and quality, but do not cover the full module catalog.
+3. **Question engine:** implemented for 10 core questions and 10 conditional questions across five module families.
 4. **Coverage report:** implemented as answered, research, missing, and ready (`aperio discover status`).
 5. **Plan gate:** implemented when a discovery record exists; `plan` refuses an incomplete record. An owner-waiver flow is not implemented.
 6. **Scenario fixtures:** not implemented.

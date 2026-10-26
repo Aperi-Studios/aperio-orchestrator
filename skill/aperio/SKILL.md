@@ -84,7 +84,9 @@ Use these only after the idea is clear:
    6. Migration or replacement
    7. SEO or growth
    8. Performance or accessibility
-   9. Other — type it
+   9. Commerce, payments, or bookings
+   10. CMS or editorial workflow
+   11. Other — type it
 9. What should the project be called?
 
 Use a progress line only after the direction is clear, for example `Discovery · users`; do not promise a fixed number of questions.

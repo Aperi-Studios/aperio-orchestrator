@@ -37,6 +37,7 @@ class Question:
     choices: tuple[Choice, ...] = ()
     multi: bool = False
     allow_text: bool = True
+    requires: tuple[str, ...] = ()
 
 
 def _c(value: str, label: str) -> Choice:
@@ -145,8 +146,132 @@ QUESTIONS: tuple[Question, ...] = (
             _c("seo", "SEO or growth"),
             _c("quality", "Performance or accessibility"),
             _c("commerce", "Commerce, payments, or bookings"),
+            _c("cms", "CMS or editorial workflow"),
         ),
         multi=True,
+    ),
+    Question(
+        "commerce_flow",
+        "commerce",
+        "How should a customer complete an order?",
+        "This decides the checkout, order storage, and support path.",
+        (
+            _c("request", "Browse and send an order request — no cart"),
+            _c("cart_cod", "Cart + guest checkout with cash on delivery"),
+            _c("cart_online", "Cart + online payment"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("commerce",),
+    ),
+    Question(
+        "commerce_delivery",
+        "commerce",
+        "How should delivery charges work?",
+        "Delivery pricing decides the checkout fields and the order total.",
+        (
+            _c("fixed", "One fixed charge"),
+            _c("zone", "Different charges by zone"),
+            _c("free", "Free delivery"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("commerce",),
+    ),
+    Question(
+        "commerce_returns",
+        "commerce",
+        "What should happen when an order is refused or returned?",
+        "COD refusal is a real cost; the policy cannot stay undefined.",
+        (
+            _c("customer", "Customer pays the return cost"),
+            _c("business", "Business absorbs the cost"),
+            _c("case", "Case by case"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("commerce",),
+    ),
+    Question(
+        "cms_roles",
+        "cms",
+        "Who should be able to edit, approve, and publish content?",
+        "Roles and publishing rights decide the CMS workflow.",
+        (
+            _c("owner", "Only the owner"),
+            _c("team", "Owner and team roles"),
+            _c("approval", "Editor plus approver"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("cms",),
+    ),
+    Question(
+        "cms_model",
+        "cms",
+        "What content types need to be editable?",
+        "The content model decides the CMS schema and the edit screen.",
+        requires=("cms",),
+    ),
+    Question(
+        "seo_baseline",
+        "seo",
+        "What search or analytics baseline do you have?",
+        "Without a baseline, SEO claims cannot be measured.",
+        (
+            _c("gsc", "Google Search Console"),
+            _c("analytics", "Analytics only"),
+            _c("both", "Both Search Console and analytics"),
+            _c("none", "Neither yet"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("seo",),
+    ),
+    Question(
+        "seo_urls",
+        "seo",
+        "Will any URLs change, or must any existing URLs be preserved?",
+        "A URL map is required before a redesign or migration.",
+        (
+            _c("none", "No URLs change"),
+            _c("map", "Yes — a redirect map is needed"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        allow_text=True,
+        requires=("seo",),
+    ),
+    Question(
+        "migration_urls",
+        "migration",
+        "Will the domain, platform, or URL structure change?",
+        "The migration path and redirect plan depend on this answer.",
+        (
+            _c("none", "No — same platform and URLs"),
+            _c("map", "Yes — a URL/data map is needed"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("migrate",),
+    ),
+    Question(
+        "migration_rollback",
+        "migration",
+        "How should rollback work if the migration fails?",
+        "A migration without a rollback path is not safe to run.",
+        (
+            _c("old", "Restore the old site"),
+            _c("both", "Keep both available"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("migrate",),
+    ),
+    Question(
+        "quality_target",
+        "quality",
+        "Which quality target matters first?",
+        "Accessibility and performance need a target before testing.",
+        (
+            _c("accessibility", "Accessibility — WCAG 2.2 AA"),
+            _c("performance", "Performance — Core Web Vitals budget"),
+            _c("both", "Both"),
+            _c("not_sure", "Not sure — research and recommend"),
+        ),
+        requires=("quality",),
     ),
     Question(
         "name",
@@ -168,6 +293,16 @@ SUMMARY_LABELS = {
     "ownership": "Ownership",
     "evidence": "Evidence",
     "labels": "Labels",
+    "commerce_flow": "Commerce order path",
+    "commerce_delivery": "Delivery charges",
+    "commerce_returns": "Refused or returned orders",
+    "cms_roles": "CMS roles",
+    "cms_model": "CMS content types",
+    "seo_baseline": "SEO baseline",
+    "seo_urls": "SEO URLs",
+    "migration_urls": "Migration URL map",
+    "migration_rollback": "Migration rollback",
+    "quality_target": "Quality target",
     "name": "Project name",
 }
 
@@ -193,9 +328,21 @@ def _state(project: Project) -> dict[str, Any]:
     return data
 
 
+def _labels(data: dict[str, Any]) -> set[str]:
+    answer = data.get("answers", {}).get("labels", {})
+    return set(answer.get("values", []))
+
+
+def _applicable(data: dict[str, Any]) -> list[Question]:
+    labels = _labels(data)
+    return [
+        question for question in QUESTIONS if all(label in labels for label in question.requires)
+    ]
+
+
 def next_question(project: Project) -> Question | None:
     data = _state(project)
-    for question in QUESTIONS:
+    for question in _applicable(data):
         answer = data["answers"].get(question.id)
         if answer is None or answer.get("status") == "research":
             return question
@@ -203,7 +350,8 @@ def next_question(project: Project) -> Question | None:
 
 
 def question_index(project: Project, question_id: str) -> int:
-    for index, question in enumerate(QUESTIONS, 1):
+    data = _state(project)
+    for index, question in enumerate(_applicable(data), 1):
         if question.id == question_id:
             return index
     raise DiscoveryError(f"unknown question: {question_id}")
@@ -261,8 +409,12 @@ def answer_question(
     if not question.allow_text and not values:
         raise DiscoveryError(f"{question.id}: choose an option")
 
-    status = "research" if "not_sure" in values else "answered"
     data = _state(project)
+    labels = _labels(data)
+    if question.requires and not all(label in labels for label in question.requires):
+        raise DiscoveryError(f"{question.id}: answer the labels question first")
+
+    status = "research" if "not_sure" in values else "answered"
     data["answers"][question.id] = {
         "values": values,
         "text": text,
@@ -278,22 +430,32 @@ def answer_question(
 def status(project: Project) -> dict[str, Any]:
     data = project.discovery()
     if data is None:
+        applicable = _applicable({})
         return {
-            "total": len(QUESTIONS),
+            "total": len(applicable),
             "answered": 0,
             "research": 0,
-            "missing": [question.id for question in QUESTIONS],
+            "missing": [question.id for question in applicable],
             "ready": False,
-            "next": QUESTIONS[0].id,
+            "next": applicable[0].id,
             "answers": {},
         }
     answers = data.get("answers", {})
-    missing = [question.id for question in QUESTIONS if question.id not in answers]
-    research = [key for key, answer in answers.items() if answer.get("status") == "research"]
-    answered = [key for key, answer in answers.items() if answer.get("status") == "answered"]
+    applicable = _applicable(data)
+    missing = [question.id for question in applicable if question.id not in answers]
+    research = [
+        question.id
+        for question in applicable
+        if answers.get(question.id, {}).get("status") == "research"
+    ]
+    answered = [
+        question.id
+        for question in applicable
+        if answers.get(question.id, {}).get("status") == "answered"
+    ]
     ready = not missing and not research
     return {
-        "total": len(QUESTIONS),
+        "total": len(applicable),
         "answered": len(answered),
         "research": len(research),
         "missing": missing,
@@ -307,7 +469,7 @@ def summary(project: Project) -> str:
     data = project.discovery() or {}
     answers = data.get("answers", {})
     lines = ["# Discovery summary", ""]
-    for question in QUESTIONS:
+    for question in _applicable(data):
         answer = answers.get(question.id)
         if not answer:
             lines.append(f"- **{SUMMARY_LABELS.get(question.id, question.domain)}:** missing")
@@ -327,8 +489,9 @@ def summary(project: Project) -> str:
 
 
 def format_question(project: Project, question: Question) -> str:
+    data = _state(project)
     index = question_index(project, question.id)
-    lines = [f"Discovery {index} of {len(QUESTIONS)} · {question.domain}", "", question.prompt, ""]
+    lines = [f"Discovery {index} of {len(_applicable(data))} · {question.domain}", "", question.prompt, ""]
     if question.choices:
         for number, choice in enumerate(question.choices, 1):
             lines.append(f"{number}. {choice.label}")

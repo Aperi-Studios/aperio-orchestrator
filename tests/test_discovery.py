@@ -45,7 +45,7 @@ class DiscoveryTests(unittest.TestCase):
             ("constraints", ["deadline", "language"], ""),
             ("ownership", ["owner"], ""),
             ("evidence", ["none"], ""),
-            ("labels", ["new", "seo"], ""),
+            ("labels", ["new"], ""),
             ("name", [], "Portfolio"),
         ]
         for question_id, choices, text in answers:
@@ -101,6 +101,30 @@ class DiscoveryTests(unittest.TestCase):
         text = summary(self.project)
         self.assertIn("A small portfolio site", text)
         self.assertIn("Portfolio", text)
+
+    def test_conditional_commerce_questions_load(self) -> None:
+        for question_id, choices, text in [
+            ("idea", [], "A jersey store"),
+            ("users", [], "Gen-Z sports fans"),
+            ("success", ["orders"], ""),
+            ("must_haves", [], "Products, cart, COD"),
+            ("non_goals", [], "No accounts yet"),
+            ("constraints", ["budget"], ""),
+            ("ownership", ["owner"], ""),
+            ("evidence", ["none"], ""),
+            ("labels", ["commerce"], ""),
+        ]:
+            answer_question(self.project, question_id, choices=choices, text=text)
+        progress = status(self.project)
+        self.assertEqual(progress["total"], 13)
+        question = next_question(self.project)
+        assert question is not None
+        self.assertEqual(question.id, "commerce_flow")
+        answer_question(self.project, "commerce_flow", choices=["cart_cod"])
+        answer_question(self.project, "commerce_delivery", choices=["zone"])
+        answer_question(self.project, "commerce_returns", choices=["business"])
+        answer_question(self.project, "name", text="Jersey Valley")
+        self.assertTrue(status(self.project)["ready"])
 
     def test_plan_refuses_incomplete_discovery(self) -> None:
         plan = ROOT / "examples" / "demo-site-plan.json"
