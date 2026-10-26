@@ -58,7 +58,7 @@ before.
 
 **Exit criteria:** documented pass, fail, or unsupported status per platform. No destructive test on the owner's machine.
 
-**Status:** Bash installer verified; PowerShell install, launcher version, and uninstall verified under `pwsh` 7.6.7 on macOS. Update/recovery and native Windows execution are not built.
+**Status:** Bash installer verified; PowerShell install, launcher version, and uninstall verified under `pwsh` 7.6.7 on macOS. Update/recovery are implemented and tested on macOS; native Windows execution is not tested.
 
 ## M5: Public beta
 

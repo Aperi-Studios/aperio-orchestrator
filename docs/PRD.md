@@ -617,19 +617,19 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **30 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | **31 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | **17 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **6 passed** | same command; `tests/test_mediator.py` |
-| CLI tests | **7 passed** | same command; `tests/test_cli.py` |
+| CLI tests | **8 passed** | same command; `tests/test_cli.py` |
 | Discovery tests | **25 passed** | same command; `tests/test_discovery.py` |
 | Inspection tests | **14 passed** | same command; `tests/test_inspect.py` |
 | Evidence tests | **6 passed** | same command; `tests/test_evidence.py` |
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
-| Installer tests | **21 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **156 passed** | same command |
+| Installer tests | **23 passed** | same command; `tests/test_installer.py` |
+| Total test suite | **160 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -669,7 +669,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Documentation drift | **clean**: links and inline paths resolve | `aperio drift` |
 | Local message store | **implemented**; real Claude and Codex processes read and replied | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
 | Mediator disposition | **implemented** from the current task state and latest evidence | `tests/test_mediator.py` |
-| Host dispatch beyond Claude/Codex/dsh/Goose | **not built** | no adapter in `src/aperio/adapter.py` for other hosts |
+| Host dispatch beyond Claude/Codex/dsh/Goose | **partial**: adapters for OpenCode, KiloCode, Cline, and agy are command-shape tested; live runs are not proven | `src/aperio/adapter.py`, `tests/test_adapter.py::test_extra_host_adapters_build_commands` |
 | Distributed/live two-host mesh | **not built**; local durable message store and mediator are implemented | `src/aperio/mesh.py`, `src/aperio/mediator.py` |
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
 | OS sandbox for host or shell steps | **not built**; undeclared writes are detected after execution | `docs/ARCHITECTURE.md` limits |

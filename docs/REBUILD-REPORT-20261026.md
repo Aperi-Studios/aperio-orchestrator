@@ -44,16 +44,19 @@ The v2 documentation set is `README.md`, `START-HERE.md`, and the files in `docs
 
 ## Verification
 
+> Historical snapshot from the rebuild. Current verified counts and status are in
+> `docs/STATUS.md`; the v2 installer no longer ships a command file.
+
 Run on the final public tree:
 
 | Check | Result |
 |---|---|
-| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 145 tests pass |
+| `PYTHONPATH=src python3 -m unittest discover -s tests -v` | 145 tests passed at rebuild time (historical) |
 | `ruff check src tests` | pass |
 | `shellcheck install.sh` | pass |
 | GitHub Actions, Python 3.10 / 3.12 / 3.14 | pass |
 | Fresh public clone, `./install.sh`, `aperio --version`, demo plan | pass |
-| Real-home install | binary, skill, and command present |
+| Real-home install | binary and skill present; no command file is installed in v2 |
 | Real Claude host dispatch | file written, acceptance passed, review confirmed, done |
 | Real Claude fresh-context review | brief-only reviewer confirmed a verified task |
 | Real Codex fresh-context review | read-only reviewer confirmed a verified task |

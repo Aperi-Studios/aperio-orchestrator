@@ -6,7 +6,7 @@
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-Expected on a clean v2 tree: 156 tests pass.
+Expected on a clean v2 tree: 160 tests pass.
 
 ## Run one module
 
@@ -65,6 +65,14 @@ python3 -m aperio --project "$T" handoff "$TASK" --print
 - CLI end-to-end flow;
 - installer dry run, install, reinstall, and uninstall.
 
+## Installer exit-code contract
+
+Both installers (`install.sh`, `install.ps1`) agree on these codes. Human-readable text may differ; codes must not.
+
+- `0` — success, including `--check` when the installed version matches source, and completed `--dry-run` runs.
+- `1` — a failure after work started: for example `--check` with a version mismatch, or an update that failed after its backup was taken — even when the backup could not be moved back into place (the moved-aside library is restored instead, so a working install remains).
+- `2` — a refusal or failure before guarantees apply: unsafe prefix, missing or invalid backup, refusing to overwrite a foreign skill file, or a `--rollback` that could not complete.
+
 ## What the tests do not cover
 
 - Host authentication, model access, or dispatch.
@@ -72,6 +80,6 @@ python3 -m aperio --project "$T" handoff "$TASK" --print
 - SEO against built output.
 - Real browser, mobile, or accessibility inspection.
 - Deployment.
-- Windows PowerShell behavior.
+- Native Windows execution of `aperio.cmd`; the PowerShell installer itself is tested under `pwsh` on macOS.
 
 Do not cite a passing test suite as proof of any item in that list.

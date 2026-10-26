@@ -16,7 +16,8 @@ Initial clean rebuild.
 
 ### Known limits
 
-- Shell steps are not OS-sandboxed.
-- Host dispatch is not implemented.
-- Mesh chat, CMS, SEO, and deployment are not implemented.
-- Windows installer parity is not implemented.
+- Shell steps are not OS-sandboxed; undeclared writes are detected after execution, not jailed.
+- Host adapters are implemented for Claude, Codex, Goose, and dsh; Claude and Codex are live-proven, Goose/dsh live calls were blocked, and the extra adapters are command-shape tested only.
+- The local message store and mediator are implemented; a distributed two-host transport is not built.
+- CMS, SEO, and deployment are not implemented.
+- The PowerShell installer is implemented and tested under `pwsh` on macOS; native Windows `.cmd` execution is not tested.
