@@ -75,9 +75,7 @@ def _safe_path(project: Project, value: str) -> Path:
     except ValueError as exc:
         raise EvidenceError("evidence path must stay inside the project") from exc
     name = resolved.name.casefold()
-    if name == ".env" or (
-        name.startswith(".env.") and not name.endswith((".example", ".sample", ".template"))
-    ):
+    if (name == "env" or name.startswith(".env")) and not name.endswith((".example", ".sample", ".template")):
         raise EvidenceError("refusing to attach an environment file that may contain secrets")
     secret_names = {
         ".npmrc",

@@ -60,10 +60,10 @@ class EvidenceTests(unittest.TestCase):
             add(self.project, "notes-link.md")
 
     def test_environment_and_secret_files_are_refused(self) -> None:
-        with self.assertRaises(EvidenceError):
-            add(self.project, ".env")
-        with self.assertRaises(EvidenceError):
-            add(self.project, ".ENV")
+        for name in (".env", ".ENV", "env", ".env2", ".envrc"):
+            (self.root / name).write_text("SECRET=do-not-read\n", encoding="utf-8")
+            with self.assertRaises(EvidenceError):
+                add(self.project, name)
         (self.root / ".npmrc").write_text("token=secret\n", encoding="utf-8")
         with self.assertRaises(EvidenceError):
             add(self.project, ".npmrc")
