@@ -101,6 +101,20 @@ must-haves, non-goals, success measure, and access owner are known. If the owner
 cannot answer, record `unknown` with the risk; do not invent an answer. Never
 ask for a password, API key, card number, or recovery code.
 
+### Persisted discovery
+
+When the project is initialized, persist the interview instead of keeping it
+only in chat:
+
+- `aperio discover next --json` returns the next numbered question.
+- `aperio discover answer <question-id> --choice 1,3 --text "..." --evidence "..."`
+  records the owner's answer.
+- `aperio discover status --json` reports answered, research, missing, and ready.
+
+A `research` answer is not complete. Research it, present the recommendation,
+and record the owner's decision before planning. Do not write a plan while
+`ready` is false unless the owner explicitly accepts a named risk.
+
 ### Program-sized requests
 
 If the request is really a program — for example “an ecommerce site with CMS,
@@ -194,6 +208,9 @@ Before running these, check `type aperio`. If it is a shell function, use `comma
 ```
 aperio init . --name "Project name"
 aperio ask "What the owner wants" --source owner
+aperio discover next
+aperio discover answer <question-id> --choice 1,3 --text "..." --evidence "..."
+aperio discover status
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder

@@ -2,7 +2,7 @@
 
 **Version:** 2 (facet-based)
 
-**Status:** research and specification. The product still records only the free-text ask; this defines the next intake slice. Do not treat it as implemented.
+**Status:** core CLI implemented: 10 universal questions, persistent answers, evidence references, research status, readiness, and a plan gate that refuses an incomplete record (`aperio discover`). The full 138-field module catalog, owner-waiver flow, and read-only inspectors remain specifications.
 
 **Research date:** 2026-10-26
 
@@ -490,14 +490,14 @@ A new surface can be added without editing the profile list: add a facet value, 
 
 ## 13. Implementation order
 
-1. **Discovery record:** stable field IDs, raw words, sources, evidence levels, confidence, sensitivity, owner, and follow-up.
-2. **Facet profile:** validated facet values, extensible custom values, and module selection.
-3. **Question engine:** deterministic next-question ordering, prerequisites, and “unknown” handling.
-4. **Coverage report:** missing, claimed, evidenced, verified; per domain and per module.
-5. **Plan gate:** block or waive with a recorded owner decision.
-6. **Scenario fixtures:** composite profiles above, run against the real gate.
-7. **Read-only inspectors:** repository, URL, analytics, Search Console, sitemap, redirects, accessibility, performance.
-8. **Evidence attachments:** hashes, redaction, expiry, and a manifest.
+1. **Discovery record:** implemented for 10 universal questions in `.aperio/discovery.json`.
+2. **Facet profile:** not implemented; the current labels are recorded but do not select modules.
+3. **Question engine:** implemented for the 10 core questions; conditional modules are not loaded.
+4. **Coverage report:** implemented as answered, research, missing, and ready (`aperio discover status`).
+5. **Plan gate:** implemented when a discovery record exists; `plan` refuses an incomplete record. An owner-waiver flow is not implemented.
+6. **Scenario fixtures:** not implemented.
+7. **Read-only inspectors:** not implemented.
+8. **Evidence attachments:** evidence references are recorded as text; hashes, redaction, expiry, and a manifest are not implemented.
 
 Do not add an LLM judge to decide whether discovery is complete. The agent conducts the interview; the gate is deterministic.
 

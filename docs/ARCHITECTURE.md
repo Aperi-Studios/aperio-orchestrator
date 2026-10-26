@@ -14,6 +14,7 @@ src/aperio/
   policy.py     allowed paths, protected paths, review separation
   adapter.py    disposable-workspace host dispatch and change validation
   drift.py      deterministic documentation link and path checks
+  discovery.py  persistent numbered discovery questions and readiness
   mesh.py       local durable message store
   mediator.py   evidence-based task disposition
   runner.py     apply, detect changes, verify, review, finish, rollback

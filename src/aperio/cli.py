@@ -11,6 +11,22 @@ from typing import Any
 
 from . import __version__
 from .adapter import HostError, run_host_review
+from .discovery import (
+    QUESTION_BY_ID,
+    DiscoveryError,
+    answer_question,
+    as_json,
+    format_next,
+    format_status,
+    next_question,
+    parse_choices,
+)
+from .discovery import (
+    status as discovery_status,
+)
+from .discovery import (
+    summary as discovery_summary,
+)
 from .drift import check as drift_check
 from .drift import format_findings as format_drift
 from .handoff import write_handoff
@@ -63,6 +79,11 @@ def _load_plan_data(path: str) -> dict[str, Any]:
 
 def cmd_plan(args: argparse.Namespace) -> int:
     project = _project(args)
+    if project.discovery() is not None:
+        progress = discovery_status(project)
+        if not progress["ready"]:
+            missing = ", ".join(progress["missing"]) or "research answers"
+            raise DiscoveryError(f"discovery is incomplete; finish or resolve: {missing}")
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -253,6 +274,84 @@ def cmd_drift(args: argparse.Namespace) -> int:
     return 1 if findings else 0
 
 
+def _question_payload(project: Project, question: Any) -> dict[str, Any]:
+    progress = discovery_status(project)
+    return {
+        "id": question.id,
+        "domain": question.domain,
+        "prompt": question.prompt,
+        "why": question.why,
+        "multi": question.multi,
+        "allow_text": question.allow_text,
+        "options": [
+            {"number": number, "value": choice.value, "label": choice.label}
+            for number, choice in enumerate(question.choices, 1)
+        ],
+        "progress": {
+            "answered": progress["answered"],
+            "total": progress["total"],
+            "research": progress["research"],
+            "ready": progress["ready"],
+        },
+    }
+
+
+def cmd_discover(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.discover_command == "next":
+        question = next_question(project)
+        if question is None:
+            if args.json:
+                print(as_json({"ready": True, "status": discovery_status(project)}))
+            else:
+                print(format_status(project))
+            return 0
+        if args.json:
+            print(as_json({"ready": False, "question": _question_payload(project, question)}))
+        else:
+            print(format_next(project))
+        return 0
+    if args.discover_command == "answer":
+        question = QUESTION_BY_ID.get(args.question_id)
+        if question is None:
+            raise DiscoveryError(f"unknown question: {args.question_id}")
+        values = parse_choices(question, args.choice or "")
+        answer = answer_question(
+            project,
+            args.question_id,
+            choices=values,
+            text=args.text or "",
+            evidence=args.evidence or "",
+        )
+        progress = discovery_status(project)
+        if args.json:
+            print(
+                as_json(
+                    {
+                        "answer": answer,
+                        "next": progress["next"],
+                        "ready": progress["ready"],
+                        "status": progress,
+                    }
+                )
+            )
+        else:
+            print(f"{args.question_id} recorded")
+            if progress["next"]:
+                print(format_next(project))
+            else:
+                print(format_status(project))
+        return 0
+    if args.discover_command == "status":
+        progress = discovery_status(project)
+        print(as_json(progress) if args.json else format_status(project))
+        return 0
+    if args.discover_command == "summary":
+        print(discovery_summary(project))
+        return 0
+    raise DiscoveryError("unknown discover command")
+
+
 def cmd_message(args: argparse.Namespace) -> int:
     project = _project(args)
     store = MeshStore(project)
@@ -382,6 +481,24 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_drift)
 
+    p = sub.add_parser("discover", help="structured, persistent discovery interview")
+    discover = p.add_subparsers(dest="discover_command", required=True)
+    discover_next = discover.add_parser("next", help="show the next question")
+    discover_next.add_argument("--json", action="store_true")
+    discover_next.set_defaults(func=cmd_discover)
+    discover_answer = discover.add_parser("answer", help="record an answer")
+    discover_answer.add_argument("question_id")
+    discover_answer.add_argument("--choice", default="", help="comma-separated option numbers or values")
+    discover_answer.add_argument("--text", default="", help="free-text answer or clarification")
+    discover_answer.add_argument("--evidence", default="", help="path, URL, or reference")
+    discover_answer.add_argument("--json", action="store_true")
+    discover_answer.set_defaults(func=cmd_discover)
+    discover_status = discover.add_parser("status", help="show discovery coverage")
+    discover_status.add_argument("--json", action="store_true")
+    discover_status.set_defaults(func=cmd_discover)
+    discover_summary = discover.add_parser("summary", help="show recorded answers")
+    discover_summary.set_defaults(func=cmd_discover)
+
     p = sub.add_parser("message", help="local durable message store")
     msg = p.add_subparsers(dest="message_command", required=True)
     send = msg.add_parser("send", help="send a message")
@@ -428,6 +545,7 @@ def main(argv: list[str] | None = None) -> int:
         HostError,
         MeshError,
         MediationError,
+        DiscoveryError,
         OSError,
         json.JSONDecodeError,
     ) as exc:

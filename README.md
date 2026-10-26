@@ -37,6 +37,8 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```bash
 aperio init . --name "My project"
 aperio ask "Build a one-page site with a working contact form" --source owner
+aperio discover next
+aperio discover status
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder
@@ -116,7 +118,7 @@ The shell limitation is real. A command can change a file before Aperio detects 
 ## Documentation
 
 - `docs/PRD.md`: full product requirements and acceptance scenarios.
-- `docs/DISCOVERY.md`: discovery domains, first questionnaire, evidence model, and scenario gates.
+- `docs/DISCOVERY.md`: discovery domains, first questionnaire, facet profiles, evidence model, and module gates.
 - `docs/ARCHITECTURE.md`: components, state layout, and safety boundaries.
 - `docs/ROADMAP.md`: rebuild order.
 - `docs/STATUS.md`: what was measured, not what is claimed.

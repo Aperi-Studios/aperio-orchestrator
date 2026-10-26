@@ -14,10 +14,12 @@
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 4 passed | same command; `tests/test_cli.py` |
+| Discovery tests | 7 passed | same command; `tests/test_discovery.py` |
 | Installer tests | 10 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 76 passed | same command |
+| Total test suite | 83 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
+| Discovery core | 10 questions persist; answers, evidence, research requests, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
 | Path traversal and symlink escape | refused, including dangling symlink components | `tests/test_core.py` |
@@ -73,7 +75,7 @@
 - OS sandbox for host or shell steps.
 - Remote deployment.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer passes under `pwsh` on macOS.
-- Adaptive discovery intake with eighteen domains, 138 base fields, and a plan gate; the specification is in `docs/DISCOVERY.md`, but no CLI command records it yet.
+- Full 138-field discovery module catalog and owner-waiver flow; the `discover` command records 10 universal questions, evidence references, research requests, readiness, and blocks `plan` while incomplete, but does not load the full module catalog.
 
 ## Known limits
 
