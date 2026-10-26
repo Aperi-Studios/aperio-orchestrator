@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import date, timedelta
 from pathlib import Path
 
 from aperio.cli import cmd_approve, cmd_plan
@@ -27,6 +28,7 @@ from aperio.store import Project
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+FUTURE = (date.today() + timedelta(days=30)).isoformat()
 
 
 class DiscoveryTests(unittest.TestCase):
@@ -140,7 +142,7 @@ class DiscoveryTests(unittest.TestCase):
                 by="owner",
                 risk="unknown",
                 confirm="yes",
-                review_at="2026-11-30",
+                review_at=FUTURE,
             )
         waiver = waive_question(
             self.project,
@@ -148,7 +150,7 @@ class DiscoveryTests(unittest.TestCase):
             by="owner",
             risk="user is not known yet",
             confirm=WAIVER_CONFIRM,
-            review_at="2026-11-30",
+            review_at=FUTURE,
         )
         self.assertEqual(waiver["status"], "waived")
         self.assertIn("users", status(self.project)["waived"])
@@ -163,7 +165,7 @@ class DiscoveryTests(unittest.TestCase):
                 by="owner",
                 risk="already answered",
                 confirm=WAIVER_CONFIRM,
-                review_at="2026-11-30",
+                review_at=FUTURE,
             )
 
     def test_labels_cannot_be_waived(self) -> None:
@@ -174,7 +176,7 @@ class DiscoveryTests(unittest.TestCase):
                 by="owner",
                 risk="skip module choice",
                 confirm=WAIVER_CONFIRM,
-                review_at="2026-11-30",
+                review_at=FUTURE,
             )
 
     def test_waiver_allows_plan_and_warns(self) -> None:
@@ -196,7 +198,7 @@ class DiscoveryTests(unittest.TestCase):
             by="owner",
             risk="working name is not decided",
             confirm=WAIVER_CONFIRM,
-            review_at="2026-11-30",
+            review_at=FUTURE,
         )
         self.assertTrue(status(self.project)["ready"])
         self.assertIn("1 waived", format_status(self.project))
