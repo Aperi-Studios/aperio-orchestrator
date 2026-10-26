@@ -67,13 +67,18 @@ class _HtmlFacts(HTMLParser):
         self._in_title = False
         self._in_h1 = False
         self._h1_parts: list[str] = []
+        self._svg_depth = 0
+        self._title_seen = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = {key.lower(): value or "" for key, value in attrs}
         if tag == "html" and values.get("lang"):
             self.lang = values["lang"]
-        if tag == "title":
-            self._in_title = True
+        if tag == "svg":
+            self._svg_depth += 1
+        elif tag == "title":
+            if not self._svg_depth and not self._title_seen:
+                self._in_title = True
         elif tag == "h1":
             self._in_h1 = True
             self._h1_parts = []
@@ -84,10 +89,10 @@ class _HtmlFacts(HTMLParser):
             elif name == "robots":
                 self.robots = values.get("content", "")
         elif tag == "link":
-            rel = values.get("rel", "").lower()
+            rel = set(values.get("rel", "").lower().split())
             if "canonical" in rel:
                 self.canonical = values.get("href", "")
-            if "stylesheet" in rel or "icon" in rel:
+            if rel & {"stylesheet", "icon"}:
                 self.links += 1
         elif tag == "a":
             self.links += 1
@@ -101,7 +106,12 @@ class _HtmlFacts(HTMLParser):
             self.scripts += 1
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "title":
+        if tag == "svg":
+            if self._svg_depth > 0:
+                self._svg_depth -= 1
+        elif tag == "title":
+            if self._in_title:
+                self._title_seen = True
             self._in_title = False
         elif tag == "h1":
             if self._h1_parts:
@@ -128,6 +138,10 @@ def parse_html(text: str, base_url: str = "") -> dict[str, Any]:
     canonical = parser.canonical
     if canonical and base_url:
         canonical = urllib.parse.urljoin(base_url, canonical)
+    if canonical:
+        scheme = urllib.parse.urlsplit(canonical).scheme.lower()
+        if scheme and scheme not in {"http", "https"}:
+            canonical = ""
     return {
         "title": parser.title,
         "description": parser.description,
@@ -467,13 +481,17 @@ def _validate_url(url: str, allow_private: bool) -> urllib.parse.SplitResult:
 
 def _display_url(url: str) -> str:
     parsed = urllib.parse.urlsplit(url)
-    if not parsed.query:
-        return url
-    pairs = []
-    for item in parsed.query.split("&"):
-        key = item.split("=", 1)[0]
-        pairs.append(f"{key}=[redacted]" if key else "[redacted]")
-    return urllib.parse.urlunsplit(parsed._replace(query="&".join(pairs)))
+    query = parsed.query
+    fragment = parsed.fragment
+    if query:
+        pairs = []
+        for item in query.split("&"):
+            key = item.split("=", 1)[0]
+            pairs.append(f"{key}=[redacted]" if key else "[redacted]")
+        query = "&".join(pairs)
+    if fragment:
+        fragment = "[redacted]"
+    return urllib.parse.urlunsplit(parsed._replace(query=query, fragment=fragment))
 
 
 class _CheckedRedirect(urllib.request.HTTPRedirectHandler):
@@ -517,8 +535,8 @@ def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
         raise InspectionError(f"HTTP {exc.code} for {_display_url(url)}") from exc
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
         raise InspectionError(f"cannot fetch {_display_url(url)}: {exc}") from exc
-    facts = parse_html(text, final_url)
     _validate_url(final_url, allow_private)
+    facts = parse_html(text, _display_url(final_url))
     security_headers = {
         key.lower(): headers.get(key, "")
         for key in (

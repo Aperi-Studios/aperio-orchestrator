@@ -171,12 +171,21 @@ class InspectTests(unittest.TestCase):
         self.assertEqual(facts["images_without_alt"], 0)
         self.assertEqual(facts["canonical"], "https://example.com/x")
 
-    def test_url_rejects_credentials_and_redacts_query(self) -> None:
+    def test_html_ignores_svg_title_and_unsafe_canonical(self) -> None:
+        facts = parse_html(
+            "<title>Real Page</title><svg><title>Icon</title></svg>"
+            '<link rel="canonicalized" href="https://evil.example/">'
+            '<link rel="canonical" href="javascript:alert(1)">'
+        )
+        self.assertEqual(facts["title"], "Real Page")
+        self.assertEqual(facts["canonical"], "")
+
+    def test_url_rejects_credentials_and_redacts_query_and_fragment(self) -> None:
         with self.assertRaises(InspectionError):
             inspect_url("https://user:pass@example.com/")
         self.assertEqual(
-            _display_url("https://example.com/page?token=SECRET&x=1"),
-            "https://example.com/page?token=[redacted]&x=[redacted]",
+            _display_url("https://example.com/page?token=SECRET&x=1#access_token=FRAG"),
+            "https://example.com/page?token=[redacted]&x=[redacted]#[redacted]",
         )
 
     def test_collect_saves_folder_when_url_fails(self) -> None:
@@ -192,7 +201,7 @@ class InspectTests(unittest.TestCase):
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
-            url = f"http://127.0.0.1:{server.server_port}/"
+            url = f"http://127.0.0.1:{server.server_port}/?token=SECRET#access_token=FRAG"
             with self.assertRaises(InspectionError):
                 inspect_url(url)
             facts = inspect_url(url, allow_private=True)
@@ -200,6 +209,8 @@ class InspectTests(unittest.TestCase):
             self.assertEqual(facts["html"]["title"], "Demo")
             self.assertEqual(facts["html"]["h1"], ["Hello"])
             self.assertEqual(facts["html"]["images_without_alt"], 1)
+            self.assertNotIn("SECRET", json.dumps(facts))
+            self.assertNotIn("FRAG", json.dumps(facts))
         finally:
             server.shutdown()
             server.server_close()

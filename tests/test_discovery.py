@@ -12,7 +12,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from datetime import date, timedelta
 from pathlib import Path
 
-from aperio.cli import cmd_approve, cmd_plan
+from aperio.cli import cmd_approve, cmd_plan, cmd_run
 from aperio.discovery import (
     WAIVER_CONFIRM,
     DiscoveryError,
@@ -24,6 +24,7 @@ from aperio.discovery import (
     summary,
     waive_question,
 )
+from aperio.runner import RunError
 from aperio.store import Project
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -350,6 +351,106 @@ class DiscoveryTests(unittest.TestCase):
                     confirm="I approve this plan",
                 )
             )
+
+    def test_plan_without_digest_is_refused_when_discovery_exists(self) -> None:
+        self.complete()
+        plan_path = ROOT / "examples" / "demo-site-plan.json"
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                cmd_plan(argparse.Namespace(project=str(self.root), file=str(plan_path))),
+                0,
+            )
+        plan_id = output.getvalue().splitlines()[0].split()[1]
+        plan = self.project.get_plan(plan_id)
+        plan.discovery_digest = ""
+        self.project.save_plan(plan)
+        with self.assertRaises(DiscoveryError):
+            cmd_approve(
+                argparse.Namespace(
+                    project=str(self.root),
+                    plan_id=plan_id,
+                    by="owner",
+                    note="",
+                    confirm="I approve this plan",
+                )
+            )
+
+    def test_plan_body_tamper_after_approval_is_refused(self) -> None:
+        self.complete()
+        plan_path = ROOT / "examples" / "demo-site-plan.json"
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                cmd_plan(argparse.Namespace(project=str(self.root), file=str(plan_path))),
+                0,
+            )
+        task_id, plan_id = output.getvalue().splitlines()[0].split()[:2]
+        cmd_approve(
+            argparse.Namespace(
+                project=str(self.root),
+                plan_id=plan_id,
+                by="owner",
+                note="",
+                confirm="I approve this plan",
+            )
+        )
+        plan = self.project.get_plan(plan_id)
+        plan.allowed_paths.append("site/other/")
+        self.project.save_plan(plan)
+        with self.assertRaises(RunError):
+            cmd_run(
+                argparse.Namespace(
+                    project=str(self.root),
+                    task_id=task_id,
+                    actor="agent",
+                )
+            )
+
+    def test_run_cannot_rewrite_discovery_control_state(self) -> None:
+        self.complete()
+        plan = {
+            "title": "Attempt control-state rewrite",
+            "request": "Attempt control-state rewrite",
+            "allowed_paths": ["site/"],
+            "steps": [
+                {
+                    "id": "sabotage",
+                    "kind": "run",
+                    "command": "printf '{}' > .aperio/discovery.json",
+                    "writes": [],
+                }
+            ],
+            "acceptance": [
+                {
+                    "id": "check",
+                    "command": f'{sys.executable} -c "from pathlib import Path; assert Path(\'.aperio/discovery.json\').read_text() == \'{{}}\'"',
+                }
+            ],
+        }
+        path = self.root / "sabotage.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                cmd_plan(argparse.Namespace(project=str(self.root), file=str(path))),
+                0,
+            )
+        task_id, plan_id = output.getvalue().splitlines()[0].split()[:2]
+        cmd_approve(
+            argparse.Namespace(
+                project=str(self.root),
+                plan_id=plan_id,
+                by="owner",
+                note="",
+                confirm="I approve this plan",
+            )
+        )
+        result = cmd_run(
+            argparse.Namespace(project=str(self.root), task_id=task_id, actor="agent")
+        )
+        self.assertEqual(result, 1)
+        self.assertEqual(self.project.get_task(task_id).status, "failed")
 
     def test_plan_refuses_incomplete_discovery(self) -> None:
         plan = ROOT / "examples" / "demo-site-plan.json"

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .adapter import HostError, run_host_step
-from .model import Plan, Step, Task, utc_now
+from .model import Plan, Step, Task, plan_body_digest, utc_now
 from .paths import (
     PathSafetyError,
     relative_posix,
@@ -182,6 +182,8 @@ def _hash_control_state(project: Project) -> dict[str, str]:
         project.state / "queue.json",
         project.state / "asks.jsonl",
         project.state / "events.jsonl",
+        project.state / "discovery.json",
+        project.state / "inspection.json",
     ]
     for directory in (project.state / "plans", project.state / "evidence"):
         if directory.is_dir():
@@ -313,7 +315,10 @@ def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[
 
 def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, Any]:
     """Apply an approved plan. Returns the evidence record."""
-    if plan.discovery_digest:
+    if not plan.discovery_digest:
+        if project.discovery() is not None:
+            raise RunError("plan has no discovery binding; recreate the plan")
+    else:
         from .discovery import DiscoveryError
         from .discovery import digest as discovery_digest
 
@@ -330,6 +335,11 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
             raise RunError("discovery is no longer ready; make a new plan")
     if not plan.approval:
         raise RunError("plan is not approved")
+    if plan.approval.plan_sha256:
+        if plan.approval.plan_sha256 != plan_body_digest(plan):
+            raise RunError("plan changed after approval; approve the current plan")
+    elif plan.discovery_digest:
+        raise RunError("plan approval predates the current binding; reapprove the plan")
     task = project.get_task(plan.task_id)
     if task.status not in {"approved", "applied", "failed"}:
         raise RunError(f"task is {task.status}; create or approve a runnable plan before running")

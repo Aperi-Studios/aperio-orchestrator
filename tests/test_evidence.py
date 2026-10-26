@@ -53,9 +53,20 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             add(self.project, "link.txt")
 
-    def test_environment_files_are_refused(self) -> None:
+    def test_hard_linked_file_is_refused(self) -> None:
+        hardlink = self.root / "notes-link.md"
+        os.link(self.root / "notes.md", hardlink)
+        with self.assertRaises(EvidenceError):
+            add(self.project, "notes-link.md")
+
+    def test_environment_and_secret_files_are_refused(self) -> None:
         with self.assertRaises(EvidenceError):
             add(self.project, ".env")
+        with self.assertRaises(EvidenceError):
+            add(self.project, ".ENV")
+        (self.root / ".npmrc").write_text("token=secret\n", encoding="utf-8")
+        with self.assertRaises(EvidenceError):
+            add(self.project, ".npmrc")
         entry = add(self.project, ".env.example")
         self.assertEqual(entry["path"], ".env.example")
 

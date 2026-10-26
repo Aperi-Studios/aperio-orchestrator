@@ -6,6 +6,8 @@ and resumed without a database or a proprietary service.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -161,6 +163,7 @@ class Approval:
     approved_by: str
     approved_at: str = field(default_factory=utc_now)
     note: str = ""
+    plan_sha256: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -171,6 +174,7 @@ class Approval:
             approved_by=str(data["approved_by"]),
             approved_at=str(data.get("approved_at", utc_now())),
             note=str(data.get("note", "")),
+            plan_sha256=str(data.get("plan_sha256", "")),
         )
 
 
@@ -256,6 +260,14 @@ class Plan:
             seen.add(step.id)
         for check in self.acceptance:
             check.validate()
+
+
+def plan_body_digest(plan: Plan) -> str:
+    """Hash the plan body without approval metadata."""
+    data = plan.to_dict()
+    data["approval"] = None
+    encoded = json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 @dataclass

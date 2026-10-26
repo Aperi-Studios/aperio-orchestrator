@@ -44,7 +44,16 @@ from .inspect import format_report as format_inspection
 from .inspect import hints as inspection_hints
 from .mediator import MediationError, mediate
 from .mesh import MeshError, MeshStore
-from .model import Acceptance, Approval, ModelError, Plan, Step, Task, new_id
+from .model import (
+    Acceptance,
+    Approval,
+    ModelError,
+    Plan,
+    Step,
+    Task,
+    new_id,
+    plan_body_digest,
+)
 from .policy import PolicyError
 from .runner import RunError, apply_plan, finish, review, rollback, verify
 from .store import Project, StoreError
@@ -166,6 +175,10 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 def _require_current_discovery(project: Project, plan: Plan) -> None:
     if not plan.discovery_digest:
+        if project.discovery() is not None:
+            raise DiscoveryError(
+                "plan has no discovery binding; recreate the plan before approval"
+            )
         return
     current = discovery_digest(project)
     if current != plan.discovery_digest:
@@ -190,7 +203,11 @@ def cmd_approve(args: argparse.Namespace) -> int:
     task = project.get_task(plan.task_id)
     if task.status not in {"planned", "approved", "failed"}:
         raise ModelError(f"task is {task.status}; an approved, verified, or done task cannot be re-approved")
-    plan.approval = Approval(approved_by=args.by, note=args.note)
+    plan.approval = Approval(
+        approved_by=args.by,
+        note=args.note,
+        plan_sha256=plan_body_digest(plan),
+    )
     task.status = "approved"
     with project.lock():
         project.save_plan(plan)

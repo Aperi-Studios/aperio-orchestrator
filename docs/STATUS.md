@@ -14,24 +14,25 @@
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
 | CLI tests | 7 passed | same command; `tests/test_cli.py` |
-| Discovery tests | 22 passed | same command; `tests/test_discovery.py` |
-| Inspection tests | 14 passed | same command; `tests/test_inspect.py` |
-| Evidence tests | 5 passed | same command; `tests/test_evidence.py` |
+| Discovery tests | 25 passed | same command; `tests/test_discovery.py` |
+| Inspection tests | 15 passed | same command; `tests/test_inspect.py` |
+| Evidence tests | 6 passed | same command; `tests/test_evidence.py` |
 | Installer tests | 10 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 119 passed | same command |
+| Total test suite | 124 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
-| Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change` |
-| Read-only inspection | folder stack, tests, docs, CI, deployment, env names; URL title, meta, H1, canonical, security headers; private URLs, credential URLs, and symlinked inputs refused; redirects revalidated; query values redacted | `tests/test_inspect.py`; `aperio inspect` |
-| Evidence manifest | file path, size, and SHA-256 recorded; contents not copied; outside paths, symlinks, and real `.env` files refused | `tests/test_evidence.py`; `aperio evidence list` |
+| Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
+| Plan approval binding | approval records a SHA-256 of the plan body; changing steps or allowed paths after approval is refused | `src/aperio/model.py::plan_body_digest`; `tests/test_discovery.py` |
+| Read-only inspection | folder stack, tests, docs, CI, deployment, env names; URL title, meta, H1, safe canonical, security headers; private URLs, credential URLs, and symlinked inputs refused; redirects revalidated; query and fragment values redacted | `tests/test_inspect.py`; `aperio inspect` |
+| Evidence manifest | file path, size, and SHA-256 recorded; contents not copied; outside paths, symlinks, hard links, secret-bearing names, and real `.env` files refused | `tests/test_evidence.py`; `aperio evidence list` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
 | Path traversal and symlink escape | refused, including dangling symlink components | `tests/test_core.py` |
 | Project state symlink | opening a project whose `.aperio` is a symlink is refused | `tests/test_core.py::test_state_symlink_is_refused` |
 | State file symlink | a symlinked queue file is refused and the external file is untouched | `tests/test_core.py::test_state_file_symlink_is_refused` |
 | Review tamper | a reviewer that changes the project is refused | `tests/test_adapter.py::test_reviewer_cannot_change_the_project` |
-| Control-state change | a step that alters project, queue, plan, or evidence fails | `_hash_control_state`; `tests/test_core.py` |
+| Control-state change | a step that alters project, queue, plan, evidence, discovery, or inspection fails | `_hash_control_state`; `tests/test_discovery.py::test_run_cannot_rewrite_discovery_control_state`; `tests/test_core.py` |
 | Protected-path glob | matching a protected path fails even through a glob | `tests/test_core.py::test_glob_cannot_reach_a_protected_path` |
 | Task ID traversal | persisted task ids cannot contain path separators | `tests/test_core.py::test_task_id_traversal_is_refused` |
 | Installer prefix canonicalization | `/..` resolves to `/` and is refused | `tests/test_installer.py::test_prefix_that_resolves_to_root_is_refused` |

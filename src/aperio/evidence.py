@@ -74,11 +74,27 @@ def _safe_path(project: Project, value: str) -> Path:
         resolved.relative_to(project.root)
     except ValueError as exc:
         raise EvidenceError("evidence path must stay inside the project") from exc
-    name = resolved.name
+    name = resolved.name.casefold()
     if name == ".env" or (
         name.startswith(".env.") and not name.endswith((".example", ".sample", ".template"))
     ):
         raise EvidenceError("refusing to attach an environment file that may contain secrets")
+    secret_names = {
+        ".npmrc",
+        ".netrc",
+        ".git-credentials",
+        "id_rsa",
+        "id_ed25519",
+    }
+    secret_suffixes = (".pem", ".key")
+    if name in secret_names or name.endswith(secret_suffixes):
+        raise EvidenceError("refusing to attach a file that may contain credentials")
+    if name.startswith("secrets.") and not name.endswith((".example", ".sample", ".template")):
+        raise EvidenceError("refusing to attach a secrets file")
+    if name.endswith(".env") and not name.endswith((".example", ".sample", ".template")):
+        raise EvidenceError("refusing to attach an environment file that may contain secrets")
+    if resolved.stat().st_nlink > 1:
+        raise EvidenceError("refusing to attach a file with more than one hard link")
     return resolved
 
 
