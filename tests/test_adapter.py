@@ -150,8 +150,7 @@ class AdapterTests(unittest.TestCase):
             command = _command_for(host, "/bin/host", "prompt", step)
             self.assertEqual(command[0], "/bin/host")
             self.assertIn("prompt", command)
-        # kilocode: --auto is a command-level option of `kilo run` (its own help,
-        # no GLOBAL section). Live-verified 2026-10-26 on kilo 7.8.15:
+        # kilocode 7.8.15 observed behavior, not a claim about yargs flag scope:
         #   kilo run --auto "<prompt>" -> exit 0, session completed
         #   kilo --auto run "<prompt>" -> exit 1 instantly (usage dump)
         self.assertEqual(
