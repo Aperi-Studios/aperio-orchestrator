@@ -1044,8 +1044,10 @@ implemented merely by appearing in this table.
 
 ### A.3 Execution rule
 
-Implement P1 items in the order Z-02, Z-03, Z-04, Z-05, Z-01. Do not start P2
-interop or observability work before the P1 control-plane items are verified.
+Implement P1 items in the order Z-02, Z-03, Z-04, Z-05, Z-01. Z-02
+(non-overridable protected paths) and Z-03 (read-only steps) are verified; Z-04
+is the next control-plane item. Do not start P2 interop or observability work
+before the P1 control-plane items are verified.
 Each item gets a negative test and a `docs/STATUS.md` row. Owner approval is
 still required for deployment, paid hosts, credentials, and public release.
 
