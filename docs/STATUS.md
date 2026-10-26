@@ -110,6 +110,7 @@
 - The learning gate is enforced by `plan`, `approve`, and `run`; direct `apply_plan` library callers bypass it unless they check `learning.status` themselves.
 - The todo gate is enforced at `plan` and `run`; `plan` records the active `todo_id`, and `run` revalidates that the linked task is in progress or accepted.
 - The readiness record's pre-flight section is a hard `plan` gate, and full readiness is required by `done` and `handoff`. `run` itself does not require the deployment/after-sales sections; deployment remains a separate owner-approved action.
+- Automated MCP/package installation is not implemented; the learning dossier records and validates the decision, and installation must happen through an approved plan or host with owner approval where required.
 - Host detection reports presence and version, not authentication or model access.
 - The demo site is a build fixture, not a design or CMS proof.
 

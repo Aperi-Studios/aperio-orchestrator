@@ -129,6 +129,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - OS-level sandboxing. Host steps and shell steps are detected, not jailed.
 - Remote deployment.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer is tested under `pwsh` on macOS.
+- Automated MCP or package installation. The learning dossier records the decision and provenance; installation must happen through an approved plan or the host, with owner approval for global/paid/credentialed tools.
 - Automatic public release.
 
 ## Safety model
