@@ -253,6 +253,10 @@ aperio inspect
 aperio inspect --url "https://example.com"
 aperio evidence add notes.md --label "Owner brief"
 aperio evidence list --json
+aperio audit start --scope src --profile quick
+aperio audit add --title "..." --status needs_validation --path src/app.py --evidence "Missing deployment fact"
+aperio audit validate
+aperio audit report
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..." --evidence "..."
 aperio discover waive <question-id> --by owner --risk "..." --review-at "YYYY-MM-DD" --confirm "I accept this risk"
@@ -272,6 +276,39 @@ aperio message send --from builder --to reviewer --body "please review" --task <
 aperio mediate <task-id>
 aperio hosts
 ```
+
+## Security audit ledger
+
+`aperio audit` is a record of source review, not a vulnerability scanner. Start
+it with a bounded scope and profile, then record only findings that have evidence.
+
+```bash
+aperio audit start --scope src --profile quick
+aperio audit add --title "Unvalidated upload path" --status confirmed \
+  --path src/upload.py --line 42 --severity high \
+  --boundary "untrusted filename reaches filesystem write" \
+  --evidence "src/upload.py:42 passes the raw filename to Path.join"
+aperio audit add --title "Proxy header handling" --status needs_validation \
+  --path src/app.py --evidence "The reverse proxy config is not in this repo"
+aperio audit unit --unit-id unit-0001 --status checked
+aperio audit validate
+aperio audit report
+```
+
+Rules:
+
+- A **confirmed** finding needs a coverage unit, a boundary, a severity, a
+  source line, and concrete evidence containing that path. Do not infer
+  exploitability from a suspicious string.
+- A **needs_validation** finding has no severity. State the missing fact.
+- A **rejected** finding keeps the reason it was rejected.
+- This command never runs target code. If proving a finding requires execution,
+  leave it `needs_validation` until a real sandbox exists.
+- The report lists coverage as recorded. It is not a whole-repository guarantee.
+- `aperio audit report` exits 1 while coverage is still open, truncated, or the
+  source changed after the audit started; 0 means complete.
+- A fresh reviewer should verify every confirmed finding; the finder is not the
+  verifier.
 
 ## Plan file
 

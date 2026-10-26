@@ -11,6 +11,13 @@ from typing import Any
 
 from . import __version__
 from .adapter import HostError, run_host_review
+from .audit import FINDING_STATUSES, PROFILES, SEVERITIES, UNIT_STATUSES
+from .audit import add_finding as audit_add_finding
+from .audit import report as audit_report
+from .audit import set_unit as audit_set_unit
+from .audit import start as audit_start
+from .audit import status as audit_status
+from .audit import validate as audit_validate
 from .discovery import (
     QUESTION_BY_ID,
     DiscoveryError,
@@ -533,6 +540,58 @@ def cmd_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_audit(args: argparse.Namespace) -> int:
+    project = _project(args)
+    with project.lock():
+        return _cmd_audit_locked(project, args)
+
+
+def _cmd_audit_locked(project: Project, args: argparse.Namespace) -> int:
+    if args.audit_command == "start":
+        result = audit_start(project, scope=args.scope, profile=args.profile)
+        print(as_json(result) if args.json else f"{result['audit_id']}  {result['units']} units  {result['path']}")
+        return 0
+    if args.audit_command == "add":
+        finding = audit_add_finding(
+            project,
+            title=args.title,
+            status=args.status,
+            unit_id=args.unit or "",
+            path=args.path or "",
+            line=args.line,
+            severity=args.severity or "",
+            boundary=args.boundary or "",
+            evidence=args.evidence,
+            audit_id=args.audit_id or "",
+        )
+        print(as_json(finding) if args.json else f"{finding['id']}  {finding['status']}  {finding['title']}")
+        return 0
+    if args.audit_command == "unit":
+        unit = audit_set_unit(
+            project,
+            unit_id=args.unit_id,
+            status=args.status,
+            note=args.note or "",
+            audit_id=args.audit_id or "",
+        )
+        print(as_json(unit) if args.json else f"{unit['id']}  {unit['status']}  {unit['path']}")
+        return 0
+    if args.audit_command == "validate":
+        errors = audit_validate(project, args.audit_id or "")
+        if args.json:
+            print(as_json({"ok": not errors, "errors": errors}))
+        else:
+            print("AUDIT LEDGER: valid" if not errors else "\n".join(f"FAIL: {error}" for error in errors))
+        return 0 if not errors else 1
+    if args.audit_command == "report":
+        result = audit_report(project, args.audit_id or "")
+        print(as_json(result) if args.json else result["report"])
+        return 0 if result["run_status"] == "complete" else 1
+    result = audit_status(project, args.audit_id or "")
+    print(as_json(result) if args.json else "\n".join(f"{key}: {value}" for key, value in result.items()))
+    return 0
+
+
 def cmd_message(args: argparse.Namespace) -> int:
     project = _project(args)
     store = MeshStore(project)
@@ -704,6 +763,42 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_list = evidence.add_parser("list", help="show recorded evidence files")
     evidence_list.add_argument("--json", action="store_true")
     evidence_list.set_defaults(func=cmd_evidence)
+
+    p = sub.add_parser("audit", help="source-anchored security audit ledger")
+    audit = p.add_subparsers(dest="audit_command", required=True)
+    audit_start_parser = audit.add_parser("start", help="create an audit ledger")
+    audit_start_parser.add_argument("--scope", default=".")
+    audit_start_parser.add_argument("--profile", choices=sorted(PROFILES), default="quick")
+    audit_start_parser.add_argument("--json", action="store_true")
+    audit_start_parser.set_defaults(func=cmd_audit)
+    audit_add = audit.add_parser("add", help="record a finding")
+    audit_add.add_argument("--title", required=True)
+    audit_add.add_argument("--status", choices=sorted(FINDING_STATUSES), required=True)
+    audit_add.add_argument("--evidence", required=True)
+    audit_add.add_argument("--unit", default="")
+    audit_add.add_argument("--path", default="")
+    audit_add.add_argument("--line", type=int, default=None)
+    audit_add.add_argument("--severity", choices=sorted(SEVERITIES), default="")
+    audit_add.add_argument("--boundary", default="")
+    audit_add.add_argument("--audit-id", default="")
+    audit_add.add_argument("--json", action="store_true")
+    audit_add.set_defaults(func=cmd_audit)
+    audit_unit = audit.add_parser("unit", help="mark a coverage unit")
+    audit_unit.add_argument("--unit-id", required=True)
+    audit_unit.add_argument("--status", choices=sorted(UNIT_STATUSES), required=True)
+    audit_unit.add_argument("--note", default="")
+    audit_unit.add_argument("--audit-id", default="")
+    audit_unit.add_argument("--json", action="store_true")
+    audit_unit.set_defaults(func=cmd_audit)
+    for name, help_text in (
+        ("validate", "validate the ledger and findings"),
+        ("report", "write the audit report"),
+        ("status", "show the latest audit"),
+    ):
+        audit_parser = audit.add_parser(name, help=help_text)
+        audit_parser.add_argument("--audit-id", default="")
+        audit_parser.add_argument("--json", action="store_true")
+        audit_parser.set_defaults(func=cmd_audit)
 
     p = sub.add_parser("message", help="local durable message store")
     msg = p.add_subparsers(dest="message_command", required=True)

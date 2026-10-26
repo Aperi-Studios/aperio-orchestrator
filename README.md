@@ -39,6 +39,11 @@ aperio init . --name "My project"
 aperio ask "Build a one-page site with a working contact form" --source owner
 aperio inspect
 aperio evidence add notes.md --label "Owner brief"
+aperio audit start --scope src --profile quick
+aperio audit add --title "..." --status needs_validation --path src/app.py --evidence "Missing deployment fact"
+aperio audit unit --unit-id unit-0001 --status checked
+aperio audit validate
+aperio audit report
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..."
 aperio discover status
@@ -83,6 +88,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude reviewers confirmed verified work on current code; earlier Codex review evidence is historical.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
+- Source-anchored security audit ledger: bounded coverage units, structured findings, `needs_validation` for unresolved facts, and a generated report. It never executes the target and never treats an unproven finding as confirmed.
 - Independent review enforcement by reviewer name.
 - Rollback of files captured before a run.
 - Handoff generation from actual state.
@@ -123,6 +129,7 @@ The shell limitation is real. A command can change a file before Aperio detects 
 - `docs/PRD.md`: full product requirements and acceptance scenarios.
 - `docs/DISCOVERY.md`: discovery domains, first questionnaire, facet profiles, evidence model, and module gates.
 - `docs/ARCHITECTURE.md`: components, state layout, and safety boundaries.
+- `docs/AUDIT.md`: source-anchored security audit ledger, schema, and limits.
 - `docs/ROADMAP.md`: rebuild order.
 - `docs/STATUS.md`: what was measured, not what is claimed.
 - `docs/TESTING.md`: how to reproduce the tests.

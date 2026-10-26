@@ -17,6 +17,7 @@ src/aperio/
   discovery.py  persistent numbered discovery questions and readiness
   inspect.py    read-only folder facts and URL metadata
   evidence.py   path, size, and SHA-256 evidence manifest
+  audit.py      coverage-ledger security audit records and reports
   mesh.py       local durable message store
   mediator.py   evidence-based task disposition
   runner.py     apply, detect changes, verify, review, finish, rollback

@@ -33,5 +33,6 @@ A shell step in an approved plan can change files before the runner detects the 
 - Acceptance checks that mutate a project file fail verification. Newly created files are removed; modified or deleted files are reported but not restored.
 - Shell commands run in a new process group and a timeout kills the group. A command that detaches itself can still outlive the runner.
 - Host detection does not authenticate a host or prove model access.
+- `aperio audit` is a source-anchored ledger, not a vulnerability scanner. It never executes target code, and `needs_validation` findings carry no severity. The ledger and report are local files and are not cryptographically signed or tamper-evident; a reviewer still has to verify each confirmed finding.
 
 See `docs/ARCHITECTURE.md` for the full boundary.
