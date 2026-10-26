@@ -36,7 +36,7 @@ A small standard-library core:
 - handoff generated from actual state;
 - deterministic documentation drift checks for links and inline paths;
 - local durable message store and evidence-based mediator disposition;
-- installer with dry run, idempotent reinstall, skill, `/aperio` command, and uninstall;
+- installer with dry run, idempotent reinstall, `/aperio` skill, legacy-command cleanup, and uninstall;
 - PowerShell installer tested under `pwsh` on macOS;
 - read-only host detection.
 

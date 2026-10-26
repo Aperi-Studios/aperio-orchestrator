@@ -51,11 +51,6 @@ COMMAND_DIR="$HOME/.claude/commands"
 COMMAND_FILE="$COMMAND_DIR/aperio.md"
 MARKER="aperio-v2-managed"
 
-if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && ! grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
-  echo "install.sh: refusing to overwrite existing $COMMAND_FILE" >&2
-  echo "Move it aside or use --no-skill." >&2
-  exit 2
-fi
 if [ "$DO_SKILL" -eq 1 ] && [ -f "$SKILL_DIR/SKILL.md" ] && [ ! -f "$SKILL_DIR/$MARKER" ]; then
   echo "install.sh: refusing to overwrite existing $SKILL_DIR/SKILL.md" >&2
   echo "Move it aside or use --no-skill." >&2
@@ -139,8 +134,10 @@ if [ "$DO_SKILL" -eq 1 ]; then
   run cp "$ROOT/skill/aperio/SKILL.md" "$SKILL_DIR/SKILL.md"
   write_text "$SKILL_DIR/VERSION" "$VERSION"
   write_text "$SKILL_DIR/$MARKER" "$MARKER"
-  run mkdir -p "$COMMAND_DIR"
-  run cp "$ROOT/commands/aperio.md" "$COMMAND_FILE"
+  if [ -f "$COMMAND_FILE" ] && grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
+    run rm -f "$COMMAND_FILE"
+    if [ "$DRY_RUN" -eq 0 ]; then echo "removed legacy $COMMAND_FILE"; fi
+  fi
   if [ -d "$HOME/.codex" ]; then
     CODEX_DIR="$HOME/.codex/skills/aperio"
     run mkdir -p "$CODEX_DIR"

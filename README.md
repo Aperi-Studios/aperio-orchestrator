@@ -23,7 +23,7 @@ PowerShell 7:
 pwsh -File install.ps1
 ```
 
-The installer copies the package to `~/.local/share/aperio`, creates `~/.local/bin/aperio`, installs the skill under `~/.claude/skills/aperio`, and installs the `/aperio` command under `~/.claude/commands/aperio.md`. It does not edit host settings, use sudo, or download anything. The command file is installed, but the host's ability to load it is not yet verified.
+The installer copies the package to `~/.local/share/aperio`, creates `~/.local/bin/aperio`, and installs the skill under `~/.claude/skills/aperio`. The `/aperio` entry point is the skill; no duplicate slash-command file is installed. The installer does not edit host settings, use sudo, or download anything. The host's ability to load the skill is not yet independently verified.
 
 To test without installing:
 

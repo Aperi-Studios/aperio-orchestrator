@@ -81,15 +81,16 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((skill_dir / "SKILL.md").read_text(), "someone else's skill\n")
 
     def test_install_is_idempotent_and_uninstalls(self) -> None:
+        command = self.home / ".claude" / "commands" / "aperio.md"
+        command.parent.mkdir(parents=True)
+        command.write_text("---\ndescription: legacy\n---\n\n# /aperio\n\nAperio v2\n", encoding="utf-8")
         first = self.run_install()
         self.assertEqual(first.returncode, 0, first.stderr)
         binary = self.prefix / "bin" / "aperio"
         skill = self.skill_home / "aperio" / "SKILL.md"
-        command = self.home / ".claude" / "commands" / "aperio.md"
         self.assertTrue(binary.is_file())
         self.assertTrue(skill.is_file())
-        self.assertTrue(command.is_file())
-        self.assertIn("Aperio v2", command.read_text())
+        self.assertFalse(command.exists())
         self.assertEqual((self.skill_home / "aperio" / "VERSION").read_text().strip(), "2.0.0.dev0")
         package = self.prefix / "share" / "aperio" / "aperio"
         self.assertFalse(any(path.name == "__pycache__" for path in package.rglob("*")))

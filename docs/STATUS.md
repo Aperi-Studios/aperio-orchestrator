@@ -56,9 +56,9 @@
 | Documentation drift | Docs links and inline paths resolve; repo check clean | `aperio drift`; `tests/test_drift.py` |
 | Local message store | send, read, reply, ack, filters, restart persistence; real Claude and Codex processes each used it | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
 | Mediator disposition | records CONFIRMED, REFUTED, or BLOCKED from the current task state and latest evidence | `tests/test_mediator.py`; `aperio mediate` |
-| `/aperio` command file | installed by the installer | `~/.claude/commands/aperio.md`; host load not verified |
+| `/aperio` entry point | supplied by the installed skill | `~/.claude/skills/aperio/SKILL.md`; no duplicate command file; host load not verified |
 | Skill file | installed by the installer | `~/.claude/skills/aperio/SKILL.md`; host load not verified |
-| Real-home install | binary, skill, and command present; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |
+| Real-home install | binary and skill present; legacy command removed; CLI runs | `bash install.sh`; `aperio --version`; `aperio doctor` |
 | Static checks | ruff and shellcheck pass | `ruff check src tests`; `shellcheck install.sh` |
 | Public repository | public at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | tests pass on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |

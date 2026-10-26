@@ -2,8 +2,8 @@
 .SYNOPSIS
   Aperio v2 installer for PowerShell.
 .DESCRIPTION
-  Copies the package, creates a launcher, and optionally installs the skill and
-  /aperio command. No network access, no administrator rights, no settings edits.
+  Copies the package, creates a launcher, and optionally installs the skill.
+  The `/aperio` entry point is the skill; no duplicate command file is installed.
 #>
 [CmdletBinding()]
 param(
@@ -77,10 +77,6 @@ if ($Uninstall) {
     exit 0
 }
 
-if (-not $NoSkill -and (Test-Path $CommandFile) -and -not (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
-    Write-Error "install.ps1: refusing to overwrite existing $CommandFile; move it aside or use -NoSkill"
-    exit 2
-}
 if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir "SKILL.md")) -and -not (Test-Path (Join-Path $SkillDir $Marker))) {
     Write-Error "install.ps1: refusing to overwrite existing $SkillDir/SKILL.md; move it aside or use -NoSkill"
     exit 2
@@ -118,11 +114,14 @@ python "%~dp0aperio_launcher.py" %*
 Write-Text $Cmd $cmdText
 
 if (-not $NoSkill) {
-    Invoke-Step { New-Item -ItemType Directory -Force -Path $SkillDir, $CommandDir | Out-Null } "create $SkillDir and $CommandDir"
+    Invoke-Step { New-Item -ItemType Directory -Force -Path $SkillDir | Out-Null } "create $SkillDir"
     Invoke-Step { Copy-Item -Force (Join-Path $Root "skill/aperio/SKILL.md") (Join-Path $SkillDir "SKILL.md") } "copy skill to $SkillDir"
     Write-Text (Join-Path $SkillDir "VERSION") $Version
     Write-Text (Join-Path $SkillDir $Marker) $Marker
-    Invoke-Step { Copy-Item -Force (Join-Path $Root "commands/aperio.md") $CommandFile } "copy command to $CommandFile"
+    if ((Test-Path $CommandFile) -and (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
+        Invoke-Step { Remove-Item -Force $CommandFile } "remove legacy $CommandFile"
+        if (-not $DryRun) { Write-Host "removed legacy $CommandFile" }
+    }
 }
 
 if (-not $DryRun) { Write-Host "installed Aperio $Version"; Write-Host "  binary: $Cmd"; if (-not $NoSkill) { Write-Host "  skill:  $SkillDir" } }

@@ -648,7 +648,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Installer idempotency | **second run leaves one skill** | `tests/test_installer.py::test_install_is_idempotent_and_uninstalls` |
 | Installer uninstall | **removes binary, library, and skill** | same test |
 | Host detection | **reports installed names and versions** | `aperio hosts`; presence is not permission |
-| `/aperio` command file | **installed**; host load not verified | `~/.claude/commands/aperio.md` |
+| `/aperio` entry point | **installed as a skill**; host load not verified; no duplicate command file | `~/.claude/skills/aperio/SKILL.md` |
 | Skill file | **installed**; host load not verified | `~/.claude/skills/aperio/SKILL.md` |
 | Claude host adapter | **real dispatch proven on current code**: produced `site/index.html`, acceptance passed, review confirmed, done | task `task-17fd7a83a6`, run `run-d8e491aeb4`, review `review-5cb1b3585d` |
 | Host change outside plan | **rejected before apply** | `tests/test_adapter.py::test_host_change_outside_plan_is_rejected` |
