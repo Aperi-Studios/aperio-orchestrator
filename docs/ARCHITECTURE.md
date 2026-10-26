@@ -16,6 +16,8 @@ src/aperio/
   drift.py       deterministic documentation link and path checks
   discovery.py  persistent numbered discovery questions and readiness
   learning.py   stack dossier, local proof, teach-back, and competency gate
+  todo.py       owner-visible todo list and one-task approval ledger
+  readiness.py  pre-flight, deploy, after-sales, design, and security checks
   inspect.py    read-only folder facts and URL metadata
   evidence.py   path, size, and SHA-256 evidence manifest
   audit.py      coverage-ledger security audit records and reports
@@ -42,6 +44,8 @@ A project initializes `.aperio/`:
   events.jsonl      append-only events
   plans/<id>.json   approved or draft plans
   learning.json     stack dossier, proof, teach-back, and competency record
+  todo.json         ordered tasks, statuses, acceptance evidence, and approvals
+  readiness.json    pre-flight, deploy, after-sales, design, and security records
   evidence/<task>/  run, verification, and review records
   runs/<id>/        run manifest
   dispatch/<id>/    disposable host workspace and host evidence
@@ -59,10 +63,12 @@ State files are written to a temporary file in the same directory, flushed, and 
 
 1. `init` creates the state directory and refuses to reinitialize it.
 2. `learn import` records the stack dossier; `learn proof` runs a real local command; `plan`, `approve`, and `run` refuse while the dossier is not ready.
-3. `ask` appends the owner's words. It does not rewrite earlier asks.
-4. `plan` validates a JSON plan and creates a task in `planned`.
-5. `approve` records the owner's identity and the explicit approval phrase. The task moves to `approved`.
-6. `run`:
+3. `todo add` records the smallest independently reviewable tasks; the next task cannot start until the previous task is accepted. `plan` refuses an empty todo list.
+4. `readiness import` records pre-flight, deploy, after-sales, design, and security facts; it is validated explicitly and does not deploy anything.
+5. `ask` appends the owner's words. It does not rewrite earlier asks.
+6. `plan` validates a JSON plan and creates a task in `planned`.
+7. `approve` records the owner's identity and the explicit approval phrase. The task moves to `approved`.
+8. `run`:
    - refuses an unapproved plan;
    - validates every declared path;
    - snapshots files that may change;
@@ -71,13 +77,13 @@ State files are written to a temporary file in the same directory, flushed, and 
    - hashes the project before and after;
    - records changed files and any change outside the declared writes;
    - saves evidence and moves the task to `applied` or `failed`.
-7. `verify` runs the plan's acceptance commands, rejects a timed-out check, and fails if a check changes a project file; it records pass or fail.
-8. `review` records a named reviewer's `confirmed` or `refuted` verdict. With `--host`, it builds a brief-only workspace containing the plan, changed files, acceptance results, and handoff; the fresh host reviewer has no builder conversation and is asked not to edit. The runner fingerprints the project before and after the review and refuses a verdict if the project changed. The reviewer must differ from the builder.
-9. `done` requires a verified task and a confirmed review.
-10. `handoff` writes a markdown report from the actual task, plan, evidence, and review.
-11. `rollback` restores files captured before a run and removes files the run created.
-12. `message` stores local durable messages with threads, recipient filters, read state, acks, and replies.
-13. `mediate` records `CONFIRMED`, `REFUTED`, or `BLOCKED` from the run, verification, and review evidence. It does not replace a live host-to-host exchange.
+9. `verify` runs the plan's acceptance commands, rejects a timed-out check, and fails if a check changes a project file; it records pass or fail.
+10. `review` records a named reviewer's `confirmed` or `refuted` verdict. With `--host`, it builds a brief-only workspace containing the plan, changed files, acceptance results, and handoff; the fresh host reviewer has no builder conversation and is asked not to edit. The runner fingerprints the project before and after the review and refuses a verdict if the project changed. The reviewer must differ from the builder.
+11. `done` requires a verified task and a confirmed review.
+12. `handoff` writes a markdown report from the actual task, plan, evidence, and review.
+13. `rollback` restores files captured before a run and removes files the run created.
+14. `message` stores local durable messages with threads, recipient filters, read state, acks, and replies.
+15. `mediate` records `CONFIRMED`, `REFUTED`, or `BLOCKED` from the run, verification, and review evidence. It does not replace a live host-to-host exchange.
 
 ## Task states
 

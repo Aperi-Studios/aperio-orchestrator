@@ -329,6 +329,35 @@ MCP decisions with provenance, the teach-back, and the competency evidence.
 a successful local command. Imported proof text is ignored. `plan`, `approve`,
 and `run` refuse when the dossier is not ready.
 
+## Todo and approval gate
+
+Before a plan, record the smallest independently reviewable tasks:
+
+```bash
+aperio todo add "Initialize the project" --deliverable "..." --acceptance "..."
+aperio todo start <todo-id>
+aperio todo accept <todo-id> --by owner --evidence "..." --confirm "I accept this task"
+```
+
+`plan` refuses an empty todo list. A task cannot start until its predecessor is
+accepted or deferred. Acceptance requires evidence and the exact confirmation
+phrase. Split by deliverable, never by an arbitrary clock.
+
+## Readiness gate
+
+Record pre-flight, deployment, after-sales, design, and security facts in
+`readiness.json`, then validate them:
+
+```bash
+aperio readiness import readiness.json
+aperio readiness validate
+```
+
+The record distinguishes marketing, web app, CMS, CRM/ERP, mobile, and desktop
+design contracts; it also requires a threat model, controls, scans, headers,
+incident handling, and no unresolved high/critical risk. Readiness validation
+does not deploy anything.
+
 ## Plan file
 
 ```json
@@ -360,24 +389,27 @@ working contact form.
 ## Hard rules
 
 1. Do not plan, approve, or run without a ready learning dossier and a recorded local proof.
-2. Do not run an unapproved plan.
-3. Do not edit outside `allowed_paths`.
-4. Do not use the builder as the only reviewer.
-5. Do not call a task done without passing acceptance checks and a confirmed review.
-6. Do not put credentials, client identifiers, or private data in the plan, evidence, or handoff.
-7. Do not claim a deployment, link, or screenshot that was not actually produced.
-8. A shell step is not OS-sandboxed. Declare every expected write; undeclared changes are recorded as violations.
-9. If a gate fails, stop and report the exact command, exit code, and result.
+2. Do not plan with an empty todo list; accept each task with evidence before starting the next.
+3. Do not run an unapproved plan.
+4. Do not edit outside `allowed_paths`.
+5. Do not use the builder as the only reviewer.
+6. Do not call a task done without passing acceptance checks and a confirmed review.
+7. Do not put credentials, client identifiers, or private data in the plan, evidence, or handoff.
+8. Do not claim a deployment, link, or screenshot that was not actually produced.
+9. A shell step is not OS-sandboxed. Declare every expected write; undeclared changes are recorded as violations.
+10. If a gate fails, stop and report the exact command, exit code, and result.
 
 ## Flow
 
 1. Record the ask exactly.
 2. Import the learning dossier, run the local proof, and validate it.
-3. Inspect the target before planning.
-4. Write the smallest plan that satisfies the ask.
-5. Ask the owner to approve. Do not self-approve.
-6. Apply the plan and read the evidence.
-7. Run the acceptance checks.
-8. Ask a different host or reviewer for a verdict.
-9. Finish only after a confirmed review.
-10. Generate the handoff and state what remains unverified.
+3. Create the todo ledger and get acceptance on each task before starting the next.
+4. Import and validate the readiness record: pre-flight, deploy, after-sales, design, and security.
+5. Inspect the target before planning.
+6. Write the smallest plan that satisfies the ask.
+7. Ask the owner to approve. Do not self-approve.
+8. Apply the plan and read the evidence.
+9. Run the acceptance checks.
+10. Ask a different host or reviewer for a verdict.
+11. Finish only after a confirmed review.
+12. Generate the handoff and state what remains unverified.
