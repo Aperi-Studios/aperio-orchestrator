@@ -303,6 +303,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         raise RunError("task has no plan")
     plan = project.get_plan(task.plan_id)
     _require_current_discovery(project, plan)
+    if plan.todo_id:
+        todo = todo_status(project)
+        linked = next((item for item in todo["tasks"] if item["id"] == plan.todo_id), None)
+        if linked is None:
+            raise ModelError("plan is linked to a missing todo task")
+        if linked["status"] not in {"in_progress", "accepted"}:
+            raise ModelError(
+                f"linked todo task is {linked['status']}; start or accept it before running the plan"
+            )
     evidence = apply_plan(project, plan, actor=args.actor)
     print(f"{evidence['run_id']}  {evidence['status']}")
     if evidence.get("changed_files"):
