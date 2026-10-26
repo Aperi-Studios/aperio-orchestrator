@@ -386,19 +386,20 @@ class DiscoveryTests(unittest.TestCase):
                 0,
             )
         task_id, plan_id = output.getvalue().splitlines()[0].split()[:2]
-        cmd_approve(
-            argparse.Namespace(
-                project=str(self.root),
-                plan_id=plan_id,
-                by="owner",
-                note="",
-                confirm="I approve this plan",
+        with redirect_stdout(io.StringIO()):
+            cmd_approve(
+                argparse.Namespace(
+                    project=str(self.root),
+                    plan_id=plan_id,
+                    by="owner",
+                    note="",
+                    confirm="I approve this plan",
+                )
             )
-        )
         plan = self.project.get_plan(plan_id)
         plan.allowed_paths.append("site/other/")
         self.project.save_plan(plan)
-        with self.assertRaises(RunError):
+        with self.assertRaises(RunError), redirect_stdout(io.StringIO()):
             cmd_run(
                 argparse.Namespace(
                     project=str(self.root),
@@ -437,18 +438,20 @@ class DiscoveryTests(unittest.TestCase):
                 0,
             )
         task_id, plan_id = output.getvalue().splitlines()[0].split()[:2]
-        cmd_approve(
-            argparse.Namespace(
-                project=str(self.root),
-                plan_id=plan_id,
-                by="owner",
-                note="",
-                confirm="I approve this plan",
+        with redirect_stdout(io.StringIO()):
+            cmd_approve(
+                argparse.Namespace(
+                    project=str(self.root),
+                    plan_id=plan_id,
+                    by="owner",
+                    note="",
+                    confirm="I approve this plan",
+                )
             )
-        )
-        result = cmd_run(
-            argparse.Namespace(project=str(self.root), task_id=task_id, actor="agent")
-        )
+        with redirect_stdout(io.StringIO()):
+            result = cmd_run(
+                argparse.Namespace(project=str(self.root), task_id=task_id, actor="agent")
+            )
         self.assertEqual(result, 1)
         self.assertEqual(self.project.get_task(task_id).status, "failed")
 
@@ -461,7 +464,8 @@ class DiscoveryTests(unittest.TestCase):
             with self.assertRaises(DiscoveryError):
                 cmd_plan(args)
             self.complete()
-            self.assertEqual(cmd_plan(args), 0)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(cmd_plan(args), 0)
 
     def test_cli_discover(self) -> None:
         env = os.environ.copy()
