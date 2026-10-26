@@ -113,15 +113,19 @@ class MeshStore:
         ).fetchall()
         if mark_read and rows:
             ids = [row["id"] for row in rows]
+            now = utc_now()
             self.connection.executemany(
                 "UPDATE messages SET read_at = COALESCE(read_at, ?) WHERE id = ?",
-                [(utc_now(), message_id) for message_id in ids],
+                [(now, message_id) for message_id in ids],
             )
             self.connection.commit()
-            rows = self.connection.execute(
-                f"SELECT * FROM messages WHERE {' AND '.join(clauses)} ORDER BY id LIMIT ?",
-                values,
-            ).fetchall()
+            # Return the rows we selected with the same read_at value. The old
+            # implementation re-selected after committing, which left a window
+            # where a concurrent reader could observe a different result.
+            rows = [
+                dict(row) if row["read_at"] is not None else {**dict(row), "read_at": now}
+                for row in rows
+            ]
         return [_row(row) for row in rows]
 
     def ack(self, message_id: int, actor: str) -> dict[str, Any]:
