@@ -331,8 +331,19 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0 if result["verdict"] == "confirmed" else 1
 
 
+def _require_full_readiness(project: Project) -> None:
+    progress = readiness_status(project)
+    if progress["ready"]:
+        return
+    issues = "; ".join(progress["issues"][:6])
+    raise ReadinessError(
+        "full project readiness is required before done or handoff" + (f": {issues}" if issues else "")
+    )
+
+
 def cmd_done(args: argparse.Namespace) -> int:
     project = _project(args)
+    _require_full_readiness(project)
     task = finish(project, args.task_id)
     print(f"{task['id']}  done")
     return 0
@@ -424,6 +435,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 def cmd_handoff(args: argparse.Namespace) -> int:
     project = _project(args)
+    _require_full_readiness(project)
     path = write_handoff(project, args.task_id)
     print(path)
     if args.print:

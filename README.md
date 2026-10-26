@@ -134,6 +134,7 @@ Aperio is deliberately conservative:
 
 - no plan, approval, or run without a ready learning dossier and a recorded local proof;
 - no plan without at least one todo task; the todo ledger requires evidence and approval before the next task starts;
+- no done or handoff without full pre-flight, deployment, after-sales, design, and security readiness;
 - writes must stay inside the plan's allowed paths;
 - protected paths such as `.git` and `.aperio` are refused;
 - symlink components and parent traversal are refused;
