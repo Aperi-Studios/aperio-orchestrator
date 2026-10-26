@@ -283,6 +283,33 @@ class DiscoveryTests(unittest.TestCase):
         with self.assertRaises(DiscoveryError):
             status(self.project)
 
+    def test_parse_choices_rejects_huge_number(self) -> None:
+        question = next_question(self.project)
+        assert question is not None
+        with self.assertRaises(DiscoveryError):
+            parse_choices(question, "9" * 5000)
+
+    def test_plan_is_refused_after_discovery_is_deleted(self) -> None:
+        self.complete()
+        plan = ROOT / "examples" / "demo-site-plan.json"
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(
+                cmd_plan(argparse.Namespace(project=str(self.root), file=str(plan))),
+                0,
+            )
+        plan_id = output.getvalue().splitlines()[0].split()[1]
+        (self.root / ".aperio" / "discovery.json").unlink()
+        args = argparse.Namespace(
+            project=str(self.root),
+            plan_id=plan_id,
+            by="owner",
+            note="",
+            confirm="I approve this plan",
+        )
+        with self.assertRaises(DiscoveryError):
+            cmd_approve(args)
+
     def test_plan_refuses_incomplete_discovery(self) -> None:
         plan = ROOT / "examples" / "demo-site-plan.json"
         args = argparse.Namespace(project=str(self.root), file=str(plan))

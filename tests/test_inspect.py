@@ -117,6 +117,15 @@ class InspectTests(unittest.TestCase):
                 "http://127.0.0.1/secret",
             )
 
+    def test_symlinked_package_json_is_not_read(self) -> None:
+        secret = self.root.parent / "secret-package.json"
+        secret.write_text('{"scripts":{"evil":"TOPSECRET"}}', encoding="utf-8")
+        (self.root / "package.json").unlink()
+        (self.root / "package.json").symlink_to(secret)
+        data = inspect_path(self.root)
+        self.assertNotIn("TOPSECRET", json.dumps(data))
+        self.assertNotIn("evil", data["scripts"])
+
     def test_collect_and_hints(self) -> None:
         collect(self.project)
         evidence = hints(self.project, "evidence")

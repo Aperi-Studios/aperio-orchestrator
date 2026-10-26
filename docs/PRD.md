@@ -623,11 +623,11 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **6 passed** | same command; `tests/test_mediator.py` |
 | CLI tests | **4 passed** | same command; `tests/test_cli.py` |
-| Discovery tests | **19 passed** | same command; `tests/test_discovery.py` |
-| Inspection tests | **10 passed** | same command; `tests/test_inspect.py` |
+| Discovery tests | **21 passed** | same command; `tests/test_discovery.py` |
+| Inspection tests | **11 passed** | same command; `tests/test_inspect.py` |
 | Evidence tests | **5 passed** | same command; `tests/test_evidence.py` |
 | Installer tests | **10 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **111 passed** | same command |
+| Total test suite | **114 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
