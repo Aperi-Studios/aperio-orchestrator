@@ -25,8 +25,10 @@ from aperio.discovery import (
     waive_question,
 )
 from aperio.learning import import_dossier, record_proof
+from aperio.readiness import import_readiness
 from aperio.runner import RunError
 from aperio.store import Project
+from aperio.todo import add as todo_add
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -91,6 +93,28 @@ class DiscoveryTests(unittest.TestCase):
         path.write_text(json.dumps(data), encoding="utf-8")
         import_dossier(self.project, str(path))
         record_proof(self.project, f'{sys.executable} -c "print(1)"')
+        todo_add(
+            self.project,
+            "Build the requested page",
+            deliverable="The requested page is working",
+            acceptance="The page exists and the acceptance command passes",
+        )
+        readiness = {
+            "schema": 1,
+            "preflight": {
+                "audience": "Test users",
+                "success_measure": "The test page renders",
+                "features": ["A test page"],
+                "out_of_scope": ["Production deployment"],
+                "integrations": ["None"],
+                "constraints": ["Local fixture"],
+                "review_owner": "owner",
+                "approval_path": "Owner approves the plan",
+            },
+        }
+        readiness_path = self.root / "readiness.json"
+        readiness_path.write_text(json.dumps(readiness), encoding="utf-8")
+        import_readiness(self.project, str(readiness_path))
 
     def complete(self) -> None:
         answers = [

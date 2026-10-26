@@ -78,10 +78,19 @@ from .model import (
     plan_body_digest,
 )
 from .policy import PolicyError
+from .readiness import ReadinessError, import_readiness, validate_preflight
+from .readiness import format_status as format_readiness
+from .readiness import status as readiness_status
 from .repo import facts as repo_facts
 from .repo import format_facts as format_git
 from .runner import RunError, apply_plan, finish, review, rollback, verify
 from .store import Project, StoreError
+from .todo import accept as todo_accept
+from .todo import add as todo_add
+from .todo import defer as todo_defer
+from .todo import format_status as format_todo
+from .todo import start as todo_start
+from .todo import status as todo_status
 
 
 def _project(args: argparse.Namespace) -> Project:
@@ -97,6 +106,22 @@ def _require_learning(project: Project) -> None:
         "learning dossier is required before planning, approval, or run; run aperio learn status"
         + (f": {issues}" if issues else "")
     )
+
+
+def _require_todo(project: Project) -> None:
+    data = todo_status(project)
+    if data["count"] == 0:
+        raise ModelError(
+            "todo list is empty; add the smallest independently reviewable tasks with aperio todo add"
+        )
+
+
+def _require_preflight(project: Project) -> None:
+    issues = validate_preflight(project)
+    if issues:
+        raise ReadinessError(
+            "pre-flight readiness is required before planning: " + "; ".join(issues[:6])
+        )
 
 
 def _print_task(task: Task) -> None:
@@ -136,6 +161,8 @@ def _load_plan_data(path: str) -> dict[str, Any]:
 def cmd_plan(args: argparse.Namespace) -> int:
     project = _project(args)
     _require_learning(project)
+    _require_todo(project)
+    _require_preflight(project)
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -609,6 +636,52 @@ def cmd_learn(args: argparse.Namespace) -> int:
     return 0 if data["ready"] else 1
 
 
+def cmd_todo(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.todo_command == "add":
+        result = todo_add(
+            project,
+            args.title,
+            deliverable=args.deliverable,
+            acceptance=args.acceptance,
+        )
+        print(as_json(result) if args.json else f"{result['id']}  {result['status']}  {result['title']}")
+        return 0
+    if args.todo_command == "start":
+        result = todo_start(project, args.task_id)
+        print(as_json(result) if args.json else f"{result['id']}  {result['status']}  {result['title']}")
+        return 0
+    if args.todo_command == "accept":
+        result = todo_accept(
+            project,
+            args.task_id,
+            by=args.by,
+            evidence=args.evidence,
+            confirm=args.confirm,
+        )
+        print(as_json(result) if args.json else f"{result['id']}  {result['status']}  {result['title']}")
+        return 0
+    if args.todo_command == "defer":
+        result = todo_defer(project, args.task_id, by=args.by, reason=args.reason)
+        print(as_json(result) if args.json else f"{result['id']}  {result['status']}  {result['title']}")
+        return 0
+    result = todo_status(project)
+    print(as_json(result) if args.json else format_todo(result))
+    return 0
+
+
+def cmd_readiness(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.readiness_command == "import":
+        result = import_readiness(project, args.file, replace=args.replace)
+    else:
+        result = readiness_status(project)
+    print(as_json(result) if args.json else format_readiness(result))
+    if args.readiness_command == "status":
+        return 0
+    return 0 if result["ready"] else 1
+
+
 def cmd_audit(args: argparse.Namespace) -> int:
     project = _project(args)
     with project.lock():
@@ -871,6 +944,49 @@ def build_parser() -> argparse.ArgumentParser:
     learn_validate.add_argument("--json", action="store_true")
     learn_validate.set_defaults(func=cmd_learn)
 
+    p = sub.add_parser("todo", help="one-task-at-a-time todo and approval ledger")
+    todo = p.add_subparsers(dest="todo_command", required=True)
+    todo_add_parser = todo.add_parser("add", help="add an independently reviewable task")
+    todo_add_parser.add_argument("title")
+    todo_add_parser.add_argument("--deliverable", required=True)
+    todo_add_parser.add_argument("--acceptance", required=True)
+    todo_add_parser.add_argument("--json", action="store_true")
+    todo_add_parser.set_defaults(func=cmd_todo)
+    todo_start_parser = todo.add_parser("start", help="start the next pending task")
+    todo_start_parser.add_argument("task_id")
+    todo_start_parser.add_argument("--json", action="store_true")
+    todo_start_parser.set_defaults(func=cmd_todo)
+    todo_accept_parser = todo.add_parser("accept", help="accept an in-progress task and record evidence")
+    todo_accept_parser.add_argument("task_id")
+    todo_accept_parser.add_argument("--by", required=True)
+    todo_accept_parser.add_argument("--evidence", required=True)
+    todo_accept_parser.add_argument("--confirm", required=True)
+    todo_accept_parser.add_argument("--json", action="store_true")
+    todo_accept_parser.set_defaults(func=cmd_todo)
+    todo_defer_parser = todo.add_parser("defer", help="defer a pending or in-progress task with a reason")
+    todo_defer_parser.add_argument("task_id")
+    todo_defer_parser.add_argument("--by", required=True)
+    todo_defer_parser.add_argument("--reason", required=True)
+    todo_defer_parser.add_argument("--json", action="store_true")
+    todo_defer_parser.set_defaults(func=cmd_todo)
+    todo_list = todo.add_parser("list", help="show the todo ledger")
+    todo_list.add_argument("--json", action="store_true")
+    todo_list.set_defaults(func=cmd_todo)
+
+    p = sub.add_parser("readiness", help="pre-flight, deploy, after-sales, design, and security checks")
+    readiness = p.add_subparsers(dest="readiness_command", required=True)
+    readiness_import = readiness.add_parser("import", help="import a readiness JSON record")
+    readiness_import.add_argument("file")
+    readiness_import.add_argument("--replace", action="store_true")
+    readiness_import.add_argument("--json", action="store_true")
+    readiness_import.set_defaults(func=cmd_readiness)
+    readiness_status_parser = readiness.add_parser("status", help="show readiness")
+    readiness_status_parser.add_argument("--json", action="store_true")
+    readiness_status_parser.set_defaults(func=cmd_readiness)
+    readiness_validate = readiness.add_parser("validate", help="validate the record; exit 1 when not ready")
+    readiness_validate.add_argument("--json", action="store_true")
+    readiness_validate.set_defaults(func=cmd_readiness)
+
     p = sub.add_parser("audit", help="source-anchored security audit ledger")
     audit = p.add_subparsers(dest="audit_command", required=True)
     audit_start_parser = audit.add_parser("start", help="create an audit ledger")
@@ -973,6 +1089,7 @@ def main(argv: list[str] | None = None) -> int:
         DiscoveryError,
         InspectionError,
         LearningError,
+        ReadinessError,
         OSError,
         json.JSONDecodeError,
     ) as exc:

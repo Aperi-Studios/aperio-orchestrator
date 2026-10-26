@@ -8,6 +8,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from aperio.readiness import import_readiness
+from aperio.store import Project
+
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 
@@ -88,6 +91,32 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stderr)
         result = self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
         self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.cli(
+            "todo",
+            "add",
+            "Build the requested page",
+            "--deliverable",
+            "The requested page is working",
+            "--acceptance",
+            "The page exists and the acceptance command passes",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        readiness = {
+            "schema": 1,
+            "preflight": {
+                "audience": "Test users",
+                "success_measure": "The test page renders",
+                "features": ["A test page"],
+                "out_of_scope": ["Production deployment"],
+                "integrations": ["None"],
+                "constraints": ["Local fixture"],
+                "review_owner": "owner",
+                "approval_path": "Owner approves the plan",
+            },
+        }
+        readiness_path = self.root / "readiness.json"
+        readiness_path.write_text(json.dumps(readiness), encoding="utf-8")
+        import_readiness(Project.open(self.root), str(readiness_path))
 
     def complete_discovery(self) -> None:
         rows = [
@@ -187,6 +216,72 @@ class CliTests(unittest.TestCase):
         result = self.cli("plan", str(path))
         self.assertEqual(result.returncode, 2)
         self.assertIn("learning dossier is required", result.stderr)
+
+    def test_approve_and_run_without_learning_are_refused(self) -> None:
+        # the gate fires before plan/task resolution, so bogus IDs still refuse
+        result = self.cli("init", str(self.root), "--name", "cli-test")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for args in (
+            ("approve", "plan-zzz", "--confirm", "I approve this plan"),
+            ("run", "task-zzz", "--actor", "agent"),
+        ):
+            result = self.cli(*args)
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("learning dossier is required", result.stderr)
+
+    def test_plan_without_todo_is_refused(self) -> None:
+        result = self.cli("init", str(self.root), "--name", "cli-test")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        dossier = self.root / "learning.json"
+        dossier.write_text(json.dumps(self.learning_dossier()), encoding="utf-8")
+        result = self.cli("learn", "import", str(dossier))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        result = self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan = {
+            "title": "No todo",
+            "request": "No todo",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("todo list is empty", result.stderr)
+
+    def test_plan_without_preflight_is_refused(self) -> None:
+        result = self.cli("init", str(self.root), "--name", "cli-test")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        dossier = self.root / "learning.json"
+        dossier.write_text(json.dumps(self.learning_dossier()), encoding="utf-8")
+        result = self.cli("learn", "import", str(dossier))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        result = self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.cli(
+            "todo",
+            "add",
+            "Build the requested page",
+            "--deliverable",
+            "The requested page is working",
+            "--acceptance",
+            "The page exists and the acceptance command passes",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan = {
+            "title": "No preflight",
+            "request": "No preflight",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("pre-flight readiness is required", result.stderr)
 
     def test_plan_without_discovery_is_refused(self) -> None:
         self.init()
