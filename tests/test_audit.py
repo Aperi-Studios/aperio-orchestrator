@@ -234,6 +234,13 @@ class AuditTests(unittest.TestCase):
             ingest(self.project, str(source))
         self.assertEqual(len(load(self.project)[3]["findings"]), 2)
 
+    def test_handoff_without_audit_is_explicit(self) -> None:
+        task = Task(id=new_id("task"), title="No audit yet", request="Review the build.")
+        self.project.put_task(task)
+        handoff = build_handoff(self.project, task.id)
+        self.assertIn("## Security audit", handoff)
+        self.assertIn("No source audit recorded.", handoff)
+
     def test_validate_rejects_orphaned_finding(self) -> None:
         start(self.project, scope="src")
         add_finding(

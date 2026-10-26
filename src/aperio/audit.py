@@ -780,12 +780,17 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
 
 
 def latest(project: Project) -> dict[str, Any] | None:
-    try:
-        return status(project)
-    except AuditError as exc:
-        if str(exc).startswith("no security audit exists"):
-            return None
-        raise
+    root = _audit_root(project)
+    if not root.is_dir():
+        return None
+    if not any(
+        path.is_dir()
+        and not path.is_symlink()
+        and (path / "run-metadata.json").is_file()
+        for path in root.glob("audit-*")
+    ):
+        return None
+    return status(project)
 
 
 def status(project: Project, audit_id: str = "") -> dict[str, Any]:
