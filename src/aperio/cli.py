@@ -100,15 +100,23 @@ def _project(args: argparse.Namespace) -> Project:
     return Project.open(args.project)
 
 
-def _require_learning(project: Project) -> None:
+def _require_learning(project: Project) -> dict[str, Any]:
     progress = learning_status(project)
     if progress["ready"]:
-        return
+        return progress
     issues = "; ".join(progress["issues"][:6])
     raise LearningError(
         "learning dossier is required before planning, approval, or run; run aperio learn status"
         + (f": {issues}" if issues else "")
     )
+
+
+def _require_current_learning(project: Project, plan: Plan) -> None:
+    if not plan.learning_digest:
+        raise LearningError("plan has no learning binding; recreate the plan")
+    current = learning_status(project)
+    if not current["ready"] or current["digest"] != plan.learning_digest:
+        raise LearningError("learning dossier changed after this plan was created; make a new plan")
 
 
 def _require_todo(project: Project) -> None:
@@ -175,6 +183,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
     _require_todo(project)
     _require_preflight(project)
     todo_id = _active_todo(project)
+    learning = learning_status(project)
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -210,6 +219,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
         acceptance=acceptance,
         builder=str(data.get("builder", "agent")),
         todo_id=todo_id,
+        learning_digest=str(learning.get("digest") or ""),
     )
     plan.validate()
     if not plan.acceptance:
@@ -277,6 +287,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
     if args.confirm != "I approve this plan":
         raise ModelError('approval requires --confirm "I approve this plan"')
     plan = project.get_plan(args.plan_id)
+    _require_current_learning(project, plan)
     _require_current_discovery(project, plan)
     task = project.get_task(plan.task_id)
     if task.status not in {"planned", "approved", "failed"}:
@@ -302,6 +313,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not task.plan_id:
         raise RunError("task has no plan")
     plan = project.get_plan(task.plan_id)
+    _require_current_learning(project, plan)
     _require_current_discovery(project, plan)
     if plan.todo_id:
         todo = todo_status(project)

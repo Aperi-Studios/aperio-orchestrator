@@ -215,6 +215,7 @@ class Plan:
     builder: str = "agent"
     discovery_digest: str = ""
     todo_id: str = ""
+    learning_digest: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -241,6 +242,7 @@ class Plan:
             builder=str(data.get("builder", "agent")),
             discovery_digest=str(data.get("discovery_digest", "")),
             todo_id=str(data.get("todo_id", "")),
+            learning_digest=str(data.get("learning_digest", "")),
         )
         plan.validate()
         return plan

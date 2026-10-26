@@ -251,6 +251,29 @@ class CliTests(unittest.TestCase):
         self.assertIn("## Evidence files", result.stdout)
         self.assertIn("done", result.stdout)
 
+    def test_learning_change_invalidates_the_plan(self) -> None:
+        self.init()
+        self.complete_discovery()
+        plan = {
+            "title": "Learning binding",
+            "request": "Prove the learning digest binding",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan_id = result.stdout.split()[1]
+        result = self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(2)"')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.cli(
+            "approve", plan_id, "--by", "owner", "--confirm", "I approve this plan"
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("learning dossier changed", result.stderr)
+
     def test_plan_without_learning_is_refused(self) -> None:
         result = self.cli("init", str(self.root), "--name", "cli-test")
         self.assertEqual(result.returncode, 0, result.stderr)

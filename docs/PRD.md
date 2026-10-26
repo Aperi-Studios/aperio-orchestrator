@@ -778,7 +778,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **6 passed** | same command; `tests/test_mediator.py` |
-| CLI tests | **12 passed** | same command; `tests/test_cli.py` |
+| CLI tests | **13 passed** | same command; `tests/test_cli.py` |
 | Learning tests | **10 passed** | same command; `tests/test_learning.py` |
 | Skill tests | **5 passed** | same command; `tests/test_skillgen.py` |
 | Todo tests | **6 passed** | same command; `tests/test_todo.py` |
@@ -789,7 +789,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
 | Installer tests | **23 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **190 passed** | same command |
+| Total test suite | **191 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -1053,7 +1053,7 @@ still required for deployment, paid hosts, credentials, and public release.
 
 | Requirement | Status | Evidence | Remaining work |
 |---|---|---|---|
-| FR-36 learning dossier | **Implemented and verified** | `src/aperio/learning.py`; 10 learning tests; plan/approve/run gate | Bind dossier digest to the plan body and expire it on stack changes |
+| FR-36 learning dossier | **Implemented and verified** | `src/aperio/learning.py`; 10 learning tests; plan/approve/run gate; plan digest binding | Expire the dossier automatically on version change and re-run the proof |
 | FR-37 toolchain and skill creation | **Partial** | project skill generation and registry; 5 skill tests; MCP/package provenance validation | Automated MCP/package installation and live skill loading |
 | FR-38 pre-flight, deploy, after-sales | **Partial** | readiness validation; pre-flight plan gate; full readiness at done/handoff | Deployment execution, real provider checks, support SLA automation |
 | FR-39 application design school | **Partial** | design contract, surface class, references, accessibility, responsive, originality fields | independent design critique and visual review workflow |

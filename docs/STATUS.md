@@ -13,7 +13,7 @@
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
-| CLI tests | 12 passed | same command; `tests/test_cli.py` |
+| CLI tests | 13 passed | same command; `tests/test_cli.py` |
 | Learning tests | 10 passed | same command; `tests/test_learning.py` |
 | Skill tests | 5 passed | same command; `tests/test_skillgen.py` |
 | Todo tests | 6 passed | same command; `tests/test_todo.py` |
@@ -25,11 +25,11 @@
 | Repo tests | 4 passed | same command; `tests/test_repo.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 190 passed | same command |
+| Total test suite | 191 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
-| Learning plan gate | `plan`, `approve`, and `run` refuse until the dossier is ready; imported proof text is ignored and `aperio learn proof` must run a local command; stack, official source, skill/MCP, teach-back, and competency are validated | `src/aperio/learning.py`; `tests/test_learning.py`; `tests/test_cli.py::test_plan_without_learning_is_refused` |
+| Learning plan gate | `plan`, `approve`, and `run` refuse until the dossier is ready; imported proof text is ignored and `aperio learn proof` must run a local command; stack, official source, skill/MCP, teach-back, and competency are validated; the plan records the dossier digest and refuses approval/run after it changes | `src/aperio/learning.py`; `src/aperio/model.py`; `tests/test_learning.py`; `tests/test_cli.py::test_plan_without_learning_is_refused` |
 | Todo and approval gate | `plan` refuses an empty todo list and requires exactly one in-progress task, recording its `todo_id`; `run` revalidates that the linked task is in progress or accepted; a task cannot start until its predecessor is accepted or deferred; acceptance requires an approver, evidence, and the exact confirmation phrase | `src/aperio/todo.py`; `src/aperio/model.py`; `tests/test_todo.py`; `tests/test_cli.py::test_plan_without_todo_is_refused` |
 | Project readiness record | Pre-flight is a hard plan gate; deployment, after-sales, design, and security facts are required for `done` and `handoff`; high/critical unresolved security risk blocks full readiness | `src/aperio/readiness.py`; `tests/test_readiness.py`; `tests/test_cli.py::test_plan_without_preflight_is_refused` |
 | Plan approval binding | approval records a SHA-256 of the plan body; changing steps or allowed paths after approval is refused | `src/aperio/model.py::plan_body_digest`; `tests/test_discovery.py` |
@@ -99,7 +99,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 190-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 191-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
