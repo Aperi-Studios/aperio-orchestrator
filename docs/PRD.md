@@ -1048,3 +1048,15 @@ Implement P1 items in the order Z-02, Z-03, Z-04, Z-05, Z-01. Do not start P2
 interop or observability work before the P1 control-plane items are verified.
 Each item gets a negative test and a `docs/STATUS.md` row. Owner approval is
 still required for deployment, paid hosts, credentials, and public release.
+
+### A.4 Implementation status
+
+| Requirement | Status | Evidence | Remaining work |
+|---|---|---|---|
+| FR-36 learning dossier | **Implemented and verified** | `src/aperio/learning.py`; 10 learning tests; plan/approve/run gate | Bind dossier digest to the plan body and expire it on stack changes |
+| FR-37 toolchain and skill creation | **Partial** | project skill generation and registry; 5 skill tests; MCP/package provenance validation | Automated MCP/package installation and live skill loading |
+| FR-38 pre-flight, deploy, after-sales | **Partial** | readiness validation; pre-flight plan gate; full readiness at done/handoff | Deployment execution, real provider checks, support SLA automation |
+| FR-39 application design school | **Partial** | design contract, surface class, references, accessibility, responsive, originality fields | independent design critique and visual review workflow |
+| FR-40 security threat model | **Partial** | threat model, trust boundaries, controls, scans, headers, incident fields; high/critical block | executed dependency/secret scans and external penetration testing |
+| FR-41 todo and per-task approval | **Implemented and verified** | todo state machine; plan binding; run revalidation; 6 todo tests | automatic acceptance evidence capture and task-level UI |
+| FR-42 teaching and competency | **Implemented and verified** | teach-back, local proof, competency record in the learning dossier | separate teacher UI and host-session loading proof |
