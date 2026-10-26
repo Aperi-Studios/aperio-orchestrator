@@ -90,10 +90,25 @@ Use these only after the idea is clear:
 Use a progress line only after the direction is clear, for example `Discovery · users`; do not promise a fixed number of questions.
 
 Do not force one project type. Record every applicable facet; a project can be
-a redesign plus SEO plus CMS plus migration at the same time. Do not run host
-detection, initialize a project, write a plan, or touch files until the ask is
-recorded. Do not present a host inventory as proof that a reviewer is
-available; presence is not permission.
+a redesign plus SEO plus CMS plus migration at the same time.
+
+### Initialize and resume
+
+- **If `.aperio/discovery.json` exists:** run `aperio discover status --json`.
+  Show the progress and continue from the next question. Never ask an answered
+  question again.
+- **If an Aperio project exists without discovery:** inspect it read-only, then
+  start the discovery record.
+- **If the folder is blank:** after the idea is clear, run
+  `aperio init . --name "<working name or folder name>"`, then `aperio ask`
+  with the owner's words, then record the idea. This writes only `.aperio`
+  state; do not create project files yet.
+
+The CLI questions are the source of truth after initialization. Use
+`aperio discover next --json` to get the next question and its numbered
+choices. Do not run host detection as a substitute for discovery, write a plan,
+or touch project files until the ask is recorded. Do not present a host
+inventory as proof that a reviewer is available; presence is not permission.
 
 For an existing URL or repository, inspect it read-only before asking a
 question it can answer. Do not plan until the outcome, current state,
@@ -110,6 +125,7 @@ only in chat:
 - `aperio discover answer <question-id> --choice 1,3 --text "..." --evidence "..."`
   records the owner's answer.
 - `aperio discover status --json` reports answered, research, missing, and ready.
+- `aperio discover summary` prints the recorded interview.
 
 A `research` answer is not complete. Research it, present the recommendation,
 and record the owner's decision before planning. Do not write a plan while

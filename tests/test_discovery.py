@@ -162,6 +162,27 @@ class DiscoveryTests(unittest.TestCase):
         )
         self.assertEqual(status_cmd.returncode, 0, status_cmd.stderr)
         self.assertEqual(json.loads(status_cmd.stdout)["answered"], 1)
+        status_text = subprocess.run(
+            [sys.executable, "-m", "aperio", "--project", str(self.root), "status"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(ROOT),
+            timeout=30,
+        )
+        self.assertIn("Discovery: 1/10 answered", status_text.stdout)
+        doctor = subprocess.run(
+            [sys.executable, "-m", "aperio", "--project", str(self.root), "doctor"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(ROOT),
+            timeout=30,
+        )
+        self.assertEqual(doctor.returncode, 0, doctor.stderr)
+        self.assertIn("INFO discovery: 1/10 answered", doctor.stdout)
 
 
 if __name__ == "__main__":

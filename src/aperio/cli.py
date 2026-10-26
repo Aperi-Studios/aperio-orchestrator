@@ -221,6 +221,14 @@ def cmd_status(args: argparse.Namespace) -> int:
     else:
         print(f"Project: {project.root}")
         print(f"State:   {project.state}")
+        discovery = project.discovery()
+        if discovery is not None:
+            progress = discovery_status(project)
+            print(
+                f"Discovery: {progress['answered']}/{progress['total']} answered"
+                f" · {progress['research']} need research"
+                f" · ready={'yes' if progress['ready'] else 'no'}"
+            )
         if not tasks:
             print("No tasks. Add an ask or a plan.")
         for task in tasks:
@@ -262,6 +270,15 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     for name, ok, detail in checks:
         print(f"{'OK  ' if ok else 'FAIL'} {name}: {detail}")
         failed = failed or not ok
+    discovery = project.discovery()
+    if discovery is not None:
+        progress = discovery_status(project)
+        print(
+            "INFO discovery: "
+            f"{progress['answered']}/{progress['total']} answered, "
+            f"{progress['research']} need research, "
+            f"ready={'yes' if progress['ready'] else 'no'}"
+        )
     return 1 if failed else 0
 
 
