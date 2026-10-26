@@ -358,13 +358,22 @@ def cmd_discover(args: argparse.Namespace) -> int:
     if args.discover_command == "next":
         question = next_question(project)
         if question is None:
+            progress = discovery_status(project)
             if args.json:
-                print(as_json({"ready": True, "status": discovery_status(project)}))
+                print(as_json({"ready": True, "status": progress, "question": None}))
             else:
                 print(format_status(project))
             return 0
         if args.json:
-            print(as_json({"ready": False, "question": _question_payload(project, question)}))
+            print(
+                as_json(
+                    {
+                        "ready": False,
+                        "status": discovery_status(project),
+                        "question": _question_payload(project, question),
+                    }
+                )
+            )
         else:
             print(format_next(project))
             hints = inspection_hints(project, question.id)

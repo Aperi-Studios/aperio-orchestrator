@@ -83,6 +83,8 @@ def build_handoff(project: Project, task_id: str) -> str:
                 "",
             ]
         )
+        if plan.discovery_digest:
+            lines.extend([f"**Discovery digest:** `{plan.discovery_digest[:16]}`", ""])
         for step in plan.steps:
             if step.kind == "write":
                 lines.append(f"- `{step.id}` write `{step.path}`")
