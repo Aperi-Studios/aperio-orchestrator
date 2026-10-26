@@ -773,7 +773,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **42 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | **49 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | **17 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
@@ -789,7 +789,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
 | Installer tests | **23 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **206 passed** | same command |
+| Total test suite | **213 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -832,7 +832,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Host dispatch beyond Claude/Codex/dsh/Goose | **partial**: adapters for OpenCode, KiloCode, Cline, and agy are command-shape tested; live runs are not proven | `src/aperio/adapter.py`, `tests/test_adapter.py::test_extra_host_adapters_build_commands` |
 | Distributed/live two-host mesh | **not built**; local durable message store and mediator are implemented | `src/aperio/mesh.py`, `src/aperio/mediator.py` |
 | CMS / SEO / Astro delivery | **not built** | no delivery adapter |
-| OS sandbox for host or shell steps | **not built**; undeclared writes are detected after execution | `docs/ARCHITECTURE.md` limits |
+| OS sandbox | **optional**; `plan.sandbox: true` uses `sandbox-exec` on macOS or `bwrap` on Linux for shell/read steps and fails closed if unavailable. Host steps are not sandboxed. | `src/aperio/sandbox.py`; `tests/test_core.py::test_sandboxed_run_records_active_isolation` |
 | Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
@@ -1046,10 +1046,11 @@ implemented merely by appearing in this table.
 
 Implement P1 items in the order Z-02, Z-03, Z-04, Z-05, Z-01. Z-02
 (non-overridable protected paths), Z-03 (read-only steps), and Z-04 (versioned
-state) are verified. Z-05 has queue recovery from the event journal and run
-checkpoints; automatic in-place step resume is not implemented. Z-01 is last.
-Do not start P2 interop or observability work before the P1 control-plane items
-are verified.
+state) are verified. Z-05 has queue recovery, run checkpoints, and safe
+snapshot-based `aperio resume`; Z-01 is implemented with `sandbox-exec` on macOS
+and `bwrap` on Linux, both fail closed when requested but unavailable. The
+`bwrap` path still needs a Linux run. Do not start P2 interop or observability
+work before these P1 control-plane items are verified.
 Each item gets a negative test and a `docs/STATUS.md` row. Owner approval is
 still required for deployment, paid hosts, credentials, and public release.
 

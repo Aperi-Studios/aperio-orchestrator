@@ -65,6 +65,7 @@ aperio skill validate custom-stack
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder
+aperio resume <task-id> --actor builder
 aperio verify <task-id>
 aperio review <task-id> --host claude
 aperio done <task-id>
@@ -128,7 +129,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - A distributed or live two-host mesh; the current store is local.
 - CMS, media, SEO, and Astro/Lumos delivery.
 - A web dashboard.
-- OS-level sandboxing. Host steps and shell steps are detected, not jailed.
+- Optional OS sandboxing for shell/read steps when a plan sets `sandbox: true`; host steps are still detected, not jailed.
 - Remote deployment.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer is tested under `pwsh` on macOS.
 - Automated MCP or package installation. The learning dossier records the decision and provenance; installation must happen through an approved plan or the host, with owner approval for global/paid/credentialed tools.
@@ -148,7 +149,7 @@ Aperio is deliberately conservative:
 - a builder label cannot be the only reviewer label; this is not authenticated identity, so use `review --host` when a separate process matters;
 - a task is `done` only after acceptance checks pass, the verified artifact and plan still match, and matching review evidence is confirmed.
 
-The shell limitation is real. A command can change a file before Aperio detects it, and a write outside the scanned project is not detected at all. Do not treat path checks as an OS sandbox.
+The shell limitation is real. A command can change a file before Aperio detects it, and a write outside the scanned project is not detected at all. A plan can set `sandbox: true` to require `sandbox-exec` (macOS) or `bwrap` (Linux); if neither is available the run refuses rather than silently downgrading. Host steps remain outside this boundary.
 
 ## Documentation
 

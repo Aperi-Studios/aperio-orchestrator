@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from aperio import sandbox
 from aperio.model import Acceptance, Approval, ModelError, Plan, Step, Task
 from aperio.paths import PathSafetyError, normalize_rel, resolve_inside
 from aperio.policy import (
@@ -15,8 +19,18 @@ from aperio.policy import (
     path_allowed,
     validate_plan_paths,
 )
-from aperio.runner import RunError, apply_plan, finish, review, rollback, verify
+from aperio.runner import (
+    RunError,
+    apply_plan,
+    finish,
+    resume_plan,
+    review,
+    rollback,
+    verify,
+)
 from aperio.store import Project, StoreError
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def make_plan(
@@ -27,6 +41,7 @@ def make_plan(
     allowed: list[str] | None = None,
     builder: str = "agent",
     approval: bool = True,
+    sandbox: bool = False,
 ) -> tuple[Task, Plan]:
     task = Task(id="task-test", title="Test task", request="Do the test work", status="planned")
     plan = Plan(
@@ -38,6 +53,7 @@ def make_plan(
         steps=steps,
         acceptance=acceptance or [Acceptance(id="check", command="test -f .aperio/project.json")],
         builder=builder,
+        sandbox=sandbox,
     )
     plan.validate()
     task.plan_id = plan.id
@@ -79,6 +95,41 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(StoreError) as caught:
             self.project.tasks()
         self.assertIn("unsupported state schema", str(caught.exception))
+
+    def test_legacy_schema_migrates_in_memory_on_a_read_only_state_dir(self) -> None:
+        # N2: a read-only mounted project must stay openable — the on-read
+        # migration may not need to persist to work.
+        queue = self.project.state / "queue.json"
+        data = json.loads(queue.read_text(encoding="utf-8"))
+        data.pop("schema", None)
+        queue.write_text(json.dumps(data), encoding="utf-8")
+        state_dir = self.project.state
+        old_mode = state_dir.stat().st_mode
+        os.chmod(state_dir, 0o555)
+        try:
+            self.assertEqual(self.project.tasks(), [])
+        finally:
+            os.chmod(state_dir, old_mode)
+        migrated = json.loads(queue.read_text(encoding="utf-8"))
+        self.assertNotIn("schema", migrated)
+
+    def test_recover_honors_the_project_flag_from_another_directory(self) -> None:
+        # N1: `recover` used to silently ignore the global --project flag.
+        task = Task(id="task-recover", title="Recover me", request="Keep this task")
+        self.project.put_task(task)
+        queue = self.project.state / "queue.json"
+        queue.unlink()
+        result = subprocess.run(
+            [sys.executable, "-m", "aperio", "--project", str(self.root), "recover"],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+            env={**os.environ, "PYTHONPATH": str(ROOT / "src")},
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual([item.id for item in self.project.tasks()], ["task-recover"])
 
     def test_future_project_schema_is_refused(self) -> None:
         project_file = self.project.state / "project.json"
@@ -126,6 +177,85 @@ class CoreTests(unittest.TestCase):
         payload = json.loads(checkpoint.read_text(encoding="utf-8"))
         self.assertEqual(payload["schema"], 1)
         self.assertEqual(payload["status"], "applied")
+
+    def test_resume_restores_the_interrupted_snapshot_before_rerunning(self) -> None:
+        (self.root / "site").mkdir()
+        target = self.root / "site" / "a.txt"
+        target.write_text("partial", encoding="utf-8")
+        task, _plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/a.txt", content="final")],
+        )
+        backup = self.project.state / "backups" / "run-crash"
+        (backup / "files" / "site").mkdir(parents=True)
+        (backup / "files" / "site" / "a.txt").write_text("before", encoding="utf-8")
+        (backup / "manifest.json").write_text(
+            json.dumps({"site/a.txt": {"existed": True, "sha256": None}}),
+            encoding="utf-8",
+        )
+        self.project.save_evidence(
+            task.id,
+            "run-crash",
+            {"run_id": "run-crash", "task_id": task.id, "status": "running", "steps": []},
+        )
+        result = resume_plan(self.project, task.id)
+        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(target.read_text(encoding="utf-8"), "final")
+
+    def test_resume_refuses_when_no_run_is_interrupted(self) -> None:
+        task, _plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/a.txt", content="a")],
+        )
+        with self.assertRaises(RunError):
+            resume_plan(self.project, task.id)
+
+    @unittest.skipUnless(sandbox.kind(), "no supported OS sandbox on this host")
+    def test_sandboxed_run_records_active_isolation(self) -> None:
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="inspect", kind="run", command=f'{sys.executable} -c "print(7)"')],
+            sandbox=True,
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(result["steps"][0]["sandbox"]["active"], True)
+        self.assertEqual(result["steps"][0]["sandbox"]["kind"], sandbox.kind())
+
+    def test_sandbox_blocks_a_write_outside_the_project(self) -> None:
+        if sandbox.kind() != "sandbox-exec":
+            self.skipTest("sandbox-exec profile test is macOS-specific")
+        outside = Path(tempfile.gettempdir()).parent / f"aperio-sandbox-leak-{os.getpid()}.txt"
+        if outside.exists():
+            outside.unlink()
+        _task, plan = make_plan(
+            self.project,
+            steps=[
+                Step(
+                    id="leak",
+                    kind="run",
+                    command=(
+                        f'{sys.executable} -c "from pathlib import Path; '
+                        f"Path('{outside}').write_text('leak')\""
+                    ),
+                )
+            ],
+            sandbox=True,
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed", result)
+        self.assertFalse(outside.exists())
+
+    def test_sandbox_request_without_a_backend_fails_closed(self) -> None:
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="inspect", kind="run", command=f'{sys.executable} -c "print(7)"')],
+            sandbox=True,
+        )
+        with patch("aperio.sandbox.kind", return_value=None):
+            result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed", result)
+        self.assertTrue(any("no supported OS sandbox" in item for item in result["violations"]))
 
     def test_ask_is_append_only(self) -> None:
         first = self.project.add_ask("Build a page")

@@ -83,7 +83,15 @@ from .readiness import format_status as format_readiness
 from .readiness import status as readiness_status
 from .repo import facts as repo_facts
 from .repo import format_facts as format_git
-from .runner import RunError, apply_plan, finish, review, rollback, verify
+from .runner import (
+    RunError,
+    apply_plan,
+    finish,
+    resume_plan,
+    review,
+    rollback,
+    verify,
+)
 from .skillgen import SkillError, list_skills
 from .skillgen import create as skill_create
 from .skillgen import validate as skill_validate
@@ -336,6 +344,34 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_resume(args: argparse.Namespace) -> int:
+    project = _project(args)
+    _require_learning(project)
+    task = project.get_task(args.task_id)
+    if not task.plan_id:
+        raise RunError("task has no plan")
+    plan = project.get_plan(task.plan_id)
+    _require_current_learning(project, plan)
+    _require_current_discovery(project, plan)
+    _require_preflight(project)
+    if plan.todo_id:
+        todo = todo_status(project)
+        linked = next((item for item in todo["tasks"] if item["id"] == plan.todo_id), None)
+        if linked is None:
+            raise ModelError("plan is linked to a missing todo task")
+        if linked["status"] not in {"in_progress", "accepted"}:
+            raise ModelError(
+                f"linked todo task is {linked['status']}; start or accept it before resuming the plan"
+            )
+    evidence = resume_plan(project, args.task_id, actor=args.actor)
+    print(f"{evidence['run_id']}  {evidence['status']}")
+    if evidence.get("violations"):
+        for violation in evidence["violations"][:10]:
+            print("violation: " + violation)
+        return 1
+    return 0
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     project = _project(args)
     evidence = verify(project, args.task_id)
@@ -491,7 +527,7 @@ def cmd_hosts(args: argparse.Namespace) -> int:
 
 
 def cmd_recover(args: argparse.Namespace) -> int:
-    project = Project.open(args.root)
+    project = Project.open(args.root or args.project)
     tasks = project.recover_queue()
     if tasks is None:
         print("no saved queue snapshot in the event journal; nothing changed", file=sys.stderr)
@@ -919,6 +955,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--actor", default="agent")
     p.set_defaults(func=cmd_run)
 
+    p = sub.add_parser("resume", help="restore an interrupted run and rerun its approved plan")
+    p.add_argument("task_id")
+    p.add_argument("--actor", default="agent")
+    p.set_defaults(func=cmd_resume)
+
     p = sub.add_parser("verify", help="run the plan's acceptance checks")
     p.add_argument("task_id")
     p.set_defaults(func=cmd_verify)
@@ -960,7 +1001,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_doctor)
 
     p = sub.add_parser("recover", help="restore a missing or corrupt queue from the event journal")
-    p.add_argument("root", nargs="?", default=".")
+    p.add_argument("root", nargs="?", default=None, help="project root; defaults to the --project value (default: current directory)")
     p.set_defaults(func=cmd_recover)
 
     p = sub.add_parser("drift", help="check docs for links and paths that do not exist")

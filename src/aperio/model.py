@@ -224,6 +224,7 @@ class Plan:
     discovery_digest: str = ""
     todo_id: str = ""
     learning_digest: str = ""
+    sandbox: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -251,6 +252,7 @@ class Plan:
             discovery_digest=str(data.get("discovery_digest", "")),
             todo_id=str(data.get("todo_id", "")),
             learning_digest=str(data.get("learning_digest", "")),
+            sandbox=bool(data.get("sandbox", False)),
         )
         plan.validate()
         return plan
@@ -264,6 +266,8 @@ class Plan:
             raise ModelError("plan needs at least one allowed path")
         if not self.steps:
             raise ModelError("plan needs at least one step")
+        if not isinstance(self.sandbox, bool):
+            raise ModelError("plan sandbox must be true or false")
         seen: set[str] = set()
         for step in self.steps:
             step.validate()

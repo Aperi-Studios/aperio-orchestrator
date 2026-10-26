@@ -12,6 +12,7 @@ src/aperio/
   store.py      project state, atomic JSON, append-only events
   paths.py      relative-path validation and symlink checks
   policy.py     allowed paths, protected paths, review separation
+  sandbox.py    optional OS isolation for shell and read steps
   adapter.py    disposable-workspace host dispatch and change validation
   drift.py       deterministic documentation link and path checks
   discovery.py  persistent numbered discovery questions and readiness
@@ -108,7 +109,7 @@ A failed run can be inspected, rolled back, or replaced by a new plan. A failed 
 - A write must be inside an allowed path and outside protected paths.
 - A `run` step must declare every expected write. Undeclared changes are violations.
 
-This is a policy layer, not an OS sandbox. A shell command can write before detection. The evidence records the violation and the task is not verified.
+This is a policy layer unless the plan sets `sandbox: true`, in which case shell and read steps run through `sandbox-exec` or `bwrap` and fail closed when neither backend is available. Host steps are not confined by the operating system.
 
 ## Step kinds
 
@@ -148,7 +149,7 @@ Supported adapters are `claude` (print mode, accept-edits, budget cap) and `goos
 
 ## Limits
 
-- Host steps and shell steps are not confined by the operating system. Host prompts ask the host to stay in the workspace and avoid network access, but this is instruction-level, not a sandbox.
+- Host steps are not confined by the operating system. Shell and read steps are only confined when the plan explicitly sets `sandbox: true`; otherwise changes outside the plan are detected after execution.
 - The host runs with its own authentication and can read accessible files outside the workspace. Use a disposable project and a host account with the least privilege available.
 - The change detector hashes project files and excludes `.git`, `.aperio`, dependency directories, and cache directories.
 - Snapshot limits are 5,000 files and 50 MB. A larger plan must narrow its scope.

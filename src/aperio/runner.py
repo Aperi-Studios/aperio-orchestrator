@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from . import sandbox
 from .adapter import HostError, run_host_step
 from .model import Plan, Step, Task, plan_body_digest, utc_now
 from .paths import (
@@ -268,9 +269,10 @@ def _run_shell_command(
     cwd: Path,
     env: dict[str, str],
     timeout: int,
+    sandboxed: list[str] | None = None,
 ) -> tuple[int, str, str, bool]:
     kwargs: dict[str, Any] = {
-        "shell": True,
+        "shell": sandboxed is None,
         "cwd": str(cwd),
         "env": env,
         "stdout": subprocess.PIPE,
@@ -280,7 +282,7 @@ def _run_shell_command(
     }
     if os.name != "nt":
         kwargs["start_new_session"] = True
-    process = subprocess.Popen(command, **kwargs)
+    process = subprocess.Popen(sandboxed or command, **kwargs)
     try:
         stdout, stderr = process.communicate(timeout=timeout)
         return int(process.returncode), stdout or "", stderr or "", False
@@ -313,11 +315,19 @@ def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[
         }
     )
     started = time.monotonic()
+    sandboxed: list[str] | None = None
+    sandbox_info: dict[str, object] = {"requested": False, "active": False, "kind": None}
+    if plan.sandbox:
+        try:
+            sandboxed, sandbox_info = sandbox.wrap(step.command or "", project.root, cwd)
+        except sandbox.SandboxError as exc:
+            raise RunError(f"step {step.id}: {exc}") from exc
     exit_code, stdout, stderr, timed_out = _run_shell_command(
         step.command or "",
         cwd=cwd,
         env=env,
         timeout=step.timeout_s,
+        sandboxed=sandboxed,
     )
     duration = round(time.monotonic() - started, 3)
     return {
@@ -332,6 +342,7 @@ def _run_command(project: Project, plan: Plan, step: Step, run_id: str) -> dict[
         "stderr": stderr[-MAX_CAPTURE:],
         "stdout_truncated": len(stdout) > MAX_CAPTURE,
         "stderr_truncated": len(stderr) > MAX_CAPTURE,
+        "sandbox": sandbox_info,
     }
 
 
@@ -394,7 +405,11 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
         "changed_files": [],
         "violations": [],
         "snapshot": {"files": len(manifest), "limited_to": targets[:50]},
-        "limits": "Shell steps are not OS-sandboxed. Writes outside the plan are detected after they happen.",
+        "limits": (
+            "Shell steps requested the OS sandbox; host steps are not OS-sandboxed."
+            if plan.sandbox
+            else "Shell steps are not OS-sandboxed. Writes outside the plan are detected after they happen."
+        ),
     }
     project.append_event("run.started", {"run_id": run_id, "task_id": plan.task_id, "actor": actor})
     _write_checkpoint(run_dir, evidence, status="started", step_id=None)
@@ -529,6 +544,34 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
         {"run_id": run_id, "status": evidence["status"], "violations": len(evidence["violations"])},
     )
     return evidence
+
+
+def resume_plan(project: Project, task_id: str, actor: str = "agent") -> dict[str, Any]:
+    """Restore an interrupted run's snapshot, then run the same approved plan again.
+
+    A command cannot be resumed from its middle: it may have made partial changes
+    that were never verified. The safe recovery point is the pre-run snapshot.
+    """
+    task = project.get_task(task_id)
+    if not task.plan_id:
+        raise RunError("task has no plan")
+    records = [row for row in project.evidence(task_id) if row.get("status") == "running"]
+    if not records:
+        raise RunError("no interrupted run to resume")
+    run_id = str(records[-1].get("run_id") or "")
+    if not run_id:
+        raise RunError("interrupted run has no run id")
+    _restore(project, run_id)
+    task.status = "approved"
+    task.run_id = None
+    task.verify_id = None
+    task.review = None
+    task.evidence = [path for path in task.evidence if run_id not in path]
+    task.notes.append(f"resumed after interrupted run {run_id}")
+    project.put_task(task)
+    project.append_event("run.resumed", {"task_id": task_id, "prior_run_id": run_id})
+    plan = project.get_plan(task.plan_id)
+    return apply_plan(project, plan, actor=actor)
 
 
 def verify(project: Project, task_id: str) -> dict[str, Any]:
