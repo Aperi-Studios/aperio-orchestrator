@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from aperio.handoff import build_handoff
+from aperio.model import Task, new_id
 from aperio.repo import facts, format_facts
 from aperio.store import Project
 
@@ -45,6 +47,13 @@ class RepoTests(unittest.TestCase):
         self.assertTrue(data["dirty"])
         self.assertEqual(data["changed"], 1)
         self.assertIn("dirty", format_facts(data))
+
+    def test_handoff_places_repository_block_before_requested_outcome(self) -> None:
+        task = Task(id=new_id("task"), title="Repository handoff", request="Show the repo facts.")
+        self.project.put_task(task)
+        handoff = build_handoff(self.project, task.id)
+        self.assertIn("## Repository", handoff)
+        self.assertLess(handoff.index("## Repository"), handoff.index("## Requested outcome"))
 
     def test_non_git_directory_is_explicit(self) -> None:
         plain = Path(self.temp.name) / "plain"
