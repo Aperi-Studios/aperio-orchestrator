@@ -32,6 +32,8 @@ aperio audit add --title "..." --status confirmed --path src/app.py --line 12 \
   --severity high --boundary "..." --evidence "src/app.py:12 ..."
 aperio audit add --title "..." --status needs_validation --path src/app.py \
   --evidence "The deployment configuration is not in this repository."
+aperio audit verify --finding-id finding-0001 --by peer-reviewer \
+  --verdict confirmed --evidence "Reproduced from the cited source line."
 aperio audit unit --unit-id unit-0001 --status checked
 aperio audit validate
 aperio audit report
@@ -74,6 +76,10 @@ contains a half-imported set. Unknown fields are rejected rather than ignored.
 - **confirmed** requires a coverage unit, a boundary, a severity, a positive
   source line, and evidence containing that path. Do not infer exploitability
   from a suspicious string.
+- A **confirmed** finding must also be independently verified with
+  `audit verify --verdict confirmed|refuted|not_reproduced` and concrete
+  evidence. A confirmed finding with no verification, or a refuted verdict,
+  keeps the report incomplete.
 - **needs_validation** must not have a severity. State the missing fact.
 - **rejected** must not have a severity.
 - Every finding must reference an existing coverage unit.
@@ -81,9 +87,10 @@ contains a half-imported set. Unknown fields are rejected rather than ignored.
 - `validate` rejects unknown statuses, duplicate IDs, orphan findings, unsafe
   paths, missing evidence, and malformed line numbers.
 - `report` refuses an invalid ledger. It marks the run `incomplete` while units
-  remain `planned`, `candidate`, or `deferred`, while coverage is truncated, or
-  when the source changed since the audit started. `aperio audit report` exits
-  1 in those cases and 0 only for a complete report.
+  remain `planned`, `candidate`, or `deferred`, while coverage is truncated,
+  when the source changed since the audit started, or while any finding is
+  unverified, contradicted, or still `needs_validation`. `aperio audit report`
+  exits 1 in those cases and 0 only for a complete report.
 
 ## Handoff
 

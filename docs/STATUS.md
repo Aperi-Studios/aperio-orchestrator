@@ -17,18 +17,18 @@
 | Discovery tests | 25 passed | same command; `tests/test_discovery.py` |
 | Inspection tests | 15 passed | same command; `tests/test_inspect.py` |
 | Evidence tests | 6 passed | same command; `tests/test_evidence.py` |
-| Audit tests | 14 passed | same command; `tests/test_audit.py` |
+| Audit tests | 16 passed | same command; `tests/test_audit.py` |
 | Repo tests | 3 passed | same command; `tests/test_repo.py` |
 | Installer tests | 13 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 145 passed | same command |
+| Total test suite | 148 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
 | Plan approval binding | approval records a SHA-256 of the plan body; changing steps or allowed paths after approval is refused | `src/aperio/model.py::plan_body_digest`; `tests/test_discovery.py` |
 | Read-only inspection | folder stack, tests, docs, CI, deployment, env names; URL title, meta, H1, safe canonical, security headers; private URLs, credential URLs, and symlinked inputs refused; redirects revalidated; query and fragment values redacted | `tests/test_inspect.py`; `aperio inspect` |
 | Evidence manifest | file path, size, and SHA-256 recorded; contents not copied; outside paths, symlinks, hard links, secret-bearing names, and real `.env` files refused | `tests/test_evidence.py`; `aperio evidence list` |
-| Security audit ledger | bounded coverage units; host brief and atomic bulk ingest; confirmed findings need boundary, severity, source line, and anchored evidence; `needs_validation` cannot carry severity; invalid ledgers are refused; report marks open, truncated, or changed-source coverage incomplete | `tests/test_audit.py`; `aperio audit start`; `docs/AUDIT.md` |
+| Security audit ledger | bounded coverage units; host brief and atomic bulk ingest; confirmed findings need boundary, severity, source line, and anchored evidence; a separate verifier records confirmed/refuted/not-reproduced evidence; `needs_validation` cannot carry severity; invalid ledgers are refused; report marks open, truncated, changed-source, unverified, contradicted, or unresolved findings incomplete | `tests/test_audit.py`; `aperio audit start`; `docs/AUDIT.md` |
 | Demo project | applied, verified, reviewed, done | `examples/demo-site-plan.json` through the CLI |
 | Rollback | restores modified files and removes created files | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
 | Path traversal and symlink escape | refused, including dangling symlink components | `tests/test_core.py` |
@@ -92,7 +92,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 145-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 148-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.

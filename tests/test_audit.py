@@ -22,7 +22,9 @@ from aperio.audit import (
     start,
     status,
     validate,
+    verify_finding,
 )
+from aperio.audit import latest as latest_audit
 from aperio.cli import cmd_audit
 from aperio.handoff import build_handoff
 from aperio.model import Task, new_id
@@ -241,6 +243,27 @@ class AuditTests(unittest.TestCase):
         self.assertIn("## Security audit", handoff)
         self.assertIn("No source audit recorded.", handoff)
 
+    def test_handoff_with_invalid_ledger_is_explicit(self) -> None:
+        start(self.project, scope="src")
+        add_finding(
+            self.project,
+            title="Orphan",
+            status="needs_validation",
+            path="src/app.py",
+            evidence="Unresolved.",
+        )
+        directory, _metadata, _ledger, findings = load(self.project)
+        findings["findings"][0]["unit_id"] = "unit-9999"
+        (directory / "findings.json").write_text(json.dumps(findings), encoding="utf-8")
+        with self.assertRaises(AuditError):
+            latest_audit(self.project)
+        task = Task(id=new_id("task"), title="Broken ledger", request="Deliver with an audit record.")
+        self.project.put_task(task)
+        handoff = build_handoff(self.project, task.id)
+        self.assertIn("## Security audit", handoff)
+        self.assertIn("**INVALID:**", handoff)
+        self.assertIn("audit ledger is invalid", handoff)
+
     def test_validate_rejects_orphaned_finding(self) -> None:
         start(self.project, scope="src")
         add_finding(
@@ -256,9 +279,18 @@ class AuditTests(unittest.TestCase):
         errors = validate(self.project)
         self.assertTrue(any("unknown coverage unit" in error for error in errors))
 
+    def test_report_complete_with_no_open_findings(self) -> None:
+        result = start(self.project, scope="src")
+        for unit in load(self.project, result["audit_id"])[2]["units"]:
+            set_unit(self.project, unit_id=unit["id"], status="checked")
+        report_result = report(self.project, result["audit_id"])
+        self.assertEqual(report_result["run_status"], "complete")
+        self.assertEqual(report_result["confirmed"], 0)
+        self.assertEqual(report_result["unverified"], 0)
+
     def test_report_writes_artifacts_and_counts(self) -> None:
         result = start(self.project, scope="src")
-        add_finding(
+        finding = add_finding(
             self.project,
             title="Confirmed issue",
             status="confirmed",
@@ -277,25 +309,35 @@ class AuditTests(unittest.TestCase):
         )
         first = report(self.project, result["audit_id"])
         self.assertEqual(first["coverage_open"], 2)
+        self.assertEqual(first["unverified"], 1)
         self.assertIn("Coverage is incomplete", Path(first["report"]).read_text())
+        verify_finding(
+            self.project,
+            finding["id"],
+            by="peer-reviewer",
+            verdict="confirmed",
+            evidence="Re-ran the source check and reproduced the issue.",
+        )
         for unit in load(self.project, result["audit_id"])[2]["units"]:
             set_unit(self.project, unit_id=unit["id"], status="checked")
         report_result = report(self.project, result["audit_id"])
         self.assertEqual(report_result["confirmed"], 1)
+        self.assertEqual(report_result["verified"], 1)
+        self.assertEqual(report_result["unverified"], 0)
         self.assertEqual(report_result["unresolved"], 1)
         self.assertEqual(report_result["coverage_open"], 0)
         text = Path(report_result["report"]).read_text()
         self.assertIn("# Security Audit Report", text)
         self.assertIn("Confirmed issue", text)
         self.assertIn("Needs deployment fact", text)
-        self.assertEqual(status(self.project)["run_status"], "complete")
+        self.assertEqual(status(self.project)["run_status"], "incomplete")
         self.assertTrue(Path(report_result["detail"]).is_file())
         self.assertTrue(Path(report_result["needs_validation"]).is_file())
         task = Task(id=new_id("task"), title="Audit handoff", request="Deliver with an audit record.")
         self.project.put_task(task)
         handoff = build_handoff(self.project, task.id)
         self.assertIn("## Security audit", handoff)
-        self.assertIn("Status: **complete**", handoff)
+        self.assertIn("Status: **incomplete**", handoff)
         self.assertIn("1 confirmed", handoff)
         add_finding(
             self.project,
@@ -330,11 +372,40 @@ class AuditTests(unittest.TestCase):
                 "--title",
                 "Evidence-backed issue",
                 "--status",
-                "needs_validation",
+                "confirmed",
                 "--path",
                 "src/app.py",
+                "--line",
+                "1",
+                "--severity",
+                "high",
+                "--boundary",
+                "untrusted input reaches a trusted command",
                 "--evidence",
-                "Unresolved external fact.",
+                "src/app.py:1 passes input to the command.",
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(self.root),
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        finding_id = json.loads(result.stdout)["id"]
+        result = subprocess.run(
+            base
+            + [
+                "audit",
+                "verify",
+                "--finding-id",
+                finding_id,
+                "--by",
+                "peer",
+                "--verdict",
+                "confirmed",
+                "--evidence",
+                "Reproduced from source.",
                 "--json",
             ],
             capture_output=True,

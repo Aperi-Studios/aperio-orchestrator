@@ -11,7 +11,14 @@ from typing import Any
 
 from . import __version__
 from .adapter import HostError, run_host_review
-from .audit import FINDING_STATUSES, PROFILES, SEVERITIES, UNIT_STATUSES, AuditError
+from .audit import (
+    FINDING_STATUSES,
+    FINDING_VERDICTS,
+    PROFILES,
+    SEVERITIES,
+    UNIT_STATUSES,
+    AuditError,
+)
 from .audit import add_finding as audit_add_finding
 from .audit import brief as audit_brief
 from .audit import ingest as audit_ingest
@@ -21,6 +28,7 @@ from .audit import set_unit as audit_set_unit
 from .audit import start as audit_start
 from .audit import status as audit_status
 from .audit import validate as audit_validate
+from .audit import verify_finding as audit_verify_finding
 from .discovery import (
     QUESTION_BY_ID,
     DiscoveryError,
@@ -612,6 +620,17 @@ def _cmd_audit_locked(project: Project, args: argparse.Namespace) -> int:
         result = audit_ingest(project, args.file, args.audit_id or "")
         print(as_json(result) if args.json else f"{result['imported']} findings imported into {result['audit_id']}")
         return 0
+    if args.audit_command == "verify":
+        finding = audit_verify_finding(
+            project,
+            args.finding_id,
+            by=args.by,
+            verdict=args.verdict,
+            evidence=args.evidence,
+            audit_id=args.audit_id or "",
+        )
+        print(as_json(finding) if args.json else f"{finding['id']}  {finding['verification']['verdict']} by {finding['verification']['by']}")
+        return 0
     if args.audit_command == "validate":
         errors = audit_validate(project, args.audit_id or "")
         if args.json:
@@ -835,6 +854,14 @@ def build_parser() -> argparse.ArgumentParser:
     audit_ingest_parser.add_argument("--audit-id", default="")
     audit_ingest_parser.add_argument("--json", action="store_true")
     audit_ingest_parser.set_defaults(func=cmd_audit)
+    audit_verify_parser = audit.add_parser("verify", help="record a fresh verification verdict")
+    audit_verify_parser.add_argument("--finding-id", required=True)
+    audit_verify_parser.add_argument("--by", required=True)
+    audit_verify_parser.add_argument("--verdict", choices=sorted(FINDING_VERDICTS), required=True)
+    audit_verify_parser.add_argument("--evidence", required=True)
+    audit_verify_parser.add_argument("--audit-id", default="")
+    audit_verify_parser.add_argument("--json", action="store_true")
+    audit_verify_parser.set_defaults(func=cmd_audit)
     for name, help_text in (
         ("validate", "validate the ledger and findings"),
         ("report", "write the audit report"),

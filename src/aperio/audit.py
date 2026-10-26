@@ -39,6 +39,7 @@ SKIP_DIRS = {
 PROFILES = {"quick", "standard", "deep"}
 UNIT_STATUSES = {"planned", "checked", "candidate", "deferred", "out_of_scope"}
 FINDING_STATUSES = {"confirmed", "needs_validation", "rejected"}
+FINDING_VERDICTS = {"confirmed", "refuted", "not_reproduced"}
 SEVERITIES = {"critical", "high", "medium", "low", "info"}
 RUN_STATUSES = {"in_progress", "complete", "incomplete"}
 
@@ -390,6 +391,17 @@ def validate(project: Project, audit_id: str = "") -> list[str]:
         line = finding.get("line")
         if status != "confirmed" and line is not None and (not isinstance(line, int) or isinstance(line, bool) or line < 1):
             errors.append(f"{finding_id}: line must be a positive integer")
+        verification = finding.get("verification")
+        if verification is not None:
+            if not isinstance(verification, dict):
+                errors.append(f"{finding_id}: verification must be an object")
+            else:
+                if not isinstance(verification.get("verdict"), str) or verification.get("verdict") not in FINDING_VERDICTS:
+                    errors.append(f"{finding_id}: verification verdict is invalid")
+                if not isinstance(verification.get("by"), str) or not verification["by"].strip():
+                    errors.append(f"{finding_id}: verification needs a verifier")
+                if not isinstance(verification.get("evidence"), str) or not verification["evidence"].strip():
+                    errors.append(f"{finding_id}: verification needs evidence")
     return errors
 
 
@@ -514,6 +526,46 @@ def add_finding(
     _write(directory / "run-metadata.json", metadata)
     project.append_event("audit.finding", {"audit_id": audit_id or directory.name, "finding_id": finding["id"], "status": status})
     return finding
+
+
+def verify_finding(
+    project: Project,
+    finding_id: str,
+    *,
+    by: str,
+    verdict: str,
+    evidence: str,
+    audit_id: str = "",
+) -> dict[str, Any]:
+    directory, metadata, _ledger, findings = load(project, audit_id)
+    if not isinstance(verdict, str) or verdict not in FINDING_VERDICTS:
+        raise AuditError(f"verification verdict must be one of: {', '.join(sorted(FINDING_VERDICTS))}")
+    by = by.strip() if isinstance(by, str) else ""
+    evidence = evidence.strip() if isinstance(evidence, str) else ""
+    if not by:
+        raise AuditError("verification needs a verifier")
+    if not evidence:
+        raise AuditError("verification needs evidence")
+    for finding in findings.get("findings", []):
+        if isinstance(finding, dict) and finding.get("id") == finding_id:
+            if finding.get("status") != "confirmed":
+                raise AuditError("only a confirmed finding can be independently verified")
+            finding["verification"] = {
+                "by": by,
+                "verdict": verdict,
+                "evidence": evidence,
+                "at": utc_now(),
+            }
+            _write(directory / "findings.json", findings)
+            metadata["run_status"] = "in_progress"
+            metadata.pop("reported_at", None)
+            _write(directory / "run-metadata.json", metadata)
+            project.append_event(
+                "audit.verified",
+                {"audit_id": audit_id or directory.name, "finding_id": finding_id, "verdict": verdict},
+            )
+            return finding
+    raise AuditError(f"unknown finding: {finding_id}")
 
 
 def brief(project: Project, audit_id: str = "") -> dict[str, Any]:
@@ -645,6 +697,15 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
     confirmed = [row for row in records if row["status"] == "confirmed"]
     unresolved = [row for row in records if row["status"] == "needs_validation"]
     rejected = [row for row in records if row["status"] == "rejected"]
+    verified = [
+        row
+        for row in confirmed
+        if isinstance(row.get("verification"), dict)
+        and row["verification"].get("verdict") == "confirmed"
+    ]
+    unverified = [row for row in confirmed if row not in verified and not isinstance(row.get("verification"), dict)]
+    contradicted = [row for row in confirmed if isinstance(row.get("verification"), dict) and row not in verified]
+    open_findings = len(unresolved) + len(unverified) + len(contradicted)
     counts = {status: sum(1 for unit in units if unit["status"] == status) for status in UNIT_STATUSES}
     open_coverage = counts["planned"] + counts["candidate"] + counts["deferred"]
     truncated = bool(ledger.get("truncated"))
@@ -668,9 +729,9 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
         f"**Current source:** {current_commit or 'unversioned'}{' (dirty)' if current_dirty else ''}  ",
         f"**Scope:** `{metadata.get('scope', '.')}`  ",
         f"**Coverage:** {len(units)} units  ",
-        f"**Findings:** {len(confirmed)} confirmed · {len(unresolved)} needs validation · {len(rejected)} rejected",
+        f"**Findings:** {len(confirmed)} confirmed · {len(verified)} verified · {len(unverified)} unverified · {len(contradicted)} contradicted · {len(unresolved)} needs validation · {len(rejected)} rejected",
         "",
-        "This is a source-anchored ledger, not proof that every path was audited. A `needs_validation` record has no severity until the missing fact is resolved.",
+        "This is a source-anchored ledger, not proof that every path was audited. A `needs_validation` record has no severity until the missing fact is resolved. An unverified confirmed finding keeps the audit incomplete.",
         "",
         "## Coverage",
         "",
@@ -694,6 +755,14 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
     if confirmed:
         for row in confirmed:
             unit_note = "" if unit_status.get(row["unit_id"]) == "checked" else f" (unit status: {unit_status.get(row['unit_id'], 'unknown')})"
+            verification = row.get("verification")
+            if isinstance(verification, dict):
+                verification_line = (
+                    f"- Verification: **{verification.get('verdict', 'unknown')}** "
+                    f"by {verification.get('by', 'unknown')} — {verification.get('evidence', '')}"
+                )
+            else:
+                verification_line = "- Verification: **UNVERIFIED**"
             confirmed_section.extend(
                 [
                     f"### {row['title']}",
@@ -703,6 +772,7 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
                     f"- Path: `{row['path']}`:{row['line']}",
                     f"- Boundary: {row['boundary']}",
                     f"- Evidence: {row['evidence']}",
+                    verification_line,
                     "",
                 ]
             )
@@ -748,7 +818,7 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
     _write_text(directory / "REPORT.md", report_text)
     _write_text(directory / "FINDINGS-DETAIL.md", "\n".join(detail))
     _write_text(directory / "NEEDS-VALIDATION.md", "\n".join(needs))
-    metadata["run_status"] = "incomplete" if (open_coverage or truncated or source_changed) else "complete"
+    metadata["run_status"] = "incomplete" if (open_coverage or truncated or source_changed or open_findings) else "complete"
     metadata["reported_at"] = utc_now()
     metadata["reported_source_ref"] = current_ref
     metadata["source_changed"] = source_changed
@@ -758,6 +828,8 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
         {
             "audit_id": directory.name,
             "confirmed": len(confirmed),
+            "verified": len(verified),
+            "unverified": len(unverified),
             "needs_validation": len(unresolved),
             "coverage_open": open_coverage,
             "truncated": truncated,
@@ -770,6 +842,9 @@ def report(project: Project, audit_id: str = "") -> dict[str, Any]:
         "detail": str(directory / "FINDINGS-DETAIL.md"),
         "needs_validation": str(directory / "NEEDS-VALIDATION.md"),
         "confirmed": len(confirmed),
+        "verified": len(verified),
+        "unverified": len(unverified),
+        "contradicted": len(contradicted),
         "unresolved": len(unresolved),
         "coverage_open": open_coverage,
         "truncated": truncated,
@@ -803,9 +878,19 @@ def status(project: Project, audit_id: str = "") -> dict[str, Any]:
     recorded_ref = metadata.get("reported_source_ref", metadata.get("source_ref"))
     current_ref = _git_ref(project.root)
     source_changed = current_ref != recorded_ref
-    truncated = bool(ledger.get("truncated"))
+    trunc = bool(ledger.get("truncated"))
+    needs_validation = sum(1 for row in records if row.get("status") == "needs_validation")
+    unverified = sum(
+        1
+        for row in records
+        if row.get("status") == "confirmed"
+        and not (
+            isinstance(row.get("verification"), dict)
+            and row["verification"].get("verdict") == "confirmed"
+        )
+    )
     run_status = metadata.get("run_status")
-    if run_status == "complete" and (truncated or source_changed):
+    if run_status == "complete" and (trunc or source_changed or needs_validation or unverified):
         run_status = "incomplete"
     return {
         "audit_id": directory.name,
@@ -813,12 +898,13 @@ def status(project: Project, audit_id: str = "") -> dict[str, Any]:
         "profile": metadata.get("profile"),
         "run_status": run_status,
         "source_changed": source_changed,
-        "truncated": truncated,
+        "truncated": trunc,
         "units": len(units),
         "checked": sum(1 for unit in units if unit.get("status") == "checked"),
         "planned": sum(1 for unit in units if unit.get("status") == "planned"),
         "findings": len(records),
         "confirmed": sum(1 for row in records if row.get("status") == "confirmed"),
-        "needs_validation": sum(1 for row in records if row.get("status") == "needs_validation"),
+        "unverified": unverified,
+        "needs_validation": needs_validation,
         "rejected": sum(1 for row in records if row.get("status") == "rejected"),
     }

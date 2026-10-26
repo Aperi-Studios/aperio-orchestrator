@@ -298,13 +298,17 @@ Rules:
 - A **confirmed** finding needs a coverage unit, a boundary, a severity, a
   source line, and concrete evidence containing that path. Do not infer
   exploitability from a suspicious string.
+- A **confirmed** finding must also be independently verified with
+  `aperio audit verify`; without a `confirmed` verdict it is unverified, and a
+  `refuted` or `not_reproduced` verdict keeps the report incomplete.
 - A **needs_validation** finding has no severity. State the missing fact.
 - A **rejected** finding keeps the reason it was rejected.
 - This command never runs target code. If proving a finding requires execution,
   leave it `needs_validation` until a real sandbox exists.
 - The report lists coverage as recorded. It is not a whole-repository guarantee.
-- `aperio audit report` exits 1 while coverage is still open, truncated, or the
-  source changed after the audit started; 0 means complete.
+- `aperio audit report` exits 1 while coverage is still open, truncated, the
+  source changed after the audit started, or any finding is unverified,
+  contradicted, or unresolved; 0 means complete.
 - A fresh reviewer should verify every confirmed finding; the finder is not the
   verifier.
 

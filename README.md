@@ -46,6 +46,7 @@ aperio audit start --scope src --profile quick
 aperio audit brief
 aperio audit ingest --file findings.json
 aperio audit add --title "..." --status needs_validation --path src/app.py --evidence "Missing deployment fact"
+aperio audit verify --finding-id finding-0001 --by peer-reviewer --verdict confirmed --evidence "Reproduced from source"
 aperio audit unit --unit-id unit-0001 --status checked
 aperio audit validate
 aperio audit report
@@ -93,7 +94,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude reviewers confirmed verified work on current code; earlier Codex review evidence is historical.
 - Change detection for writes outside the declared plan.
 - Acceptance checks and recorded evidence.
-- Source-anchored security audit ledger: bounded coverage units, host brief, atomic bulk ingest, structured findings, `needs_validation` for unresolved facts, and a generated report. Handoff and project status always surface the latest audit, including open or source-changed coverage. It never executes the target and never treats an unproven finding as confirmed.
+- Source-anchored security audit ledger: bounded coverage units, host brief, atomic bulk ingest, structured findings, `needs_validation` for unresolved facts, independent verification verdicts, and a generated report. Handoff and project status always surface the latest audit, including open or source-changed coverage. It never executes the target and never treats an unproven finding as confirmed.
 - Independent review enforcement by reviewer name.
 - Rollback of files captured before a run.
 - Handoff generation from actual state.
