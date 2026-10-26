@@ -473,6 +473,7 @@ A new surface can be added without editing the profile list: add a facet value, 
 - Planning before current state is inspected.
 - Treating a host binary as proof of a reviewer.
 - Claiming “all scenarios covered” from a handful of demos.
+- Calling a static form a working contact form, or accepting a string-presence check as proof of an interactive behavior.
 
 ## 12. Agent behavior contract
 

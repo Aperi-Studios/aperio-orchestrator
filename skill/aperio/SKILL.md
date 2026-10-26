@@ -291,6 +291,16 @@ aperio hosts
 }
 ```
 
+## Plan quality
+
+Map every must-have to a concrete step and an acceptance check that can fail.
+A string-presence check proves text exists; it does not prove a form sends, a
+page renders, or a layout works on mobile. If the owner asked for an
+interactive behavior and no endpoint, storage, or service is in scope, either
+include a working path in the plan or record the missing behavior as a non-goal
+and get the owner's explicit acceptance. Do not describe a static form as a
+working contact form.
+
 ## Hard rules
 
 1. Do not run an unapproved plan.
