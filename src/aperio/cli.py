@@ -60,6 +60,11 @@ from .inspect import InspectionError
 from .inspect import collect as collect_inspection
 from .inspect import format_report as format_inspection
 from .inspect import hints as inspection_hints
+from .learning import LearningError
+from .learning import format_status as format_learning
+from .learning import import_dossier as import_learning
+from .learning import record_proof as record_learning_proof
+from .learning import status as learning_status
 from .mediator import MediationError, mediate
 from .mesh import MeshError, MeshStore
 from .model import (
@@ -81,6 +86,17 @@ from .store import Project, StoreError
 
 def _project(args: argparse.Namespace) -> Project:
     return Project.open(args.project)
+
+
+def _require_learning(project: Project) -> None:
+    progress = learning_status(project)
+    if progress["ready"]:
+        return
+    issues = "; ".join(progress["issues"][:6])
+    raise LearningError(
+        "learning dossier is required before planning, approval, or run; run aperio learn status"
+        + (f": {issues}" if issues else "")
+    )
 
 
 def _print_task(task: Task) -> None:
@@ -119,6 +135,7 @@ def _load_plan_data(path: str) -> dict[str, Any]:
 
 def cmd_plan(args: argparse.Namespace) -> int:
     project = _project(args)
+    _require_learning(project)
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -216,6 +233,7 @@ def _require_current_discovery(project: Project, plan: Plan) -> None:
 
 def cmd_approve(args: argparse.Namespace) -> int:
     project = _project(args)
+    _require_learning(project)
     if args.confirm != "I approve this plan":
         raise ModelError('approval requires --confirm "I approve this plan"')
     plan = project.get_plan(args.plan_id)
@@ -239,6 +257,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     project = _project(args)
+    _require_learning(project)
     task = project.get_task(args.task_id)
     if not task.plan_id:
         raise RunError("task has no plan")
@@ -576,6 +595,20 @@ def cmd_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_learn(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.learn_command == "import":
+        data = import_learning(project, args.file, replace=args.replace)
+    elif args.learn_command == "proof":
+        data = record_learning_proof(project, args.command, timeout=args.timeout)
+    else:
+        data = learning_status(project)
+    print(as_json(data) if args.json else format_learning(data))
+    if args.learn_command == "status":
+        return 0
+    return 0 if data["ready"] else 1
+
+
 def cmd_audit(args: argparse.Namespace) -> int:
     project = _project(args)
     with project.lock():
@@ -819,6 +852,25 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_list.add_argument("--json", action="store_true")
     evidence_list.set_defaults(func=cmd_evidence)
 
+    p = sub.add_parser("learn", help="stack-mastery dossier, local proof, and competency gate")
+    learn = p.add_subparsers(dest="learn_command", required=True)
+    learn_import = learn.add_parser("import", help="import a learning dossier JSON file")
+    learn_import.add_argument("file")
+    learn_import.add_argument("--replace", action="store_true")
+    learn_import.add_argument("--json", action="store_true")
+    learn_import.set_defaults(func=cmd_learn)
+    learn_proof = learn.add_parser("proof", help="run and record a local stack proof")
+    learn_proof.add_argument("--command", required=True)
+    learn_proof.add_argument("--timeout", type=int, default=120)
+    learn_proof.add_argument("--json", action="store_true")
+    learn_proof.set_defaults(func=cmd_learn)
+    learn_status = learn.add_parser("status", help="show learning readiness")
+    learn_status.add_argument("--json", action="store_true")
+    learn_status.set_defaults(func=cmd_learn)
+    learn_validate = learn.add_parser("validate", help="validate the dossier; exit 1 when not ready")
+    learn_validate.add_argument("--json", action="store_true")
+    learn_validate.set_defaults(func=cmd_learn)
+
     p = sub.add_parser("audit", help="source-anchored security audit ledger")
     audit = p.add_subparsers(dest="audit_command", required=True)
     audit_start_parser = audit.add_parser("start", help="create an audit ledger")
@@ -920,6 +972,7 @@ def main(argv: list[str] | None = None) -> int:
         MediationError,
         DiscoveryError,
         InspectionError,
+        LearningError,
         OSError,
         json.JSONDecodeError,
     ) as exc:

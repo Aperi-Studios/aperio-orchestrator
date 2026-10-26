@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "stack": {
+    "surface": "website",
+    "runtime": "Python 3.14",
+    "framework": "standard library",
+    "package_manager": "none",
+    "database": "none",
+    "hosting": "local",
+    "versions": {
+      "python": "3.14"
+    },
+    "constraints": [
+      "Replace every value in this example with the target project's real stack and versions."
+    ]
+  },
+  "sources": [
+    {
+      "title": "Python documentation",
+      "url": "https://docs.python.org/3/",
+      "kind": "official_docs",
+      "version": "3.14",
+      "accessed": "2026-10-26",
+      "official": true
+    }
+  ],
+  "skills": [],
+  "skill_gap": {
+    "needed": false,
+    "reason": "The standard library is sufficient for this example; record a real skill decision for a real project."
+  },
+  "mcps": [],
+  "teachback": {
+    "agent": "builder",
+    "summary": "Replace this with a specific explanation of the runtime, chosen modules, acceptance command, and unproven limits.",
+    "uncertainties": []
+  },
+  "competency": {
+    "agent": "builder",
+    "verdict": "demonstrated",
+    "evidence": "Replace this with the actual local proof command and its result.",
+    "recorded_at": "2026-10-26T00:00:00Z"
+  }
+}

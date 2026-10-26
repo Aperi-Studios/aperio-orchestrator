@@ -22,6 +22,51 @@ class CliTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def learning_dossier(self) -> dict:
+        return {
+            "schema": 1,
+            "stack": {
+                "surface": "website",
+                "runtime": "Python 3.14",
+                "framework": "standard library",
+                "package_manager": "none",
+                "database": "none",
+                "hosting": "local",
+                "versions": {"python": "3.14"},
+                "constraints": [],
+            },
+            "sources": [
+                {
+                    "title": "Python documentation",
+                    "url": "https://docs.python.org/3/",
+                    "kind": "official_docs",
+                    "version": "3.14",
+                    "accessed": "2026-10-26",
+                    "official": True,
+                }
+            ],
+            "skills": [],
+            "skill_gap": {"needed": False, "reason": "The standard library is sufficient for this CLI fixture."},
+            "mcps": [],
+            "proof": {
+                "command": "python3 -c \"print('proof')\"",
+                "exit_code": 0,
+                "output_sha256": "0" * 64,
+                "recorded_at": "2026-10-26T00:00:00Z",
+            },
+            "teachback": {
+                "agent": "agent",
+                "summary": "I can explain the Python runtime, the plan format, the acceptance check, and the limits of this fixture.",
+                "uncertainties": [],
+            },
+            "competency": {
+                "agent": "agent",
+                "verdict": "demonstrated",
+                "evidence": "The fixture's local proof command and acceptance check are recorded.",
+                "recorded_at": "2026-10-26T00:00:00Z",
+            },
+        }
+
     def cli(self, *args: str, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, "-m", "aperio", "--project", str(self.root), *args],
@@ -36,6 +81,12 @@ class CliTests(unittest.TestCase):
 
     def init(self) -> None:
         result = self.cli("init", str(self.root), "--name", "cli-test")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        dossier = self.root / "learning.json"
+        dossier.write_text(json.dumps(self.learning_dossier()), encoding="utf-8")
+        result = self.cli("learn", "import", str(dossier))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        result = self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def complete_discovery(self) -> None:
@@ -120,6 +171,22 @@ class CliTests(unittest.TestCase):
         self.assertIn("## Verification", result.stdout)
         self.assertIn("## Evidence files", result.stdout)
         self.assertIn("done", result.stdout)
+
+    def test_plan_without_learning_is_refused(self) -> None:
+        result = self.cli("init", str(self.root), "--name", "cli-test")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan = {
+            "title": "No learning",
+            "request": "No learning",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("learning dossier is required", result.stderr)
 
     def test_plan_without_discovery_is_refused(self) -> None:
         self.init()

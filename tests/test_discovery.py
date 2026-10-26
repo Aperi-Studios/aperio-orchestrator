@@ -24,6 +24,7 @@ from aperio.discovery import (
     summary,
     waive_question,
 )
+from aperio.learning import import_dossier, record_proof
 from aperio.runner import RunError
 from aperio.store import Project
 
@@ -37,9 +38,59 @@ class DiscoveryTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="aperio-discovery-")
         self.root = Path(self.temp.name) / "project"
         self.project = Project.init(self.root, name="discovery-test")
+        self.seed_learning()
 
     def tearDown(self) -> None:
         self.temp.cleanup()
+
+    def seed_learning(self) -> None:
+        data = {
+            "schema": 1,
+            "stack": {
+                "surface": "website",
+                "runtime": "Python 3.14",
+                "framework": "standard library",
+                "package_manager": "none",
+                "database": "none",
+                "hosting": "local",
+                "versions": {"python": "3.14"},
+                "constraints": [],
+            },
+            "sources": [
+                {
+                    "title": "Python documentation",
+                    "url": "https://docs.python.org/3/",
+                    "kind": "official_docs",
+                    "version": "3.14",
+                    "accessed": "2026-10-26",
+                    "official": True,
+                }
+            ],
+            "skills": [],
+            "skill_gap": {"needed": False, "reason": "The standard library is sufficient for this discovery fixture."},
+            "mcps": [],
+            "proof": {
+                "command": "python3 -c \"print('proof')\"",
+                "exit_code": 0,
+                "output_sha256": "0" * 64,
+                "recorded_at": "2026-10-26T00:00:00Z",
+            },
+            "teachback": {
+                "agent": "agent",
+                "summary": "I can explain the Python runtime, the plan format, the acceptance check, and the limits of this fixture.",
+                "uncertainties": [],
+            },
+            "competency": {
+                "agent": "agent",
+                "verdict": "demonstrated",
+                "evidence": "The fixture's local proof command and acceptance check are recorded.",
+                "recorded_at": "2026-10-26T00:00:00Z",
+            },
+        }
+        path = self.root / "learning-fixture.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        import_dossier(self.project, str(path))
+        record_proof(self.project, f'{sys.executable} -c "print(1)"')
 
     def complete(self) -> None:
         answers = [
