@@ -137,6 +137,7 @@ The shell limitation is real. A command can change a file before Aperio detects 
 - `docs/DISCOVERY.md`: discovery domains, first questionnaire, facet profiles, evidence model, and module gates.
 - `docs/ARCHITECTURE.md`: components, state layout, and safety boundaries.
 - `docs/AUDIT.md`: source-anchored security audit ledger, schema, and limits.
+- `docs/CMS-ROADMAP.md`: stack-neutral custom CMS architecture, deployment profiles, phases, and exit proof.
 - `docs/COORDINATION.md`: builder/auditor durable message channel, commands, and rules.
 - `docs/ROADMAP.md`: rebuild order.
 - `docs/STATUS.md`: what was measured, not what is claimed.

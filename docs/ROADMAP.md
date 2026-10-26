@@ -37,6 +37,10 @@ The order is deliberate. Do not build a large feature surface on an unproven loo
 
 ## M3: CMS and delivery slice
 
+See `docs/CMS-ROADMAP.md` for the stack-neutral design, deployment decision
+tree, phases, and exit proof. The framework is selected after discovery, not
+before.
+
 - Add a target-project adapter for one approved stack.
 - Build one public section and its admin controls together.
 - Prove edit, save, publish, permission denial, and rollback.
