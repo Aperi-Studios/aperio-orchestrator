@@ -53,6 +53,7 @@ aperio audit report
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..."
 aperio discover status
+aperio security scan
 aperio dashboard
 aperio learn import examples/learning-dossier.json
 aperio learn proof --command "python3 -V"
@@ -108,6 +109,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Owner-visible todo ledger with ordered, minimal tasks; `plan` refuses an empty todo list, and the next task cannot start until the previous task is accepted with evidence.
 - Readiness record for pre-flight, deployment, after-sales, design, and security facts; `aperio readiness validate` refuses gaps and high/critical unresolved risk.
 - Project-scoped skill creation: `aperio skill create` writes a validated scaffold under `.aperio/skills/` and refuses to overwrite a foreign skill.
+- Bounded local secret scan: `aperio security scan` flags high-confidence tokens, private keys, sensitive filenames, and assigned secrets; it does not replace a dependency or history scanner.
 - Generated read-only status dashboard: `aperio dashboard` writes self-contained HTML from the state files with no scripts or network.
 - Manifest-driven toolchain installation: `aperio tool import` validates source, version, license, permissions, risk flags, cost, install argv, and verify argv; risky tools require exact owner confirmation.
 - Non-overridable `.git` and `.aperio` protection, plus a read-only `kind: read` step that fails on any project change.

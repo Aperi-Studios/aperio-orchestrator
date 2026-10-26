@@ -93,6 +93,8 @@ from .runner import (
     rollback,
     verify,
 )
+from .security import format_findings as format_security
+from .security import scan as security_scan
 from .skillgen import SkillError, list_skills
 from .skillgen import create as skill_create
 from .skillgen import validate as skill_validate
@@ -806,6 +808,16 @@ def cmd_skill(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_security(args: argparse.Namespace) -> int:
+    project = _project(args)
+    findings = security_scan(project, include_tests=args.include_tests)
+    if args.json:
+        print(json.dumps({"findings": findings, "count": len(findings)}, indent=2, sort_keys=True))
+    else:
+        print(format_security(findings))
+    return 1 if any(item["severity"] in {"high", "critical"} for item in findings) else 0
+
+
 def cmd_dashboard(args: argparse.Namespace) -> int:
     project = _project(args)
     path = write_dashboard(project, args.output)
@@ -1171,6 +1183,13 @@ def build_parser() -> argparse.ArgumentParser:
     skill_validate_parser.add_argument("name")
     skill_validate_parser.add_argument("--json", action="store_true")
     skill_validate_parser.set_defaults(func=cmd_skill)
+
+    p = sub.add_parser("security", help="bounded local secret scan")
+    security = p.add_subparsers(dest="security_command", required=True)
+    security_scan_parser = security.add_parser("scan", help="scan project files for obvious secrets")
+    security_scan_parser.add_argument("--json", action="store_true")
+    security_scan_parser.add_argument("--include-tests", action="store_true")
+    security_scan_parser.set_defaults(func=cmd_security)
 
     p = sub.add_parser("dashboard", help="write a self-contained status dashboard")
     p.add_argument("--output", default="")

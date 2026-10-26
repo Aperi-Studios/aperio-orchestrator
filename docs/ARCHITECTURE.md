@@ -14,6 +14,7 @@ src/aperio/
   policy.py     allowed paths, protected paths, review separation
   dashboard.py  generated read-only status page from project state
   sandbox.py    optional OS isolation for shell and read steps
+  security.py   bounded local secret scan
   adapter.py    disposable-workspace host dispatch and change validation
   drift.py       deterministic documentation link and path checks
   discovery.py  persistent numbered discovery questions and readiness
