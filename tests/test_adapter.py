@@ -150,16 +150,19 @@ class AdapterTests(unittest.TestCase):
             command = _command_for(host, "/bin/host", "prompt", step)
             self.assertEqual(command[0], "/bin/host")
             self.assertIn("prompt", command)
-        # kilocode: --auto is a global flag and must precede the run subcommand.
+        # kilocode: --auto is a command-level option of `kilo run` (its own help,
+        # no GLOBAL section). Live-verified 2026-10-26 on kilo 7.8.15:
+        #   kilo run --auto "<prompt>" -> exit 0, session completed
+        #   kilo --auto run "<prompt>" -> exit 1 instantly (usage dump)
         self.assertEqual(
             _command_for("kilocode", "/bin/host", "prompt", step),
-            ["/bin/host", "--auto", "run", "prompt"],
+            ["/bin/host", "run", "--auto", "prompt"],
         )
         with mock.patch.dict(os.environ, {"APERIO_MODEL_KILOCODE": "kilocode/test-model"}):
             with_model = _command_for("kilocode", "/bin/host", "prompt", step)
         self.assertEqual(
             with_model,
-            ["/bin/host", "--auto", "run", "--model", "kilocode/test-model", "prompt"],
+            ["/bin/host", "run", "--auto", "--model", "kilocode/test-model", "prompt"],
         )
         self.assertIn("--auto-approve", _command_for("cline", "/bin/host", "prompt", step))
         self.assertIn("--provider", _command_for("cline", "/bin/host", "prompt", step))

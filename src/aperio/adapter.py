@@ -154,7 +154,7 @@ def _command_for(host: str, binary: str, prompt: str, step: Step) -> list[str]:
             command.extend(["--model", model])
         return command + [prompt]
     if host == "kilocode":
-        command = [binary, "--auto", "run"]
+        command = [binary, "run", "--auto"]
         if model:
             command.extend(["--model", model])
         return command + [prompt]
