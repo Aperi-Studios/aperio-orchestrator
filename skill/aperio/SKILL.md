@@ -11,6 +11,8 @@ independent review.
 
 ## Commands
 
+Before running these, check `type aperio`. If it is a shell function, use `command aperio` or `$HOME/.local/bin/aperio`; a shell wrapper must not shadow the installed CLI.
+
 ```
 aperio init . --name "Project name"
 aperio ask "What the owner wants" --source owner
