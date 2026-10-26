@@ -130,7 +130,7 @@ restore_update() {
   exit "$status"
 }
 if [ "$UPDATE" -eq 1 ] && [ -f "$LIB/$MARKER" ]; then
-  BACKUP="$LIB.backup.$(date -u +%Y%m%dT%H%M%SZ).$$"
+  BACKUP="$LIB.backup.$(date -u +%Y%m%dT%H%M%SZ).$$.$RANDOM"
   run cp -R "$LIB" "$BACKUP"
   if [ "$DRY_RUN" -eq 0 ]; then
     # keep the 5 newest backups (incl. the just-created one, which is excluded
