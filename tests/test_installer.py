@@ -164,6 +164,24 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(probe.is_file())
         self.assertFalse(backups[0].exists())
 
+    def test_update_prunes_old_backups_keeping_five(self) -> None:
+        install = self.run_install()
+        self.assertEqual(install.returncode, 0, install.stderr)
+        for _ in range(7):
+            update = self.run_install("--update")
+            self.assertEqual(update.returncode, 0, update.stderr)
+        backups = list((self.prefix / "share").glob("aperio.backup.*"))
+        self.assertEqual(len(backups), 5)
+        # a pruned-down backup set is still a working rollback target
+        probe = self.prefix / "share" / "aperio" / "aperio" / "UPDATE_PROBE"
+        probe.write_text("old\n", encoding="utf-8")
+        update = self.run_install("--update")
+        self.assertEqual(update.returncode, 0, update.stderr)
+        self.assertFalse(probe.exists())
+        rollback = self.run_install("--rollback")
+        self.assertEqual(rollback.returncode, 0, rollback.stderr)
+        self.assertTrue(probe.is_file())
+
     def test_rollback_without_backup_is_refused(self) -> None:
         result = self.run_install("--rollback")
         self.assertEqual(result.returncode, 2)

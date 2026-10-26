@@ -132,6 +132,15 @@ restore_update() {
 if [ "$UPDATE" -eq 1 ] && [ -f "$LIB/$MARKER" ]; then
   BACKUP="$LIB.backup.$(date -u +%Y%m%dT%H%M%SZ).$$"
   run cp -R "$LIB" "$BACKUP"
+  if [ "$DRY_RUN" -eq 0 ]; then
+    # keep the 5 newest backups (incl. the just-created one, which is excluded
+    # from the candidate list); --rollback restores the newest one
+    find "$PREFIX/share" -maxdepth 1 -type d -name 'aperio.backup.*' \
+      ! -path "$BACKUP" -print 2>/dev/null \
+      | sort -r | tail -n +5 | while IFS= read -r old_backup; do
+          rm -rf "$old_backup"
+        done
+  fi
   trap restore_update ERR
 fi
 
