@@ -60,6 +60,13 @@ before.
 
 **Status:** Bash installer verified; PowerShell install, launcher version, and uninstall verified under `pwsh` 7.6.7 on macOS. Update/recovery are implemented and tested on macOS; native Windows execution is not tested.
 
+## H: Audit-derived hardening (planned)
+
+The ZCode audit backlog is recorded in `docs/PRD.md` Appendix A. Implement the
+P1 items in this order: non-overridable protected paths, read-only step kind,
+versioned state, event-sourced recovery/checkpoints, then optional OS sandbox.
+P2 interop and observability items wait until those are verified.
+
 ## M5: Public beta
 
 - Privacy scan of the worktree, tracked files, history, branches, and artifacts.

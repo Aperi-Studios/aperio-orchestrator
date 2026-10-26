@@ -97,7 +97,7 @@
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.
-- The project lock is best-effort and a no-op where `fcntl` is unavailable.
+- The project lock is best-effort. POSIX uses `fcntl`; Windows uses an `msvcrt` byte-lock fallback that is implemented but unverified natively.
 - Host detection reports presence and version, not authentication or model access.
 - The demo site is a build fixture, not a design or CMS proof.
 

@@ -829,3 +829,58 @@ The north-star question for every agent is:
 > Does the delivered behavior in the intended repository satisfy what the owner actually asked for, and can another party reproduce the proof?
 
 If the answer is no or unknown, Aperio is not done.
+
+---
+
+## Appendix A. ZCode audit-derived backlog (2026-10-26)
+
+Source: external ZCode audit dated 2026-10-26 (archived outside the
+repository; it is a historical snapshot, not a repository document). The
+report is a snapshot: its `158` test count predates the current tree, and its
+per-module table lists 15 inspection tests where the tree has 14. The findings
+below were re-checked against code and commands.
+
+Status vocabulary: **Planned** means recorded, not implemented. An item moves to
+**Implemented** only when code exists, and to **Verified** only when a
+reproducible test or command proves it. Listing an item here is not a claim.
+
+### A.1 Findings and dispositions
+
+| ID | Finding | Disposition | Evidence |
+|---|---|---|---|
+| Z-D1 | Directory-form step writes rejected files created by the step | **Verified fixed** | `27dcfb7`; `test_directory_write_accepts_files_created_by_a_run` |
+| Z-D2 | `review --host` help advertised unsupported adapters | **Verified fixed** | `890eff6`; `test_review_help_lists_only_supported_hosts` |
+| Z-D3 | Six stale documentation statements | **Verified fixed** | `0394f84`; `docs/STATUS.md`, `docs/TESTING.md` |
+| Z-D4a | Evidence name filter missed `env` and `.env2` | **Verified fixed** | `src/aperio/evidence.py`; expanded refusal test |
+| Z-D4b | Mesh `read(mark_read=True)` re-selected after commit | **Verified fixed** | `src/aperio/mesh.py`; `test_send_read_ack_and_reply` |
+| Z-D4c | Windows lock was a silent no-op | **Implemented; native Windows unverified** | `src/aperio/store.py` msvcrt fallback; no Windows runner |
+| Z-D4d | Audit status reset after mutation | **Accepted intentional** | `src/aperio/audit.py`; regression test |
+| Z-D4e | Codex hard-coded macOS path fallback | **Accepted; PATH checked first** | `src/aperio/hosts.py`; documented |
+
+### A.2 Suggestions and acceptance criteria
+
+Priority is implementation order, not severity. No suggestion below is
+implemented merely by appearing in this table.
+
+| ID | Suggestion | Priority | Acceptance proof |
+|---|---|---|---|
+| Z-01 | Optional OS sandbox for `run`/`host` steps using `sandbox-exec` or `bubblewrap` when available, with an honest detect-only fallback | P1 | sandboxed and fallback tests; evidence shows whether isolation was active |
+| Z-02 | Make `.git` and `.aperio` non-overridable protected paths, independent of project policy | P1 | plan/run attempts through those paths fail even if policy omits them |
+| Z-03 | Add a read-only step kind for exploration and audit work | P1 | schema, runner, and policy tests prove the step cannot write |
+| Z-04 | Add `type` and `version` to every mutable `.aperio` JSON document | P1 | migration/refusal tests; old and new documents read predictably |
+| Z-05 | Make `events.jsonl` the recovery journal and add step checkpoints | P1 | crash/restart test reconstructs the queue or resumes safely |
+| Z-06 | Optional MCP server facade with approval elicitation | P2 | tool-list and approval integration test against an MCP client |
+| Z-07 | Emit OTel GenAI-named trace data from run events | P2 | trace shape test; no new runtime dependency required |
+| Z-08 | Add monotonic evidence versions alongside SHA-256 | P2 | append-only evidence-chain test; tamper detection demonstrated |
+| Z-09 | Add a project constitution checked during plan validation | P2 | a plan violating an invariant is refused before approval |
+| Z-10 | Add `depends_on` so independent plan steps can run in waves | P2 | deterministic ordering and conflict tests; serial fallback remains |
+| Z-11 | Add stall detection that forces replanning after repeated failures | P2 | repeated-failure test produces a replan request, not an endless retry |
+| Z-12 | Add replay-based evaluation and an OWASP Agentic Top 10 gap analysis | P2 | recorded task evidence replays in CI; dated gap report |
+| Z-13 | Add per-role handoff context filters and read target repository agent instructions during inspection | P2 | builder/reviewer briefs differ by role; inspection records the file |
+
+### A.3 Execution rule
+
+Implement P1 items in the order Z-02, Z-03, Z-04, Z-05, Z-01. Do not start P2
+interop or observability work before the P1 control-plane items are verified.
+Each item gets a negative test and a `docs/STATUS.md` row. Owner approval is
+still required for deployment, paid hosts, credentials, and public release.
