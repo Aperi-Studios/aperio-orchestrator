@@ -224,6 +224,8 @@ Record every substantive owner instruction, amendment, constraint, rejection, an
 
 Ask one question at a time and branch on the answer. The first branch distinguishes new build, redesign, migration, repair, audit, or another task. Collect purpose, audience, features, content, stack, CMS, auth, data, integrations, hosting, budget, localization, accessibility, SEO, maintenance, and deployment constraints. Do not use a form when a conversation is enough.
 
+The question model, twelve domains, evidence levels, and scenario gates are specified in [Discovery and Evidence Intake](DISCOVERY.md).
+
 **Acceptance:** every required answer is answered or explicitly marked `N/A` or `Assumed` with a reason; placeholders fail.
 
 ### FR-05: Research-first Gate 0 (P1)

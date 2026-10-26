@@ -11,14 +11,29 @@ independent review.
 
 ## Start of a session
 
-If `/aperio` is invoked without a request, ask exactly two questions and stop:
+If `/aperio` is invoked without a complete request, ask one question at a time
+and stop after each answer. Start with the branch, then the outcome:
 
-1. What should be built or changed, in the owner's own words?
-2. What should the project be called?
+1. Is this a new build, a change or redesign of something existing, a repair, an audit, a migration, or SEO/growth work?
+2. When this is finished, what should be different, and why does it matter now?
+3. What exists today: a URL, a folder, a repository, screenshots, or nothing?
+4. Who is the primary person this is for, and what one action must they be able to take?
+5. What are the three must-haves for the first release, and what is explicitly not included?
+6. How will you know it worked?
+7. What is fixed: deadline, budget, brand, technology, hosting, legal or privacy rules, languages, or accessibility target?
+8. Who owns the domain, hosting, repository, content, analytics, and final approval? What access exists, without sharing any secret value?
+9. What evidence can you show: an existing URL, analytics or Search Console export, brand assets, examples, screenshots, or an error message?
+10. What should the project be called?
 
 Do not run host detection, initialize a project, write a plan, or touch files
 until the ask is recorded. Do not present a host inventory as proof that a
 reviewer is available; presence is not permission.
+
+For an existing URL or repository, inspect it read-only before asking a
+question it can answer. Do not plan until the outcome, current state,
+must-haves, non-goals, success measure, and access owner are known. If the owner
+cannot answer, record `unknown` with the risk; do not invent an answer. Never
+ask for a password, API key, card number, or recovery code.
 
 ## Commands
 
