@@ -58,7 +58,6 @@ aperio learn proof --command "python3 -V"
 aperio learn validate
 aperio todo add "Initialize the project" --deliverable "A working initialization" --acceptance "The initialization command exits 0"
 aperio todo start <todo-id>
-aperio todo accept <todo-id> --by owner --evidence "command exit 0" --confirm "I accept this task"
 aperio readiness import readiness.json
 aperio readiness validate
 aperio skill create custom-stack --purpose "..." --trigger "When the custom stack is used"
@@ -69,6 +68,7 @@ aperio run <task-id> --actor builder
 aperio verify <task-id>
 aperio review <task-id> --host claude
 aperio done <task-id>
+aperio todo accept <todo-id> --by owner --evidence "command exit 0" --confirm "I accept this task"
 aperio handoff <task-id> --print
 aperio drift
 aperio message send --from builder --to reviewer --body "please review" --task <task-id>
