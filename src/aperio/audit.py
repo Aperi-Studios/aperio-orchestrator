@@ -550,6 +550,8 @@ def verify_finding(
         if isinstance(finding, dict) and finding.get("id") == finding_id:
             if finding.get("status") != "confirmed":
                 raise AuditError("only a confirmed finding can be independently verified")
+            if isinstance(finding.get("verification"), dict):
+                raise AuditError("finding already has a verification verdict; start a new audit to re-verify")
             finding["verification"] = {
                 "by": by,
                 "verdict": verdict,

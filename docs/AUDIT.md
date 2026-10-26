@@ -79,7 +79,8 @@ contains a half-imported set. Unknown fields are rejected rather than ignored.
 - A **confirmed** finding must also be independently verified with
   `audit verify --verdict confirmed|refuted|not_reproduced` and concrete
   evidence. A confirmed finding with no verification, or a refuted verdict,
-  keeps the report incomplete.
+  keeps the report incomplete. A verification verdict is immutable; start a new
+  audit rather than overwriting it.
 - **needs_validation** must not have a severity. State the missing fact.
 - **rejected** must not have a severity.
 - Every finding must reference an existing coverage unit.

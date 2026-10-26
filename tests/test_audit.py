@@ -326,6 +326,14 @@ class AuditTests(unittest.TestCase):
             verdict="confirmed",
             evidence="Re-ran the source check and reproduced the issue.",
         )
+        with self.assertRaisesRegex(AuditError, "already has a verification"):
+            verify_finding(
+                self.project,
+                finding["id"],
+                by="second-reviewer",
+                verdict="refuted",
+                evidence="A second verdict must not overwrite the first.",
+            )
         for unit in load(self.project, result["audit_id"])[2]["units"]:
             set_unit(self.project, unit_id=unit["id"], status="checked")
         report_result = report(self.project, result["audit_id"])

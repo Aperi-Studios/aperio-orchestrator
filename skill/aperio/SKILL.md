@@ -300,7 +300,8 @@ Rules:
   exploitability from a suspicious string.
 - A **confirmed** finding must also be independently verified with
   `aperio audit verify`; without a `confirmed` verdict it is unverified, and a
-  `refuted` or `not_reproduced` verdict keeps the report incomplete.
+  `refuted` or `not_reproduced` verdict keeps the report incomplete. A verdict
+  is immutable; start a new audit to re-verify.
 - A **needs_validation** finding has no severity. State the missing fact.
 - A **rejected** finding keeps the reason it was rejected.
 - This command never runs target code. If proving a finding requires execution,
