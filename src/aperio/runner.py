@@ -179,6 +179,24 @@ def _hash_project(project: Project) -> dict[str, str]:
     return _current_hashes(project)
 
 
+def _write_checkpoint(
+    run_dir: Path, evidence: dict[str, Any], *, status: str, step_id: str | None
+) -> None:
+    """Write a small crash checkpoint outside the control-state hash."""
+    checkpoint = {
+        "schema": 1,
+        "run_id": evidence.get("run_id"),
+        "status": status,
+        "step_id": step_id,
+        "steps_recorded": len(evidence.get("steps", [])),
+        "at": utc_now(),
+    }
+    replace_text_atomic(
+        run_dir / "checkpoint.json",
+        json.dumps(checkpoint, indent=2, sort_keys=True) + "\n",
+    )
+
+
 def _hash_control_state(project: Project) -> dict[str, str]:
     """Hash the files that define the approved plan and evidence."""
     paths: list[Path] = [
@@ -379,11 +397,13 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
         "limits": "Shell steps are not OS-sandboxed. Writes outside the plan are detected after they happen.",
     }
     project.append_event("run.started", {"run_id": run_id, "task_id": plan.task_id, "actor": actor})
+    _write_checkpoint(run_dir, evidence, status="started", step_id=None)
     control_before = _hash_control_state(project)
 
     failed = False
     try:
         for step in plan.steps:
+            _write_checkpoint(run_dir, evidence, status="step-started", step_id=step.id)
             if step.kind == "write":
                 rel = assert_writable(step.path or "", plan)
                 target = project.resolve_project_path(rel, create_parents=True)
@@ -494,6 +514,7 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     evidence["status"] = "failed" if failed else "applied"
     evidence["finished_at"] = utc_now()
+    _write_checkpoint(run_dir, evidence, status=evidence["status"], step_id=None)
     evidence_path = project.save_evidence(plan.task_id, run_id, evidence)
     (run_dir / "manifest.json").write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     task = project.get_task(plan.task_id)

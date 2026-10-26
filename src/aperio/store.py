@@ -73,6 +73,7 @@ class Project:
             project.state / "queue.json",
             {"schema": SCHEMA_VERSION, "tasks": [], "updated_at": utc_now()},
         )
+        project.append_event("queue.saved", {"tasks": []})
         (project.state / "asks.jsonl").touch()
         (project.state / "events.jsonl").touch()
         project.append_event("project.initialized", {"name": name or root_path.name})
@@ -256,14 +257,51 @@ class Project:
         return [Task.from_dict(row) for row in data.get("tasks", [])]
 
     def save_tasks(self, tasks: list[Task]) -> None:
+        snapshot = [task.to_dict() for task in tasks]
         self._write_json(
             self.state / "queue.json",
             {
                 "schema": SCHEMA_VERSION,
-                "tasks": [task.to_dict() for task in tasks],
+                "tasks": snapshot,
                 "updated_at": utc_now(),
             },
         )
+        self.append_event("queue.saved", {"tasks": snapshot})
+
+    def recover_queue(self) -> list[Task] | None:
+        """Restore a missing or corrupt queue from the append-only event journal.
+
+        A queue written by a newer build is refused, not downgraded. This repairs
+        the queue document only; it does not invent tasks that were never saved.
+        """
+        path = self.state / "queue.json"
+        try:
+            if path.is_file():
+                data = self._read_state_json(path)
+                return [Task.from_dict(row) for row in data.get("tasks", [])]
+        except StoreError as exc:
+            if "unsupported state schema" in str(exc):
+                raise
+        snapshot: list[dict[str, Any]] | None = None
+        for row in self._read_jsonl(self.state / "events.jsonl"):
+            if row.get("event") != "queue.saved":
+                continue
+            candidate = row.get("data", {}).get("tasks")
+            if isinstance(candidate, list) and all(isinstance(item, dict) for item in candidate):
+                snapshot = candidate
+        if snapshot is None:
+            return None
+        self._write_json(
+            path,
+            {
+                "schema": SCHEMA_VERSION,
+                "tasks": snapshot,
+                "updated_at": utc_now(),
+                "recovered_at": utc_now(),
+            },
+        )
+        self.append_event("queue.recovered", {"tasks": len(snapshot)})
+        return [Task.from_dict(row) for row in snapshot]
 
     def get_task(self, task_id: str) -> Task:
         for task in self.tasks():

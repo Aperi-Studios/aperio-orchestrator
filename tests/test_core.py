@@ -97,6 +97,36 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(result["schema"], 1)
         self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["schema"], 1)
 
+    def test_queue_recovers_from_event_journal(self) -> None:
+        task = Task(id="task-recover", title="Recover me", request="Keep this task")
+        self.project.put_task(task)
+        (self.project.state / "queue.json").unlink()
+        recovered = self.project.recover_queue()
+        assert recovered is not None
+        self.assertEqual([item.id for item in recovered], ["task-recover"])
+        self.assertTrue((self.project.state / "queue.json").is_file())
+
+    def test_queue_recovery_refuses_future_schema(self) -> None:
+        queue = self.project.state / "queue.json"
+        data = json.loads(queue.read_text(encoding="utf-8"))
+        data["schema"] = 999
+        queue.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaises(StoreError):
+            self.project.recover_queue()
+
+    def test_run_writes_a_step_checkpoint(self) -> None:
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="write", kind="write", path="site/a.txt", content="a")],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        checkpoint = self.project.state / "runs" / result["run_id"] / "checkpoint.json"
+        self.assertTrue(checkpoint.is_file())
+        payload = json.loads(checkpoint.read_text(encoding="utf-8"))
+        self.assertEqual(payload["schema"], 1)
+        self.assertEqual(payload["status"], "applied")
+
     def test_ask_is_append_only(self) -> None:
         first = self.project.add_ask("Build a page")
         second = self.project.add_ask("Add a CMS field")

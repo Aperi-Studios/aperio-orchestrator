@@ -773,7 +773,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **39 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | **42 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | **17 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
@@ -789,7 +789,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
 | Installer tests | **23 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **203 passed** | same command |
+| Total test suite | **206 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -1046,8 +1046,10 @@ implemented merely by appearing in this table.
 
 Implement P1 items in the order Z-02, Z-03, Z-04, Z-05, Z-01. Z-02
 (non-overridable protected paths), Z-03 (read-only steps), and Z-04 (versioned
-state) are verified; Z-05 is the next control-plane item. Do not start P2 interop
-or observability work before the P1 control-plane items are verified.
+state) are verified. Z-05 has queue recovery from the event journal and run
+checkpoints; automatic in-place step resume is not implemented. Z-01 is last.
+Do not start P2 interop or observability work before the P1 control-plane items
+are verified.
 Each item gets a negative test and a `docs/STATUS.md` row. Owner approval is
 still required for deployment, paid hosts, credentials, and public release.
 

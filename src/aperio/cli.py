@@ -490,6 +490,17 @@ def cmd_hosts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_recover(args: argparse.Namespace) -> int:
+    project = Project.open(args.root)
+    tasks = project.recover_queue()
+    if tasks is None:
+        print("no saved queue snapshot in the event journal; nothing changed", file=sys.stderr)
+        return 2
+    for task in tasks:
+        print(f"{task.id}\t{task.status}\t{task.title}")
+    return 0
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     project = _project(args)
     checks: list[tuple[str, bool, str]] = [
@@ -947,6 +958,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("doctor", help="check the project state")
     p.set_defaults(func=cmd_doctor)
+
+    p = sub.add_parser("recover", help="restore a missing or corrupt queue from the event journal")
+    p.add_argument("root", nargs="?", default=".")
+    p.set_defaults(func=cmd_recover)
 
     p = sub.add_parser("drift", help="check docs for links and paths that do not exist")
     p.add_argument("--json", action="store_true")
