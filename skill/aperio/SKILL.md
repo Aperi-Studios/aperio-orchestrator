@@ -15,6 +15,21 @@ Ask one question at a time. Give numbered choices whenever the answer can be
 enumerated. Always include a **not sure — research and recommend** choice and an
 **other** choice. Use multi-select when more than one answer can apply.
 
+Open with this, in one or two sentences:
+
+> I will ask about 8 to 10 short questions, one at a time. Answer with a
+> number, several numbers, “not sure”, or “other”. I will inspect anything that
+> already exists before asking you to repeat it.
+
+Before each question, show a small progress line, for example:
+
+```text
+Discovery 2 of 8 · users
+```
+
+After each answer, show what you recorded and what comes next. Do not dump the
+whole questionnaire.
+
 Start with the outcome:
 
 1. Which outcome matters most? Choose one or more:
@@ -110,6 +125,44 @@ question it can answer. Do not plan until the outcome, current state,
 must-haves, non-goals, success measure, and access owner are known. If the owner
 cannot answer, record `unknown` with the risk; do not invent an answer. Never
 ask for a password, API key, card number, or recovery code.
+
+### End of the interview
+
+Show a compact summary:
+
+```text
+Outcome: ...
+Current state: ...
+Labels: ...
+Primary user and action: ...
+Must-haves / not included: ...
+Success measure: ...
+Fixed constraints: ...
+Owner and access: ...
+Evidence: ...
+Unknowns and risks: ...
+```
+
+Then ask:
+
+```text
+Is this correct?
+
+1. Yes — write the plan
+2. Change something
+3. Stop for now
+```
+
+Do not write the plan until the owner chooses 1 or explicitly accepts a named
+risk. A deferred answer stays visible as an open risk; it is not silently
+treated as answered.
+
+### When the owner says “you decide”
+
+Give two or three concrete options, explain the trade-offs, recommend one, and
+ask the owner to accept it. Record it as a delegated decision with the owner’s
+name and the reason. Do not silently choose and do not present a recommendation
+as an owner requirement.
 
 ### When the owner does not know
 

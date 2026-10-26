@@ -217,7 +217,12 @@ Rules:
 - allow multiple selections when appropriate;
 - always include **not sure — research and recommend** and **other**;
 - keep the menu short; put examples in one sentence, not a paragraph;
-- reflect the choice back before moving to the next question.
+- show a progress line such as `Discovery 2 of 8 · users`;
+- after each answer, show what was recorded and what comes next;
+- reflect the choice back before moving to the next question;
+- do not dump the whole questionnaire at once;
+- end with a compact summary and ask **1. Yes — write the plan, 2. Change something, 3. Stop for now**;
+- do not write the plan until the owner chooses 1 or accepts a named risk.
 
 If the owner chooses “not sure”:
 
