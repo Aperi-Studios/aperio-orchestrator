@@ -184,6 +184,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("acceptance", result.stderr)
 
+    def test_review_help_lists_only_supported_hosts(self) -> None:
+        # D2: the help text used to advertise adapters that _review_command
+        # rejects at runtime.
+        result = self.cli("review", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        help_text = " ".join(result.stdout.split())
+        self.assertIn("claude, codex, dsh, goose", help_text)
+        self.assertNotIn("opencode", help_text)
+
     def test_hosts_command_is_read_only(self) -> None:
         self.init()
         result = self.cli("hosts")
