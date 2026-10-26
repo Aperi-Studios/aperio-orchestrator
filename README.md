@@ -70,6 +70,7 @@ aperio review <task-id> --host claude
 aperio done <task-id>
 aperio todo accept <todo-id> --by owner --evidence "command exit 0" --confirm "I accept this task"
 aperio handoff <task-id> --print
+aperio recover
 aperio drift
 aperio message send --from builder --to reviewer --body "please review" --task <task-id>
 aperio mediate <task-id>

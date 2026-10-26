@@ -41,15 +41,15 @@ A project initializes `.aperio/`:
 .aperio/
   project.json      schema, id, name, policy
   asks.jsonl        append-only owner asks
-  queue.json        tasks and statuses
-  events.jsonl      append-only events
+  queue.json        tasks and statuses; restored by `aperio recover` from the event journal
+  events.jsonl      append-only events, including `queue.saved` snapshots
   plans/<id>.json   approved or draft plans
   learning.json     stack dossier, proof, teach-back, and competency record
   todo.json         ordered tasks, statuses, acceptance evidence, and approvals
   readiness.json    pre-flight, deploy, after-sales, design, and security records
   skills/           project-scoped generated skills and registry
   evidence/<task>/  run, verification, and review records
-  runs/<id>/        run manifest
+  runs/<id>/        run manifest and crash checkpoint
   dispatch/<id>/    disposable host workspace and host evidence
   reviews/<id>/     brief-only host review workspace
   mesh/             local message store (SQLite)
