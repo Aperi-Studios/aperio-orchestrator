@@ -85,8 +85,9 @@
 
 ## Known limits
 
-- Seven external Codex passes and one Claude audit found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 74-test suite is not a whole-repository audit. Claude's F1, F3, F4, and F5 are fixed; F2 (reviewer identity is a label) remains documented, not solved. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 124-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
+- URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
 - Snapshot limits are 5,000 files and 50 MB.
 - The project lock is best-effort and a no-op where `fcntl` is unavailable.
