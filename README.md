@@ -53,6 +53,9 @@ aperio audit report
 aperio discover next
 aperio discover answer <question-id> --choice 1,3 --text "..."
 aperio discover status
+aperio learn import examples/learning-dossier.json
+aperio learn proof --command "python3 -V"
+aperio learn validate
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
 aperio run <task-id> --actor builder
@@ -65,7 +68,7 @@ aperio message send --from builder --to reviewer --body "please review" --task <
 aperio mediate <task-id>
 ```
 
-A plan is JSON. It declares allowed paths, exact write steps, bounded run steps, host steps, and acceptance checks. A host step is shown in `examples/host-plan.json`.
+A plan is JSON. Before `plan`, `approve`, or `run`, Aperio requires a ready learning dossier: stack and versions, official sources, skill/MCP decisions, a real local proof recorded by `aperio learn proof`, a teach-back, and a competency record. `aperio learn import` exits 1 until the proof is recorded. A plan is shown below; a host step is shown in `examples/host-plan.json`.
 
 ```json
 {
@@ -89,6 +92,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 ## What works now
 
 - Project initialization and append-only owner asks.
+- Mandatory learning dossier with stack/version, official-source, skill/MCP, local-proof, teach-back, and competency validation; `plan`, `approve`, and `run` refuse until it is ready.
 - Plan creation, explicit approval, bounded writes, and shell steps with timeouts.
 - Host dispatch through a disposable project copy for the Claude, Codex, dsh, Goose, OpenCode, KiloCode, Cline, and agy adapters. Claude and Codex are proven on current code. dsh and Goose command paths are tested, but their live runs are blocked by a missing credential and an HTTP 500 bridge, respectively. The OpenCode, KiloCode, Cline, and agy command shapes are tested with a fake binary; live runs are not yet proven.
 - Fresh-context host review. `aperio review <task> --host claude` gets only the plan, changed files, acceptance results, and evidence, with no builder conversation. Real Claude reviewers confirmed verified work on current code; earlier Codex review evidence is historical.
@@ -121,7 +125,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 
 Aperio is deliberately conservative:
 
-- no run without an approved plan;
+- no plan, approval, or run without a ready learning dossier and a recorded local proof;
 - writes must stay inside the plan's allowed paths;
 - protected paths such as `.git` and `.aperio` are refused;
 - symlink components and parent traversal are refused;
