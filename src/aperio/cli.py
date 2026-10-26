@@ -65,6 +65,8 @@ from .model import (
     plan_body_digest,
 )
 from .policy import PolicyError
+from .repo import facts as repo_facts
+from .repo import format_facts as format_git
 from .runner import RunError, apply_plan, finish, review, rollback, verify
 from .store import Project, StoreError
 
@@ -318,6 +320,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         return 0
     tasks = project.tasks()
     audit = _audit_status_safe(project)
+    repository = repo_facts(project)
     if args.json:
         discovery = project.discovery()
         progress = discovery_status(project) if discovery is not None else None
@@ -326,6 +329,7 @@ def cmd_status(args: argparse.Namespace) -> int:
                 {
                     "project": str(project.root),
                     "state": str(project.state),
+                    "git": repository,
                     "discovery": progress,
                     "audit": audit,
                     "tasks": [task.to_dict() for task in tasks],
@@ -337,6 +341,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     else:
         print(f"Project: {project.root}")
         print(f"State:   {project.state}")
+        print(f"Git:     {format_git(repository)}")
         discovery = project.discovery()
         if discovery is not None:
             progress = discovery_status(project)

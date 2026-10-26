@@ -18,9 +18,10 @@
 | Inspection tests | 15 passed | same command; `tests/test_inspect.py` |
 | Evidence tests | 6 passed | same command; `tests/test_evidence.py` |
 | Audit tests | 14 passed | same command; `tests/test_audit.py` |
+| Repo tests | 3 passed | same command; `tests/test_repo.py` |
 | Installer tests | 13 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, and uninstall pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
-| Total test suite | 142 passed | same command |
+| Total test suite | 145 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -66,6 +67,7 @@
 | Fresh-context host review | real Claude reviewer saw only the brief, changed files, acceptance, and evidence; verdict confirmed | review `review-973d3a5fb8` in the temporary goldfish project |
 | Self-review refusal | a host cannot review its own build | `tests/test_adapter.py::test_host_cannot_review_its_own_build` |
 | Documentation drift | Docs links and inline paths resolve; repo check clean | `aperio drift`; `tests/test_drift.py` |
+| Git facts | branch, short commit, dirty state, changed count, and credential-stripped origin are read-only and shown in status/handoff | `tests/test_repo.py`; `aperio status` |
 | Local message store | send, read, reply, ack, filters, restart persistence; real Claude and Codex processes each used it | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
 | Mediator disposition | records CONFIRMED, REFUTED, or BLOCKED from the current task state and latest evidence | `tests/test_mediator.py`; `aperio mediate` |
 | `/aperio` entry point | supplied by the installed skill | `~/.claude/skills/aperio/SKILL.md`; no duplicate command file; host load not verified |
@@ -90,7 +92,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 142-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 145-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps and shell steps are not jailed. Changes outside the plan are detected after execution.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.

@@ -98,6 +98,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Rollback of files captured before a run.
 - Handoff generation from actual state.
 - Deterministic documentation drift checks: links and inline paths that do not exist fail `aperio drift`.
+- Read-only Git facts in project status and handoff: branch, commit, dirty state, changed count, and credential-stripped origin.
 - Local durable message store with send, read, reply, ack, filters, and restart persistence. Real Claude and Codex processes both read and replied through it; Codex is historical evidence, not the current trusted host set.
 - Mediator disposition from run, verify, and review evidence: `CONFIRMED`, `REFUTED`, or `BLOCKED`.
 - Installer, idempotent reinstall, dry run, uninstall, version check, update backup, and rollback.

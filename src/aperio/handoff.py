@@ -9,6 +9,7 @@ from .audit import AuditError
 from .audit import latest as latest_audit
 from .evidence import EvidenceError
 from .evidence import entries as evidence_entries
+from .repo import facts as repo_facts
 from .store import Project
 
 
@@ -58,6 +59,17 @@ def build_handoff(project: Project, task_id: str) -> str:
         task.request.strip() or "No request recorded.",
         "",
     ]
+    repository = repo_facts(project)
+    if repository:
+        changed = f" ({repository['changed']} changed)" if repository["dirty"] else ""
+        lines[7:7] = [
+            "## Repository",
+            "",
+            f"**Branch:** `{repository['branch']}`  ",
+            f"**Commit:** `{repository['head']}`  ",
+            f"**Working tree:** {'dirty' if repository['dirty'] else 'clean'}{changed}  ",
+            "",
+        ]
     if asks:
         lines.extend(["## Owner asks on record", "", _bullets([f"`{a.id}` {a.text}" for a in asks[-10:]]), ""])
 
