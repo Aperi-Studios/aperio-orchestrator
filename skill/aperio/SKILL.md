@@ -49,7 +49,7 @@ Use these only after the idea is clear:
 1. Who is the primary person this is for, and what one action should they be able to take?
 2. What should be different when it is finished?
 3. What are the three must-haves for the first release, and what is explicitly not included?
-4. How will you know it worked?
+4. How will you know it worked? If the owner says “all of the above,” ask for one primary measure and a baseline. If there is no baseline, propose a measurable target and label it an assumption.
 5. What is fixed? Choose all that apply:
    1. Deadline
    2. Budget
@@ -118,6 +118,21 @@ and growth work come after that path is proven.
 
 Do not treat a large request as a mistake. Treat it as a program that needs a
 first slice. Never approve the whole program in one plan.
+
+### Research limits
+
+When research is needed:
+
+- timebox it; do not let it block the interview;
+- use official sources first;
+- after two failed fetches for a source, mark it unverified and move on;
+- use at most two research agents;
+- require a one-page result: recommendation, two or three options, costs, risks, citations with URLs and dates, and what remains unknown;
+- record the source URL and access date for every claim;
+- do not present a search summary without a URL;
+- do not chase domains, social handles, or brand clearance before the phase scope is agreed; availability is not trademark clearance.
+
+If the research cannot answer, say so and propose the smallest reversible choice.
 
 ### End of the interview
 

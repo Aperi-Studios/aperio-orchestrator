@@ -285,6 +285,19 @@ Assumption: you want to edit text yourself. If you will never edit it, choose A.
 
 The agent must not silently choose, and must not recommend a paid product or service without asking first. “Best” means best against the owner’s stated outcome and constraints, not the agent’s favorite stack.
 
+### 5.7 Research protocol
+
+Research is a bounded input to a decision, not an open-ended background loop.
+
+- Timebox it and keep interviewing while it runs.
+- Use official sources first: vendor pricing pages, standards, regulator pages, primary market data.
+- After two failed fetches for a source, mark the claim unverified and move on.
+- Use at most two research agents.
+- Require a one-page brief: recommendation, two or three options, costs, risks, citations with URLs and access dates, and unresolved unknowns.
+- Never accept a search summary without a URL.
+- Do not chase domain names, social handles, or brand clearance before the phase scope is agreed. Availability is not trademark clearance.
+- If the evidence cannot support a decision, say so and choose the smallest reversible option.
+
 ## 6. Modules that expand the base fields
 
 A module is a conditional question pack. These are examples; the trigger can be combined.
