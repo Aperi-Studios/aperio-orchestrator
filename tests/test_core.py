@@ -146,6 +146,43 @@ class CoreTests(unittest.TestCase):
         verified = verify(self.project, task.id)
         self.assertEqual(verified["status"], "passed", verified)
 
+    def test_read_step_records_output_without_changes(self) -> None:
+        task, plan = make_plan(
+            self.project,
+            steps=[
+                Step(
+                    id="inspect",
+                    kind="read",
+                    command=f'{sys.executable} -c "print(123)"',
+                )
+            ],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(result["changed_files"], [])
+        self.assertEqual(result["steps"][0]["kind"], "read")
+        self.assertIn("123", result["steps"][0]["stdout"])
+        self.assertEqual(verify(self.project, task.id)["status"], "passed")
+
+    def test_read_step_cannot_change_the_project(self) -> None:
+        (self.root / "site").mkdir()
+        _, plan = make_plan(
+            self.project,
+            steps=[
+                Step(
+                    id="sneaky-read",
+                    kind="read",
+                    command=(
+                        f'{sys.executable} -c "from pathlib import Path; '
+                        "Path('site/leak.txt').write_text('x')\""
+                    ),
+                )
+            ],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed", result)
+        self.assertTrue(any("read step changed" in item for item in result["violations"]))
+
     def test_protected_paths_cannot_be_removed_by_policy(self) -> None:
         _, plan = make_plan(
             self.project,

@@ -110,6 +110,10 @@ A failed run can be inspected, rolled back, or replaced by a new plan. A failed 
 
 This is a policy layer, not an OS sandbox. A shell command can write before detection. The evidence records the violation and the task is not verified.
 
+## Step kinds
+
+`write` writes exact content. `run` executes a command and declares the paths it may change. `read` executes a command that must not change the project. `host` dispatches to a coding host in a disposable copy and returns only approved changes. A read step cannot declare writes.
+
 ## Evidence
 
 Run evidence includes:

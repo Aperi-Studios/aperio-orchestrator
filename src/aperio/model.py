@@ -54,9 +54,10 @@ class Step:
     """One bounded operation in an approved plan.
 
     kind="write" writes exact content. kind="run" executes a command and declares
-    which paths it may change. kind="host" asks an installed coding host to work
-    in a disposable copy of the project and returns only changes inside the
-    declared paths. There is no fourth kind that silently edits files.
+    which paths it may change. kind="read" executes a command that must not change
+    the project. kind="host" asks an installed coding host to work in a
+    disposable copy of the project and returns only changes inside the declared
+    paths. There is no step kind that silently edits files.
     """
 
     id: str
@@ -78,8 +79,8 @@ class Step:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Step:
         kind = str(data.get("kind", "")).strip()
-        if kind not in {"write", "run", "host"}:
-            raise ModelError(f"step {data.get('id', '?')}: kind must be write, run, or host")
+        if kind not in {"write", "run", "read", "host"}:
+            raise ModelError(f"step {data.get('id', '?')}: kind must be write, run, read, or host")
         timeout = int(data.get("timeout_s", 120))
         if timeout < 1 or timeout > 3600:
             raise ModelError(f"step {data.get('id', '?')}: timeout_s must be 1..3600")
@@ -117,6 +118,13 @@ class Step:
                 raise ModelError(f"step {self.id}: run needs a command")
             if self.path or self.content is not None or self.host or self.prompt:
                 raise ModelError(f"step {self.id}: run cannot also write fixed content or use a host")
+        elif self.kind == "read":
+            if not self.command:
+                raise ModelError(f"step {self.id}: read needs a command")
+            if self.path or self.content is not None or self.host or self.prompt:
+                raise ModelError(f"step {self.id}: read cannot write fixed content or use a host")
+            if self.writes:
+                raise ModelError(f"step {self.id}: read must not declare writes")
         elif self.kind == "host":
             if not self.host or not self.prompt:
                 raise ModelError(f"step {self.id}: host needs host and prompt")

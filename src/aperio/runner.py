@@ -404,6 +404,22 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
                     failed = True
                     evidence["violations"].append(f"step {step.id} exited {result['exit_code']}")
                     break
+            elif step.kind == "read":
+                read_before = _hash_project(project)
+                result = _run_command(project, plan, step, run_id)
+                result["kind"] = "read"
+                evidence["steps"].append(result)
+                read_delta = _changed_files(project, read_before)
+                if read_delta:
+                    failed = True
+                    evidence["violations"].append(
+                        "read step changed the project: " + ", ".join(read_delta)
+                    )
+                    break
+                if result["exit_code"] != 0:
+                    failed = True
+                    evidence["violations"].append(f"step {step.id} exited {result['exit_code']}")
+                    break
             elif step.kind == "host":
                 host_before = _hash_project(project)
                 host_result = run_host_step(project, plan, step, run_id)
