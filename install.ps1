@@ -56,24 +56,23 @@ function Write-Text([string]$Path, [string]$Value) {
 if ($Uninstall) {
     if (Test-Path (Join-Path $Lib $Marker)) {
         Invoke-Step { Remove-Item -Recurse -Force $Lib } "remove $Lib"
-        if ($DryRun) { Write-Host "would remove $Lib" } else { Write-Host "removed $Lib" }
+        if (-not $DryRun) { Write-Host "removed $Lib" }
     } else { Write-Host "not removing $Lib`: marker missing" }
     if ((Test-Path $Cmd) -and (Select-String -Path $Cmd -Pattern "Aperio v2" -Quiet)) {
         Invoke-Step { Remove-Item -Force $Cmd } "remove $Cmd"
-        if ($DryRun) { Write-Host "would remove $Cmd" } else { Write-Host "removed $Cmd" }
+        if (-not $DryRun) { Write-Host "removed $Cmd" }
     }
     if ((Test-Path $Launcher) -and (Select-String -Path $Launcher -Pattern "Aperio v2" -Quiet)) {
         Invoke-Step { Remove-Item -Force $Launcher } "remove $Launcher"
-        if ($DryRun) { Write-Host "would remove $Launcher" } else { Write-Host "removed $Launcher" }
+        if (-not $DryRun) { Write-Host "removed $Launcher" }
     }
     if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir $Marker))) {
         Invoke-Step { Remove-Item -Force (Join-Path $SkillDir "SKILL.md"), (Join-Path $SkillDir "VERSION"), (Join-Path $SkillDir $Marker) -ErrorAction SilentlyContinue } "remove Aperio files in $SkillDir"
-        if (-not $DryRun) { if (Test-Path $SkillDir) { Remove-Item $SkillDir -Force -ErrorAction SilentlyContinue } }
-        if ($DryRun) { Write-Host "would remove Aperio files in $SkillDir" } else { Write-Host "removed Aperio files in $SkillDir" }
+        if (-not $DryRun) { if (Test-Path $SkillDir) { Remove-Item $SkillDir -Force -ErrorAction SilentlyContinue }; Write-Host "removed Aperio files in $SkillDir" }
     }
     if (-not $NoSkill -and (Test-Path $CommandFile) -and (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
         Invoke-Step { Remove-Item -Force $CommandFile } "remove $CommandFile"
-        if ($DryRun) { Write-Host "would remove $CommandFile" } else { Write-Host "removed $CommandFile" }
+        if (-not $DryRun) { Write-Host "removed $CommandFile" }
     }
     exit 0
 }
@@ -90,6 +89,12 @@ if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir "SKILL.md")) -and -not (T
 Invoke-Step { New-Item -ItemType Directory -Force -Path $Lib, $Bin | Out-Null } "create $Lib and $Bin"
 Invoke-Step { Remove-Item -Recurse -Force (Join-Path $Lib "aperio") -ErrorAction SilentlyContinue } "clear $Lib/aperio"
 Invoke-Step { Copy-Item -Recurse -Force (Join-Path $Root "src/aperio") (Join-Path $Lib "aperio") } "copy package to $Lib"
+if (-not $DryRun) {
+    Get-ChildItem -Path (Join-Path $Lib "aperio") -Recurse -Directory -Filter "__pycache__" |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path (Join-Path $Lib "aperio") -Recurse -File -Filter "*.pyc" |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+}
 Write-Text (Join-Path $Lib "VERSION") $Version
 Write-Text (Join-Path $Lib $Marker) $Marker
 
@@ -98,6 +103,7 @@ $launcherText = @"
 """Aperio v2 launcher. Installed by install.ps1."""
 import sys
 from pathlib import Path
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "share" / "aperio"))
 from aperio.cli import main
 raise SystemExit(main())

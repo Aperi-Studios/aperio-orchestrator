@@ -58,7 +58,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((self.prefix / "bin" / "aperio").is_file())
         self.assertTrue((self.skill_home / "aperio" / "SKILL.md").is_file())
-        self.assertIn("would remove", result.stdout)
+        self.assertIn("would:", result.stdout)
 
     def test_uninstall_preserves_user_files_in_the_skill_directory(self) -> None:
         install = self.run_install()
@@ -91,6 +91,8 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(command.is_file())
         self.assertIn("Aperio v2", command.read_text())
         self.assertEqual((self.skill_home / "aperio" / "VERSION").read_text().strip(), "2.0.0.dev0")
+        package = self.prefix / "share" / "aperio" / "aperio"
+        self.assertFalse(any(path.name == "__pycache__" for path in package.rglob("*")))
 
         version = subprocess.run(
             [str(binary), "--version"],
@@ -172,6 +174,7 @@ class InstallerTests(unittest.TestCase):
             timeout=30,
         )
         self.assertEqual(version.returncode, 0, version.stderr)
+        self.assertFalse(any(path.name == "__pycache__" for path in (prefix / "share" / "aperio" / "aperio").rglob("*")))
         remove = subprocess.run(
             ["pwsh", "-NoProfile", "-File", str(ROOT / "install.ps1"), "-Prefix", str(prefix), "-NoSkill", "-Uninstall"],
             check=False,

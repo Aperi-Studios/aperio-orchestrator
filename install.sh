@@ -83,27 +83,25 @@ write_text() {
 if [ "$UNINSTALL" -eq 1 ]; then
   if [ -f "$LIB/$MARKER" ]; then
     run rm -rf "$LIB"
-    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$LIB"; else echo "removed $LIB"; fi
+    if [ "$DRY_RUN" -eq 0 ]; then echo "removed $LIB"; fi
   else
     echo "not removing $LIB: marker missing"
   fi
   if [ -f "$BIN" ] && grep -q "Aperio v2" "$BIN" 2>/dev/null; then
     run rm -f "$BIN"
-    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$BIN"; else echo "removed $BIN"; fi
+    if [ "$DRY_RUN" -eq 0 ]; then echo "removed $BIN"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$SKILL_DIR/$MARKER" ]; then
     run rm -f "$SKILL_DIR/SKILL.md" "$SKILL_DIR/VERSION" "$SKILL_DIR/$MARKER"
-    if [ "$DRY_RUN" -eq 0 ]; then rmdir "$SKILL_DIR" 2>/dev/null || true; fi
-    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove Aperio files in %s\n' "$SKILL_DIR"; else echo "removed Aperio files in $SKILL_DIR"; fi
+    if [ "$DRY_RUN" -eq 0 ]; then rmdir "$SKILL_DIR" 2>/dev/null || true; echo "removed Aperio files in $SKILL_DIR"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$CODEX_SKILL_DIR/$MARKER" ]; then
     run rm -f "$CODEX_SKILL_DIR/SKILL.md" "$CODEX_SKILL_DIR/VERSION" "$CODEX_SKILL_DIR/$MARKER"
-    if [ "$DRY_RUN" -eq 0 ]; then rmdir "$CODEX_SKILL_DIR" 2>/dev/null || true; fi
-    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove Aperio files in %s\n' "$CODEX_SKILL_DIR"; else echo "removed Aperio files in $CODEX_SKILL_DIR"; fi
+    if [ "$DRY_RUN" -eq 0 ]; then rmdir "$CODEX_SKILL_DIR" 2>/dev/null || true; echo "removed Aperio files in $CODEX_SKILL_DIR"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
     run rm -f "$COMMAND_FILE"
-    if [ "$DRY_RUN" -eq 1 ]; then printf 'would remove %s\n' "$COMMAND_FILE"; else echo "removed $COMMAND_FILE"; fi
+    if [ "$DRY_RUN" -eq 0 ]; then echo "removed $COMMAND_FILE"; fi
   fi
   exit 0
 fi
@@ -111,6 +109,10 @@ fi
 run mkdir -p "$LIB" "$PREFIX/bin"
 run rm -rf "$LIB/aperio"
 run cp -R "$ROOT/src/aperio" "$LIB/aperio"
+if [ "$DRY_RUN" -eq 0 ]; then
+  find "$LIB/aperio" -type d -name __pycache__ -prune -exec rm -rf {} +
+  find "$LIB/aperio" -type f -name '*.pyc' -delete
+fi
 write_text "$LIB/VERSION" "$VERSION"
 write_text "$LIB/$MARKER" "$MARKER"
 run chmod 755 "$PREFIX/bin"
@@ -123,6 +125,7 @@ else
 """Aperio v2 launcher. Installed by install.sh."""
 import sys
 from pathlib import Path
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "share" / "aperio"))
 from aperio.cli import main
 raise SystemExit(main())
