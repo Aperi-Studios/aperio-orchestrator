@@ -99,7 +99,11 @@ class CliTests(unittest.TestCase):
             "The requested page is working",
             "--acceptance",
             "The page exists and the acceptance command passes",
+            "--json",
         )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        todo_id = json.loads(result.stdout)["id"]
+        result = self.cli("todo", "start", todo_id)
         self.assertEqual(result.returncode, 0, result.stderr)
         readiness = {
             "schema": 1,
@@ -314,7 +318,11 @@ class CliTests(unittest.TestCase):
             "The requested page is working",
             "--acceptance",
             "The page exists and the acceptance command passes",
+            "--json",
         )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        todo_id = json.loads(result.stdout)["id"]
+        result = self.cli("todo", "start", todo_id)
         self.assertEqual(result.returncode, 0, result.stderr)
         plan = {
             "title": "No preflight",

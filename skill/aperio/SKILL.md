@@ -339,9 +339,10 @@ aperio todo start <todo-id>
 aperio todo accept <todo-id> --by owner --evidence "..." --confirm "I accept this task"
 ```
 
-`plan` refuses an empty todo list. A task cannot start until its predecessor is
-accepted or deferred. Acceptance requires evidence and the exact confirmation
-phrase. Split by deliverable, never by an arbitrary clock.
+`plan` refuses an empty todo list and requires exactly one in-progress task.
+The plan records that task's `todo_id`. A task cannot start until its
+predecessor is accepted or deferred. Acceptance requires evidence and the exact
+confirmation phrase. Split by deliverable, never by an arbitrary clock.
 
 ## Readiness gate
 

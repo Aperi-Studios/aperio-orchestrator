@@ -119,6 +119,14 @@ def _require_todo(project: Project) -> None:
         )
 
 
+def _active_todo(project: Project) -> str:
+    data = todo_status(project)
+    active = [item for item in data["tasks"] if item["status"] == "in_progress"]
+    if len(active) != 1:
+        raise ModelError("start exactly one todo task before planning a slice")
+    return str(active[0]["id"])
+
+
 def _require_preflight(project: Project) -> None:
     issues = validate_preflight(project)
     if issues:
@@ -166,6 +174,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
     _require_learning(project)
     _require_todo(project)
     _require_preflight(project)
+    todo_id = _active_todo(project)
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -200,6 +209,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
         steps=steps,
         acceptance=acceptance,
         builder=str(data.get("builder", "agent")),
+        todo_id=todo_id,
     )
     plan.validate()
     if not plan.acceptance:

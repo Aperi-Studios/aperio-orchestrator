@@ -29,6 +29,7 @@ from aperio.readiness import import_readiness
 from aperio.runner import RunError
 from aperio.store import Project
 from aperio.todo import add as todo_add
+from aperio.todo import start as todo_start
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -93,12 +94,13 @@ class DiscoveryTests(unittest.TestCase):
         path.write_text(json.dumps(data), encoding="utf-8")
         import_dossier(self.project, str(path))
         record_proof(self.project, f'{sys.executable} -c "print(1)"')
-        todo_add(
+        todo = todo_add(
             self.project,
             "Build the requested page",
             deliverable="The requested page is working",
             acceptance="The page exists and the acceptance command passes",
         )
+        todo_start(self.project, todo["id"])
         readiness = {
             "schema": 1,
             "preflight": {

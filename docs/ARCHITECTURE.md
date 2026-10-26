@@ -69,7 +69,7 @@ State files are written to a temporary file in the same directory, flushed, and 
 4. `readiness import` records pre-flight, deploy, after-sales, design, and security facts; it is validated explicitly and does not deploy anything.
 5. `skill create` writes a project-scoped skill under `.aperio/skills/` and validates its required sections; it never overwrites a foreign skill.
 6. `ask` appends the owner's words. It does not rewrite earlier asks.
-7. `plan` validates a JSON plan and creates a task in `planned`.
+7. `plan` validates a JSON plan, binds the one in-progress todo task, and creates a task in `planned`.
 8. `approve` records the owner's identity and the explicit approval phrase. The task moves to `approved`.
 9. `run`:
    - refuses an unapproved plan;

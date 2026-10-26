@@ -214,6 +214,7 @@ class Plan:
     approval: Approval | None = None
     builder: str = "agent"
     discovery_digest: str = ""
+    todo_id: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -239,6 +240,7 @@ class Plan:
             approval=Approval.from_dict(approval_data) if approval_data else None,
             builder=str(data.get("builder", "agent")),
             discovery_digest=str(data.get("discovery_digest", "")),
+            todo_id=str(data.get("todo_id", "")),
         )
         plan.validate()
         return plan
