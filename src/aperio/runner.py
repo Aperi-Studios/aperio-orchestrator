@@ -85,6 +85,10 @@ def _expand_targets(project: Project, plan: Plan) -> list[str]:
                             rel = relative_posix(project.root, path)
                             targets.add(assert_writable(rel, plan))
                 elif candidate.is_dir():
+                    # Keep the directory target itself, not only the files that
+                    # happen to exist before the run. Build steps create new
+                    # files; the post-run outside check must accept them.
+                    targets.add(normalized)
                     for path in candidate.rglob("*"):
                         if path.is_file() and not path.is_symlink() and not _is_excluded(path.relative_to(project.root)):
                             targets.add(relative_posix(project.root, path))

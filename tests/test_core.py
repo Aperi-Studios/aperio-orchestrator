@@ -105,6 +105,42 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(RunError):
             apply_plan(self.project, plan)
 
+    def test_directory_write_accepts_files_created_by_a_run(self) -> None:
+        # Regression: an existing declared directory used to expand to its
+        # pre-run files only, so a build step that emitted a new file was
+        # rejected as "changed outside declared writes".
+        (self.root / "dist").mkdir()
+        command = (
+            f"{sys.executable} -c \"from pathlib import Path; "
+            "Path('dist/new.txt').write_text('built'); "
+            "Path('dist/sub').mkdir(exist_ok=True); "
+            "Path('dist/sub/nested.txt').write_text('nested')\""
+        )
+        acceptance_command = (
+            f"{sys.executable} -c \"from pathlib import Path; "
+            "assert Path('dist/new.txt').read_text() == 'built'\""
+        )
+        task, plan = make_plan(
+            self.project,
+            steps=[
+                Step(
+                    id="build",
+                    kind="run",
+                    command=command,
+                    writes=["dist/"],
+                )
+            ],
+            allowed=["dist/"],
+            acceptance=[Acceptance(id="check", command=acceptance_command)],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(result["violations"], [])
+        self.assertTrue((self.root / "dist/new.txt").is_file())
+        self.assertTrue((self.root / "dist/sub/nested.txt").is_file())
+        verified = verify(self.project, task.id)
+        self.assertEqual(verified["status"], "passed", verified)
+
     def test_reviewer_must_differ_from_builder(self) -> None:
         with self.assertRaises(PolicyError):
             assert_reviewer("agent", "agent")
