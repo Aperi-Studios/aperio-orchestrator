@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from .model import ModelError, utc_now
@@ -324,11 +325,25 @@ def _state(project: Project) -> dict[str, Any]:
         data = _new_state()
         project.save_discovery(data)
         return data
+    return _read_state(data)
+
+
+def _read_state(data: dict[str, Any] | None) -> dict[str, Any]:
+    if data is None:
+        raise DiscoveryError("discovery state is missing")
     if not isinstance(data, dict) or not isinstance(data.get("answers"), dict):
         raise DiscoveryError("discovery state is malformed")
     if not isinstance(data.get("waivers"), dict):
         data["waivers"] = {}
     return data
+
+
+def _answer_complete(answer: dict[str, Any] | None) -> bool:
+    if not isinstance(answer, dict) or answer.get("status") != "answered":
+        return False
+    values = answer.get("values")
+    text = answer.get("text")
+    return bool(values) or bool(str(text or "").strip())
 
 
 def _labels(data: dict[str, Any]) -> set[str]:
@@ -350,7 +365,7 @@ def next_question(project: Project) -> Question | None:
         if question.id in waivers:
             continue
         answer = data["answers"].get(question.id)
-        if answer is None or answer.get("status") == "research":
+        if answer is None or answer.get("status") == "research" or not _answer_complete(answer):
             return question
     return None
 
@@ -377,12 +392,20 @@ def parse_choices(question: Question, raw: str) -> list[str]:
         token = token.strip()
         if not token:
             continue
-        if token.isdigit():
-            values.append(_choice_by_number(question, int(token)).value)
+        if token.isdecimal():
+            if len(token) > 4:
+                raise DiscoveryError(f"{question.id}: choice number is too large")
+            try:
+                number = int(token)
+            except ValueError as exc:
+                raise DiscoveryError(f"{question.id}: unknown choice: {token}") from exc
+            values.append(_choice_by_number(question, number).value)
         elif token in {choice.value for choice in question.choices}:
             values.append(token)
         else:
             raise DiscoveryError(f"{question.id}: unknown choice: {token}")
+    if len(values) != len(set(values)):
+        raise DiscoveryError(f"{question.id}: choice repeated")
     if not question.multi and len(values) > 1:
         raise DiscoveryError(f"{question.id}: choose only one option")
     return values
@@ -401,6 +424,8 @@ def answer_question(
     values = choices or []
     text = text.strip()
     evidence = evidence.strip()
+    if len(values) != len(set(values)):
+        raise DiscoveryError(f"{question.id}: choice repeated")
     valid_values = {choice.value for choice in question.choices}
     if values and not question.choices:
         raise DiscoveryError(f"{question.id}: this question takes a text answer")
@@ -443,16 +468,27 @@ def waive_question(
     by: str,
     risk: str,
     confirm: str,
+    review_at: str,
 ) -> dict[str, Any]:
     question = QUESTION_BY_ID.get(question_id)
     if question is None:
         raise DiscoveryError(f"unknown question: {question_id}")
+    if question_id == "labels":
+        raise DiscoveryError("labels controls conditional questions; answer it instead of waiving")
     if confirm != WAIVER_CONFIRM:
         raise DiscoveryError(f"confirmation must be exactly: {WAIVER_CONFIRM}")
     if not by.strip():
         raise DiscoveryError("waiver needs an owner name")
     if not risk.strip():
         raise DiscoveryError("waiver needs a stated risk")
+    if not review_at.strip():
+        raise DiscoveryError("waiver needs a review date")
+    try:
+        review_date = date.fromisoformat(review_at.strip())
+    except ValueError as exc:
+        raise DiscoveryError("review date must be YYYY-MM-DD") from exc
+    if review_date < date.today():
+        raise DiscoveryError("review date must not be in the past")
     data = _state(project)
     if question.requires and not all(label in _labels(data) for label in question.requires):
         raise DiscoveryError(f"{question_id}: answer the labels question first")
@@ -462,6 +498,7 @@ def waive_question(
     waiver = {
         "by": by.strip(),
         "risk": risk.strip(),
+        "review_at": review_at.strip(),
         "accepted_at": utc_now(),
         "confirm": confirm,
         "status": "waived",
@@ -482,32 +519,41 @@ def status(project: Project) -> dict[str, Any]:
             "research": 0,
             "missing": [question.id for question in applicable],
             "waived": [],
+            "waived_research": [],
             "ready": False,
             "next": applicable[0].id,
             "answers": {},
             "waivers": {},
         }
+    data = _read_state(data)
     answers = data.get("answers", {})
     waivers = data.get("waivers", {})
     applicable = _applicable(data)
     missing = [
         question.id
         for question in applicable
-        if question.id not in answers and question.id not in waivers
+        if question.id not in waivers
+        and (question.id not in answers or not _answer_complete(answers.get(question.id)))
+        and answers.get(question.id, {}).get("status") != "research"
     ]
     research = [
         question.id
         for question in applicable
-        if question.id in answers
-        and question.id not in waivers
+        if question.id not in waivers
         and answers.get(question.id, {}).get("status") == "research"
     ]
     answered = [
         question.id
         for question in applicable
-        if answers.get(question.id, {}).get("status") == "answered"
+        if _answer_complete(answers.get(question.id))
     ]
     waived = [question.id for question in applicable if question.id in waivers]
+    waived_research = [
+        question.id
+        for question in applicable
+        if question.id in waivers
+        and answers.get(question.id, {}).get("status") == "research"
+    ]
     ready = not missing and not research
     return {
         "total": len(applicable),
@@ -515,6 +561,7 @@ def status(project: Project) -> dict[str, Any]:
         "research": len(research),
         "missing": missing,
         "waived": waived,
+        "waived_research": waived_research,
         "ready": ready,
         "next": missing[0] if missing else (research[0] if research else None),
         "answers": answers,
@@ -523,20 +570,22 @@ def status(project: Project) -> dict[str, Any]:
 
 
 def summary(project: Project) -> str:
-    data = project.discovery() or {}
+    data = _read_state(project.discovery()) if project.discovery() is not None else {}
     answers = data.get("answers", {})
     waivers = data.get("waivers", {})
     lines = ["# Discovery summary", ""]
     for question in _applicable(data):
         waiver = waivers.get(question.id)
         if waiver:
+            suffix = " (research was requested)" if answers.get(question.id, {}).get("status") == "research" else ""
             lines.append(
                 f"- **{SUMMARY_LABELS.get(question.id, question.domain)}:** "
                 f"WAIVED by {waiver.get('by', 'unknown')} — {waiver.get('risk', 'no risk stated')}"
+                f" (review by {waiver.get('review_at', 'not set')}){suffix}"
             )
             continue
         answer = answers.get(question.id)
-        if not answer:
+        if not _answer_complete(answer):
             lines.append(f"- **{SUMMARY_LABELS.get(question.id, question.domain)}:** missing")
             continue
         labels = [

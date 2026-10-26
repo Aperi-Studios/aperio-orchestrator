@@ -131,13 +131,21 @@ class DiscoveryTests(unittest.TestCase):
     def test_waiver_requires_exact_confirmation(self) -> None:
         answer_question(self.project, "idea", text="A small site")
         with self.assertRaises(DiscoveryError):
-            waive_question(self.project, "users", by="owner", risk="unknown", confirm="yes")
+            waive_question(
+                self.project,
+                "users",
+                by="owner",
+                risk="unknown",
+                confirm="yes",
+                review_at="2026-11-30",
+            )
         waiver = waive_question(
             self.project,
             "users",
             by="owner",
             risk="user is not known yet",
             confirm=WAIVER_CONFIRM,
+            review_at="2026-11-30",
         )
         self.assertEqual(waiver["status"], "waived")
         self.assertIn("users", status(self.project)["waived"])
@@ -152,6 +160,18 @@ class DiscoveryTests(unittest.TestCase):
                 by="owner",
                 risk="already answered",
                 confirm=WAIVER_CONFIRM,
+                review_at="2026-11-30",
+            )
+
+    def test_labels_cannot_be_waived(self) -> None:
+        with self.assertRaises(DiscoveryError):
+            waive_question(
+                self.project,
+                "labels",
+                by="owner",
+                risk="skip module choice",
+                confirm=WAIVER_CONFIRM,
+                review_at="2026-11-30",
             )
 
     def test_waiver_allows_plan_and_warns(self) -> None:
@@ -173,6 +193,7 @@ class DiscoveryTests(unittest.TestCase):
             by="owner",
             risk="working name is not decided",
             confirm=WAIVER_CONFIRM,
+            review_at="2026-11-30",
         )
         self.assertTrue(status(self.project)["ready"])
         plan = ROOT / "examples" / "demo-site-plan.json"
@@ -182,6 +203,36 @@ class DiscoveryTests(unittest.TestCase):
         with redirect_stdout(output), redirect_stderr(errors):
             self.assertEqual(cmd_plan(args), 0)
         self.assertIn("discovery waivers accepted: name", errors.getvalue())
+
+    def test_parse_choices_rejects_superscript_and_duplicates(self) -> None:
+        question = next_question(self.project)
+        assert question is not None
+        with self.assertRaises(DiscoveryError):
+            parse_choices(question, "1,1")
+        with self.assertRaises(DiscoveryError):
+            parse_choices(question, "²")
+
+    def test_empty_answer_is_not_complete(self) -> None:
+        next_question(self.project)
+        data = self.project.discovery()
+        assert data is not None
+        data["answers"]["idea"] = {"status": "answered", "values": [], "text": " "}
+        self.project.save_discovery(data)
+        self.assertIn("idea", status(self.project)["missing"])
+        question = next_question(self.project)
+        assert question is not None
+        self.assertEqual(question.id, "idea")
+
+    def test_malformed_state_is_rejected(self) -> None:
+        next_question(self.project)
+        data = self.project.discovery()
+        assert data is not None
+        data["answers"] = []
+        self.project.save_discovery(data)
+        with self.assertRaises(DiscoveryError):
+            status(self.project)
+        with self.assertRaises(DiscoveryError):
+            summary(self.project)
 
     def test_plan_refuses_incomplete_discovery(self) -> None:
         plan = ROOT / "examples" / "demo-site-plan.json"

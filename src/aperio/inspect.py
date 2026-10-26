@@ -137,6 +137,8 @@ def parse_html(text: str, base_url: str = "") -> dict[str, Any]:
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
+    if path.is_symlink():
+        return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -146,6 +148,8 @@ def _read_json(path: Path) -> dict[str, Any] | None:
 
 def _env_names(path: Path) -> list[str]:
     names: list[str] = []
+    if path.is_symlink():
+        return names
     try:
         for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
@@ -274,7 +278,7 @@ def _detect_cms_or_commerce(dependencies: list[str], stack: list[str]) -> dict[s
 def _html_file(root: Path) -> Path | None:
     for relative in ("index.html", "public/index.html", "src/index.html", "home.html"):
         path = root / relative
-        if path.is_file():
+        if path.is_file() and not path.is_symlink():
             return path
     return None
 
@@ -300,13 +304,26 @@ def _git_facts(root: Path) -> dict[str, Any]:
     if not (root / ".git").exists() or shutil.which("git") is None:
         return {"is_repo": False}
     facts: dict[str, Any] = {"is_repo": True}
+    base = [
+        "git",
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "-c",
+        "core.pager=cat",
+        "-c",
+        "diff.external=",
+        "-C",
+        str(root),
+    ]
     for key, args in (
-        ("branch", ["git", "-C", str(root), "rev-parse", "--abbrev-ref", "HEAD"]),
-        ("remote_count", ["git", "-C", str(root), "remote"]),
-        ("dirty_count", ["git", "-C", str(root), "status", "--porcelain"]),
+        ("branch", ["rev-parse", "--abbrev-ref", "HEAD"]),
+        ("remote_count", ["remote"]),
+        ("dirty_count", ["status", "--porcelain"]),
     ):
         try:
-            result = subprocess.run(args, check=False, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(base + args, check=False, capture_output=True, text=True, timeout=5)
         except (OSError, subprocess.TimeoutExpired):
             continue
         if result.returncode != 0:
@@ -423,19 +440,43 @@ def _private_host(host: str) -> bool:
     return False
 
 
-def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
+def _validate_url(url: str, allow_private: bool) -> urllib.parse.SplitResult:
     parsed = urllib.parse.urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise InspectionError("URL must be http or https with a hostname")
+        raise InspectionError(f"URL must be http or https with a hostname: {url}")
     if not allow_private and _private_host(parsed.hostname):
         raise InspectionError("refusing a private, loopback, or non-public URL")
+    return parsed
+
+
+class _CheckedRedirect(urllib.request.HTTPRedirectHandler):
+    def __init__(self, allow_private: bool) -> None:
+        self.allow_private = allow_private
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        absolute = urllib.parse.urljoin(req.full_url, newurl)
+        _validate_url(absolute, self.allow_private)
+        return super().redirect_request(req, fp, code, msg, headers, absolute)
+
+
+def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
+    _validate_url(url, allow_private)
     request = urllib.request.Request(
         url,
         headers={"User-Agent": "Aperio-Inspect/2.0 (read-only)"},
         method="GET",
     )
+    opener = urllib.request.build_opener(_CheckedRedirect(allow_private))
     try:
-        with urllib.request.urlopen(request, timeout=12) as response:
+        with opener.open(request, timeout=12) as response:
             body = response.read(MAX_URL_BYTES)
             charset = response.headers.get_content_charset() or "utf-8"
             text = body.decode(charset, errors="replace")
@@ -447,11 +488,7 @@ def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
         raise InspectionError(f"cannot fetch {url}: {exc}") from exc
     facts = parse_html(text, final_url)
-    final_parsed = urllib.parse.urlsplit(final_url)
-    if final_parsed.scheme not in {"http", "https"} or not final_parsed.hostname:
-        raise InspectionError(f"redirected to an unsupported URL: {final_url}")
-    if not allow_private and _private_host(final_parsed.hostname):
-        raise InspectionError("redirected to a private, loopback, or non-public URL")
+    _validate_url(final_url, allow_private)
     security_headers = {
         key.lower(): headers.get(key, "")
         for key in (
@@ -474,6 +511,7 @@ def inspect_url(url: str, allow_private: bool = False) -> dict[str, Any]:
         "limits": [
             "Inspection is a single read-only GET; it does not test interactions or rendering.",
             "Only a public URL is fetched; private and loopback hosts are refused.",
+            "Redirect targets are revalidated before each hop; DNS rebinding is not fully prevented.",
         ],
     }
 

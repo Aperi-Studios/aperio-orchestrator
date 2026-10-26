@@ -57,6 +57,17 @@ def build_handoff(project: Project, task_id: str) -> str:
     if asks:
         lines.extend(["## Owner asks on record", "", _bullets([f"`{a.id}` {a.text}" for a in asks[-10:]]), ""])
 
+    discovery = project.discovery() or {}
+    waivers = discovery.get("waivers") if isinstance(discovery, dict) else {}
+    if isinstance(waivers, dict) and waivers:
+        waiver_rows = [
+            f"`{question_id}` — {item.get('risk', 'no risk stated')} "
+            f"(accepted by {item.get('by', 'unknown')}, review by {item.get('review_at', 'not set')})"
+            for question_id, item in sorted(waivers.items())
+            if isinstance(item, dict)
+        ]
+        lines.extend(["## Discovery waivers", "", _bullets(waiver_rows), ""])
+
     if plan:
         lines.extend(
             [

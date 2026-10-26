@@ -9,10 +9,12 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.request import Request
 
 from aperio.discovery import answer_question
 from aperio.inspect import (
     InspectionError,
+    _CheckedRedirect,
     collect,
     hints,
     inspect_path,
@@ -92,6 +94,27 @@ class InspectTests(unittest.TestCase):
         self.assertEqual(data["html"]["title"], "Demo Store")
         self.assertEqual(data["env_names"], ["API_KEY"])
         self.assertNotIn("do-not-read", json.dumps(data))
+
+    def test_symlinked_index_is_not_read(self) -> None:
+        secret = self.root.parent / "secret.html"
+        secret.write_text("<html><title>SECRET</title></html>", encoding="utf-8")
+        (self.root / "index.html").unlink()
+        (self.root / "index.html").symlink_to(secret)
+        data = inspect_path(self.root)
+        self.assertNotIn("SECRET", json.dumps(data))
+        self.assertNotIn("title", data["html"])
+
+    def test_redirect_to_private_host_is_refused(self) -> None:
+        request = Request("https://example.com/")
+        with self.assertRaises(InspectionError):
+            _CheckedRedirect(False).redirect_request(
+                request,
+                None,
+                302,
+                "Found",
+                {},
+                "http://127.0.0.1/secret",
+            )
 
     def test_collect_and_hints(self) -> None:
         collect(self.project)

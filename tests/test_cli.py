@@ -38,8 +38,31 @@ class CliTests(unittest.TestCase):
         result = self.cli("init", str(self.root), "--name", "cli-test")
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def complete_discovery(self) -> None:
+        rows = [
+            ("idea", [], "Build a page"),
+            ("users", [], "Visitors"),
+            ("success", ["launch"], ""),
+            ("must_haves", [], "One page"),
+            ("non_goals", [], "No login"),
+            ("constraints", ["none"], ""),
+            ("ownership", ["owner"], ""),
+            ("evidence", ["none"], ""),
+            ("labels", ["new"], ""),
+            ("name", [], "cli-test"),
+        ]
+        for question_id, choices, text in rows:
+            command = ["discover", "answer", question_id]
+            if choices:
+                command += ["--choice", ",".join(choices)]
+            if text:
+                command += ["--text", text]
+            result = self.cli(*command)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_full_cli_flow(self) -> None:
         self.init()
+        self.complete_discovery()
         result = self.cli("ask", "Build a page")
         self.assertEqual(result.returncode, 0, result.stderr)
         plan = {
@@ -93,6 +116,21 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("## Verification", result.stdout)
         self.assertIn("done", result.stdout)
+
+    def test_plan_without_discovery_is_refused(self) -> None:
+        self.init()
+        plan = {
+            "title": "No discovery",
+            "request": "No discovery",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("discovery is required before planning", result.stderr)
 
     def test_plan_without_acceptance_is_rejected(self) -> None:
         self.init()

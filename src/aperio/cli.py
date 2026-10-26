@@ -84,16 +84,6 @@ def _load_plan_data(path: str) -> dict[str, Any]:
 
 def cmd_plan(args: argparse.Namespace) -> int:
     project = _project(args)
-    if project.discovery() is not None:
-        progress = discovery_status(project)
-        if not progress["ready"]:
-            missing = ", ".join(progress["missing"]) or "research answers"
-            raise DiscoveryError(f"discovery is incomplete; finish or resolve: {missing}")
-        if progress["waived"]:
-            print(
-                "WARNING: discovery waivers accepted: " + ", ".join(progress["waived"]),
-                file=sys.stderr,
-            )
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -116,6 +106,21 @@ def cmd_plan(args: argparse.Namespace) -> int:
     plan.validate()
     if not plan.acceptance:
         raise ModelError("plan needs at least one acceptance check")
+
+    progress = discovery_status(project)
+    if not progress["ready"]:
+        if progress["missing"]:
+            missing = ", ".join(progress["missing"])
+            raise DiscoveryError(
+                "discovery is required before planning; finish or waive: " + missing
+            )
+        raise DiscoveryError("discovery has unresolved research answers; record a decision first")
+    if progress["waived"]:
+        print(
+            "WARNING: discovery waivers accepted: " + ", ".join(progress["waived"]),
+            file=sys.stderr,
+        )
+
     task.plan_id = plan.id
     with project.lock():
         project.save_plan(plan)
@@ -382,6 +387,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
             by=args.by,
             risk=args.risk,
             confirm=args.confirm,
+            review_at=args.review_at,
         )
         if args.json:
             print(as_json({"waiver": waiver, "status": discovery_status(project)}))
@@ -551,6 +557,7 @@ def build_parser() -> argparse.ArgumentParser:
     discover_waive.add_argument("question_id")
     discover_waive.add_argument("--by", required=True)
     discover_waive.add_argument("--risk", required=True)
+    discover_waive.add_argument("--review-at", required=True)
     discover_waive.add_argument("--confirm", required=True)
     discover_waive.add_argument("--json", action="store_true")
     discover_waive.set_defaults(func=cmd_discover)

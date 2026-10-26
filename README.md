@@ -39,6 +39,7 @@ aperio init . --name "My project"
 aperio ask "Build a one-page site with a working contact form" --source owner
 aperio inspect
 aperio discover next
+aperio discover answer <question-id> --choice 1,3 --text "..."
 aperio discover status
 aperio plan plan.json
 aperio approve <plan-id> --by owner --confirm "I approve this plan"
