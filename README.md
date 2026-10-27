@@ -2,7 +2,7 @@
 
 Aperio turns an owner request into a bounded, approved plan, applies it, runs acceptance checks, requires an independent review, and writes evidence and a handoff.
 
-**Status: early rebuild.** The core loop and installer work. Host dispatch, mesh chat, CMS delivery, and SEO delivery are not built yet. Do not describe this as feature-complete.
+**Status: early rebuild.** The core loop and installer work. Discovery, learning, readiness, todo approval, optional shell sandboxing, toolchain installation, secret scanning, and a generated read-only dashboard are implemented. CMS/SEO delivery and deployment execution are outside Aperio's scope. Do not describe this as feature-complete.
 
 ## Why this rebuild exists
 
@@ -132,15 +132,17 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 
 ## What is not built
 
-- Live host dispatch for OpenCode, KiloCode, Cline, and agy; their command shapes are tested, but live runs are not yet proven.
+- Live host dispatch for OpenCode, KiloCode, Cline, and agy; their command shapes are tested, but live runs are deferred until those hosts are actually used.
 - A distributed or live two-host mesh; the current store is local.
-- CMS, media, SEO, and Astro/Lumos delivery.
 - A web dashboard server or interactive controls; the generated `aperio dashboard` page is read-only.
-- Optional OS sandboxing for shell/read steps when a plan sets `sandbox: true`; host steps are still detected, not jailed.
-- Remote deployment.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer is tested under `pwsh` on macOS.
 - Automated MCP or package discovery. Installation works only from a declared toolchain manifest with an explicit argv and verification command; risky tools still require owner approval.
 - Automatic public release.
+
+## Out of scope
+
+- **CMS and SEO delivery.** Aperio may orchestrate a project that uses a CMS, but it does not ship a CMS, editor, media system, or SEO product. Those belong to the target project. `docs/CMS-ROADMAP.md` is a separate method reference, not an Aperio feature.
+- **Deployment execution.** Aperio records deployment readiness and writes the handoff. It does not hold provider credentials or deploy applications. Deployment is an owner/project action.
 
 ## Safety model
 
@@ -164,7 +166,7 @@ The shell limitation is real. A command can change a file before Aperio detects 
 - `docs/DISCOVERY.md`: discovery domains, first questionnaire, facet profiles, evidence model, and module gates.
 - `docs/ARCHITECTURE.md`: components, state layout, and safety boundaries.
 - `docs/AUDIT.md`: source-anchored security audit ledger, schema, and limits.
-- `docs/CMS-ROADMAP.md`: stack-neutral custom CMS architecture, deployment profiles, phases, and exit proof.
+- `docs/CMS-ROADMAP.md`: separate stack-neutral CMS method for a target project; not an Aperio feature.
 - `docs/COORDINATION.md`: builder/auditor durable message channel, commands, and rules.
 - `docs/ROADMAP.md`: rebuild order.
 - `docs/STATUS.md`: what was measured, not what is claimed.

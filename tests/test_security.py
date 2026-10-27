@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -51,6 +52,24 @@ class SecurityTests(unittest.TestCase):
     def test_code_assignment_is_not_a_secret(self) -> None:
         self.write("parser.py", "token = token.strip()\n")
         self.assertEqual(scan(self.project), [])
+
+    def test_upper_snake_assignment_is_found(self) -> None:
+        # S1: a leading \b could not match names prefixed with an underscore,
+        # so DB_PASSWORD = "..." was invisible to the scan. Keyword-internal
+        # names needed a suffix anchor instead of a trailing \b.
+        self.write(
+            "config.py",
+            'DB_PASSWORD = "Sup3rSecret99"\n'
+            'SECRET_FALLBACK = "Sup3rSecret99"\n'
+            'AWS_SECRET_ACCESS_KEY = "Sup3rSecret99"\n'
+            'API_KEY_RESTRICTED = "Sup3rSecret99"\n',
+        )
+        findings = scan(self.project)
+        matches = [
+            item for item in findings
+            if item["kind"] == "assigned-secret" and "Sup3rSecret99" in json.dumps(item)
+        ]
+        self.assertGreaterEqual(len(matches), 4, findings)
 
     def test_format_is_readable(self) -> None:
         self.write("config.py", 'api_key = "sk_live_123456789"\n')

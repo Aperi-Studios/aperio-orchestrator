@@ -35,6 +35,10 @@ When a lower layer contradicts a higher one, the higher layer wins, and the cont
 
 This PRD does **not** authorize a public release, history rewrite, force-push, branch deletion, deployment, paid service, credential change, destructive cleanup, or copying client data into this repository.
 
+### Scope decision: Aperio is not a CMS or deployment product
+
+Aperio is a stack-neutral orchestrator. It does not ship a CMS, media system, visual editor, SEO product, or hosting/deployment runtime. A target project may choose those things; Aperio records the decision, checks readiness, and hands off. CMS and SEO requirements in this PRD apply only when the owner selects a CMS-backed target project, and they are delivered by that project, not by Aperio itself. Deployment execution is an owner/project action; Aperio records the deployment data and requires it before handoff.
+
 ---
 
 ## 1. Product definition
@@ -782,8 +786,8 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Learning tests | **10 passed** | same command; `tests/test_learning.py` |
 | Skill tests | **8 passed** | same command; `tests/test_skillgen.py` |
 | Toolchain tests | **8 passed** | same command; `tests/test_toolchain.py` |
-| Dashboard tests | **6 passed** | same command; `tests/test_dashboard.py` |
-| Security tests | **7 passed** | same command; `tests/test_security.py` |
+| Dashboard tests | **7 passed** | same command; `tests/test_dashboard.py` |
+| Security tests | **8 passed** | same command; `tests/test_security.py` |
 | Todo tests | **6 passed** | same command; `tests/test_todo.py` |
 | Readiness tests | **5 passed** | same command; `tests/test_readiness.py` |
 | Discovery tests | **25 passed** | same command; `tests/test_discovery.py` |
@@ -792,7 +796,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
 | Installer tests | **23 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **234 passed** | same command |
+| Total test suite | **236 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -832,13 +836,14 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Documentation drift | **clean**: links and inline paths resolve | `aperio drift` |
 | Local message store | **implemented**; real Claude and Codex processes read and replied | `tests/test_mesh.py`; `docs/HOST-PROOFS.md` |
 | Mediator disposition | **implemented** from the current task state and latest evidence | `tests/test_mediator.py` |
-| Host dispatch beyond Claude/Codex/dsh/Goose | **partial**: adapters for OpenCode, KiloCode, Cline, and agy are command-shape tested; live runs are not proven | `src/aperio/adapter.py`, `tests/test_adapter.py::test_extra_host_adapters_build_commands` |
+| Host dispatch beyond Claude/Codex/dsh/Goose | **deferred**: adapters for OpenCode, KiloCode, Cline, and agy are command-shape tested; live proof is not a release blocker | `src/aperio/adapter.py`, `tests/test_adapter.py::test_extra_host_adapters_build_commands` |
 | Distributed/live two-host mesh | **not built**; local durable message store and mediator are implemented | `src/aperio/mesh.py`, `src/aperio/mediator.py` |
-| CMS / SEO / Astro delivery | **not built** | no delivery adapter |
+| CMS / SEO / Astro delivery | **out of scope**; delivered by a target project, not Aperio | `README.md` scope decision |
 | OS sandbox | **optional**; `plan.sandbox: true` uses `sandbox-exec` on macOS or `bwrap` on Linux for shell/read steps and fails closed if unavailable. Host steps are not sandboxed. | `src/aperio/sandbox.py`; `tests/test_core.py::test_sandboxed_run_records_active_isolation` |
-| Native Windows execution | **not tested**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
+| Native Windows execution | **deferred**; `install.ps1` passes under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer` |
 | Public repository | **public** at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | **tests pass** on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
+| Remote deployment | **out of scope**; Aperio records readiness and hands off, but does not hold provider credentials or deploy | `README.md` scope decision |
 | External audit of the whole repo | **seven Codex passes and one Claude audit; Claude F1/F3/F4/F5 fixed, F2 documented; owner approval pending** | `docs/AUDIT-CODEX-20261026.md`, `docs/AUDIT-CLAUDE-20261026.md` |
 
 The v2 tree is intentionally small. It does not inherit the old repository's test count, branch state, or reports.
@@ -911,16 +916,16 @@ Every completion report includes this table, filled from actual work:
 | FR-16 | real delivery | | | | | |
 | FR-17 | design | | | | | |
 | FR-18 | mobile/a11y | | | | | |
-| FR-19 | CMS | | | | | |
-| FR-20 | visual editor | | | | | |
-| FR-21 | media | | | | | |
-| FR-22 | CMS SEO | | | | | |
-| FR-23 | revisions | | | | | |
-| FR-24 | blueprints | | | | | |
-| FR-25 | SEO pack | | | | | |
+| FR-19 | CMS | — | — | — | — | EXCLUDED WITH OWNER REASON |
+| FR-20 | visual editor | — | — | — | — | EXCLUDED WITH OWNER REASON |
+| FR-21 | media | — | — | — | — | EXCLUDED WITH OWNER REASON |
+| FR-22 | CMS SEO | — | — | — | — | EXCLUDED WITH OWNER REASON |
+| FR-23 | revisions | — | — | — | — | EXCLUDED WITH OWNER REASON |
+| FR-24 | blueprints | — | — | — | — | EXCLUDED WITH OWNER REASON |
+| FR-25 | SEO pack | — | — | — | — | EXCLUDED WITH OWNER REASON |
 | FR-26 | prompt | | | | | |
 | FR-27 | learning | | | | | |
-| FR-28 | status | `src/aperio/dashboard.py` | `aperio dashboard` | 4 dashboard tests; generated HTML | IMPLEMENTED | |
+| FR-28 | status | `src/aperio/dashboard.py` | `aperio dashboard` | 7 dashboard tests; `--output` is no-clobber (`--force` overwrites) and cannot reach `.git`/`.aperio` or escape the project; generated HTML | IMPLEMENTED | |
 | FR-29 | git/CI | | | | | |
 | FR-30 | install | | | | | |
 | FR-31 | portability | | | | | |
@@ -1064,7 +1069,7 @@ still required for deployment, paid hosts, credentials, and public release.
 | FR-36 learning dossier | **Implemented and verified** | `src/aperio/learning.py`; 10 learning tests; plan/approve/run gate; plan digest binding | Expire the dossier automatically on version change and re-run the proof |
 | FR-37 toolchain and skill creation | **Implemented** | manifest validation, approval-gated argv install with verification, project skills; 8 toolchain tests and 8 skill tests | registry discovery and live host skill loading |
 | FR-28 status dashboard | **Implemented** | generated read-only HTML from state; escaped text; protected output path; no scripts or network | live server or interactive controls |
-| FR-38 pre-flight, deploy, after-sales | **Partial** | readiness validation; pre-flight plan gate; full readiness at done/handoff | Deployment execution, real provider checks, support SLA automation |
+| FR-38 pre-flight, deploy, after-sales | **Implemented for data readiness** | readiness validation; pre-flight plan gate; deployment, after-sales, design, and security facts required at done/handoff | deployment execution is out of scope; provider checks and SLA automation belong to the target project |
 | FR-39 application design school | **Partial** | design contract, surface class, references, accessibility, responsive, originality fields | independent design critique and visual review workflow |
 | FR-40 security threat model | **Partial** | threat model, trust boundaries, controls, scans, headers, incident fields; high/critical block; local secret scan | dependency-history scan, external penetration testing, and provider header verification |
 | FR-41 todo and per-task approval | **Implemented and verified** | todo state machine; plan binding; run revalidation; 6 todo tests | automatic acceptance evidence capture and task-level UI |

@@ -159,7 +159,7 @@ footer {{ color:var(--muted); font-size:12px; margin-top:24px; }}
 """
 
 
-def write(project: Project, output: str = "") -> str:
+def write(project: Project, output: str = "", *, force: bool = False) -> str:
     if output:
         # --output must stay inside the project and outside the control plane:
         # this path is owner-facing HTML, never a state file.
@@ -172,6 +172,9 @@ def write(project: Project, output: str = "") -> str:
             raise PathSafetyError(
                 f"dashboard output would overwrite project state: {rel}"
             )
+        if path.exists() and not force:
+            # D1: a tracked source file must never be silently replaced by HTML
+            raise ValueError(f"dashboard output already exists: {path}; pass --force to overwrite")
     else:
         path = project.state / DASHBOARD_NAME
     if path.exists() and path.is_dir():

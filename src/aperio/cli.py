@@ -820,7 +820,7 @@ def cmd_security(args: argparse.Namespace) -> int:
 
 def cmd_dashboard(args: argparse.Namespace) -> int:
     project = _project(args)
-    path = write_dashboard(project, args.output)
+    path = write_dashboard(project, args.output, force=args.force)
     print(path)
     return 0
 
@@ -1193,6 +1193,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("dashboard", help="write a self-contained status dashboard")
     p.add_argument("--output", default="")
+    p.add_argument("--force", action="store_true", help="overwrite an existing --output file")
     p.set_defaults(func=cmd_dashboard)
 
     p = sub.add_parser("tool", help="approval-gated toolchain and MCP manifest")

@@ -39,7 +39,11 @@ PATTERNS = [
     (
         "assigned-secret",
         re.compile(
-            r"(?i)\b(?:api[_-]?key|secret|token|password|passwd|client[_-]?secret)\b"
+            # the trailing [a-z0-9_]* (with (?i)) also matches keyword-internal
+            # names: SECRET_FALLBACK, AWS_SECRET_ACCESS_KEY, API_KEY_RESTRICTED.
+            # A leading \b instead of the lookbehind missed underscore-prefixed
+            # names like DB_PASSWORD (S1).
+            r"(?i)(?<![A-Za-z])(?:api[_-]?key|secret|token|password|passwd|client[_-]?secret)[a-z0-9_]*"
             r"\s*[:=]\s*['\"]?([^\s'\"#]{8,})"
         ),
         "medium",

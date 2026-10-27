@@ -22,5 +22,5 @@ Initial clean rebuild.
 - Shell/read steps are OS-sandboxed only when a plan sets `sandbox: true`; host steps are not jailed. Undeclared changes are otherwise detected after execution.
 - Host adapters are implemented for Claude, Codex, Goose, dsh, OpenCode, KiloCode, Cline, and agy; Claude and Codex are live-proven, Goose/dsh live calls were blocked, and the extra adapters are command-shape tested only.
 - The local message store and mediator are implemented; a distributed two-host transport is not built.
-- CMS, SEO, deployment execution, and a live dashboard server are not implemented.
+- CMS, SEO, deployment execution, and a live dashboard server are target-project/owner concerns and outside Aperio's scope.
 - The PowerShell installer is implemented and tested under `pwsh` on macOS; native Windows `.cmd` execution is not tested.

@@ -60,3 +60,13 @@ class DashboardTests(unittest.TestCase):
         with self.assertRaises(PathSafetyError):
             write(self.project, "../escape.html")
         self.assertFalse(outside.exists())
+
+    def test_dashboard_output_does_not_clobber_tracked_files(self) -> None:
+        # D1: an existing tracked file must never be silently replaced by HTML.
+        readme = self.project.root / "README.md"
+        readme.write_text("# Keep\n", encoding="utf-8")
+        with self.assertRaises(ValueError):
+            write(self.project, "README.md")
+        self.assertEqual(readme.read_text(encoding="utf-8"), "# Keep\n")
+        forced = Path(write(self.project, "README.md", force=True))
+        self.assertIn("<!doctype html>", forced.read_text(encoding="utf-8"))
