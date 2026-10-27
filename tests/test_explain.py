@@ -32,6 +32,57 @@ class ExplainTests(unittest.TestCase):
             for section in ("WHAT IT CHECKS", "WHY IT EXISTS", "COMMANDS"):
                 self.assertIn(section, info["text"], topic)
 
+    def test_every_topic_anchors_its_rationale(self) -> None:
+        # A host review required each topic to connect its rationale to a
+        # traceable source: a repo doc path or a named test. Every topic's
+        # WHY section must reference at least one.
+        import re
+
+        for topic in TOPICS:
+            info = explain(topic, self.project)
+            why = info["text"].split("WHY IT EXISTS", 1)[1].split("COMMANDS", 1)[0]
+            anchors = re.findall(r"(docs/[\w./-]+|tests/[\w./-]+|skill/[\w./-]+)", why)
+            self.assertTrue(anchors, f"{topic}: no traceable anchor in WHY section")
+
+    def test_command_guidance_is_shell_safe(self) -> None:
+        # A host review caught bare <placeholders> (redirections) and
+        # omitted required flags. Every command line must quote its
+        # placeholders and carry the flags the CLI requires.
+        for topic in TOPICS:
+            info = explain(topic, self.project)
+            commands = info["text"].split("COMMANDS", 1)[1]
+            for line in commands.splitlines():
+                stripped = line.strip().removesuffix("\\").strip()
+                if not stripped.startswith("aperio "):
+                    continue
+                # No unquoted placeholders.
+                self.assertNotRegex(stripped, r"(?<!['\w])<(?!')", f"{topic}: {stripped}")
+            # Required flags per topic.
+            if topic == "review":
+                self.assertIn("--verdict", info["text"])
+            if topic == "discovery":
+                self.assertIn("--confirm 'I accept this risk'", info["text"])
+            if topic == "todo":
+                self.assertIn("--confirm 'I accept this task'", info["text"])
+
+    def test_read_only_across_all_topics(self) -> None:
+        def snapshot() -> dict[str, bytes]:
+            return {
+                str(p.relative_to(self.root)): p.read_bytes()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file()
+            }
+
+        before = snapshot()
+        for topic in TOPICS:
+            result = subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "explain", topic, "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            )
+            self.assertEqual(result.returncode, 0, topic)
+        self.assertEqual(before, snapshot(), "explain must not write any state")
+
     def test_every_topic_includes_live_status_with_a_project(self) -> None:
         for topic in TOPICS:
             info = explain(topic, self.project)
