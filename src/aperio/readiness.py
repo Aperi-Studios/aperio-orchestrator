@@ -8,6 +8,7 @@ review.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,18 @@ def _read(project: Project) -> dict[str, Any]:
     if data.get("schema") != SCHEMA_VERSION:
         raise ReadinessError(f"readiness schema must be {SCHEMA_VERSION}")
     return data
+
+
+def digest(project: Project) -> str:
+    """Stable hash of the readiness record content, for plan binding.
+
+    Mirrors discovery.digest: the plan pins the record it was planned
+    against, and approval/run refuse if the record changed afterwards.
+    """
+    data = _read(project)
+    payload = {key: data.get(key) for key in ("preflight", "deploy", "aftersales", "design", "security")}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _text(value: Any) -> bool:

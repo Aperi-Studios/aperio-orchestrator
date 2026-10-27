@@ -224,6 +224,7 @@ class Plan:
     discovery_digest: str = ""
     todo_id: str = ""
     learning_digest: str = ""
+    readiness_digest: str = ""
     sandbox: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -252,6 +253,7 @@ class Plan:
             discovery_digest=str(data.get("discovery_digest", "")),
             todo_id=str(data.get("todo_id", "")),
             learning_digest=str(data.get("learning_digest", "")),
+            readiness_digest=str(data.get("readiness_digest", "")),
             sandbox=bool(data.get("sandbox", False)),
         )
         plan.validate()

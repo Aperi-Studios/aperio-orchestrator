@@ -160,6 +160,16 @@ def _require_preflight(project: Project) -> None:
         )
 
 
+def _require_current_readiness(project: Project, plan: Plan) -> None:
+    if not plan.readiness_digest:
+        raise ReadinessError("plan has no readiness binding; recreate the plan")
+    from .readiness import digest as readiness_digest
+
+    current = readiness_digest(project)
+    if current != plan.readiness_digest:
+        raise ReadinessError("readiness record changed after this plan was created; make a new plan")
+
+
 def _print_task(task: Task) -> None:
     print(f"{task.id}  {task.status:11}  {task.title}")
     if task.plan_id:
@@ -201,6 +211,9 @@ def cmd_plan(args: argparse.Namespace) -> int:
     _require_preflight(project)
     todo_id = _active_todo(project)
     learning = learning_status(project)
+    from .readiness import digest as readiness_digest_at_plan
+
+    readiness_digest_value = readiness_digest_at_plan(project)
     data = _load_plan_data(args.file)
     task = Task(
         id=new_id("task"),
@@ -237,6 +250,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
         builder=str(data.get("builder", "agent")),
         todo_id=todo_id,
         learning_digest=str(learning.get("digest") or ""),
+        readiness_digest=readiness_digest_value,
     )
     plan.validate()
     if not plan.acceptance:
@@ -306,6 +320,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
     plan = project.get_plan(args.plan_id)
     _require_current_learning(project, plan)
     _require_current_discovery(project, plan)
+    _require_current_readiness(project, plan)
     task = project.get_task(plan.task_id)
     if task.status not in {"planned", "approved", "failed"}:
         raise ModelError(f"task is {task.status}; an approved, verified, or done task cannot be re-approved")
@@ -332,6 +347,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     plan = project.get_plan(task.plan_id)
     _require_current_learning(project, plan)
     _require_current_discovery(project, plan)
+    _require_current_readiness(project, plan)
     _require_preflight(project)
     if plan.todo_id:
         todo = todo_status(project)
@@ -362,6 +378,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
     plan = project.get_plan(task.plan_id)
     _require_current_learning(project, plan)
     _require_current_discovery(project, plan)
+    _require_current_readiness(project, plan)
     _require_preflight(project)
     if plan.todo_id:
         todo = todo_status(project)

@@ -382,7 +382,70 @@ class CliTests(unittest.TestCase):
         (self.root / ".aperio" / "readiness.json").unlink()
         result = self.cli("run", task_id)
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertIn("pre-flight readiness is required", result.stderr)
+        # The digest binding refuses first ("readiness record is missing");
+        # either refusal means the vanished record blocked the run.
+        self.assertTrue(
+            "pre-flight readiness is required" in result.stderr
+            or "readiness record is missing" in result.stderr,
+            result.stderr,
+        )
+
+    def test_readiness_change_invalidates_the_plan(self) -> None:
+        # The plan pins the readiness record it was planned against (like the
+        # learning and discovery bindings): a record edited between plan and
+        # approval must invalidate the plan, not silently pass with the new
+        # facts.
+        self.init()
+        self.complete_discovery()
+        plan = {
+            "title": "Readiness binding",
+            "request": "Prove the readiness digest binding",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan_id = result.stdout.split()[1]
+        record_path = self.root / ".aperio" / "readiness.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record["preflight"]["constraints"] = ["weakened after planning"]
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        result = self.cli(
+            "approve", plan_id, "--by", "owner", "--confirm", "I approve this plan"
+        )
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("readiness record changed", result.stderr)
+
+    def test_plan_without_readiness_binding_is_refused_at_approval(self) -> None:
+        # A plan body that predates the readiness binding (no digest field)
+        # cannot be approved: the owner must re-plan against the current
+        # record, mirroring the learning-binding migration rule.
+        self.init()
+        self.complete_discovery()
+        plan = {
+            "title": "No readiness binding",
+            "request": "Prove the readiness binding is required",
+            "allowed_paths": ["site/"],
+            "steps": [{"id": "write", "kind": "write", "path": "site/a.txt", "content": "a"}],
+            "acceptance": [{"id": "check", "command": f"{sys.executable} -c \"pass\""}],
+        }
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(plan), encoding="utf-8")
+        result = self.cli("plan", str(path))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        plan_id = result.stdout.split()[1]
+        plan_state_path = self.root / ".aperio" / "plans" / f"{plan_id}.json"
+        plan_state = json.loads(plan_state_path.read_text(encoding="utf-8"))
+        plan_state["readiness_digest"] = ""
+        plan_state_path.write_text(json.dumps(plan_state), encoding="utf-8")
+        result = self.cli(
+            "approve", plan_id, "--by", "owner", "--confirm", "I approve this plan"
+        )
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("plan has no readiness binding", result.stderr)
 
     def test_plan_without_discovery_is_refused(self) -> None:
         self.init()
