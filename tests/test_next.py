@@ -298,7 +298,7 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "plan")
         self.assertEqual(
             step["gates"],
-            {"discovery": True, "learning": True, "todo_in_progress": 1, "readiness": True},
+            {"discovery": True, "learning": True, "todo_in_progress": 1},
         )
 
     # ---- loop stages -----------------------------------------------------
@@ -397,6 +397,26 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["task_id"], task_id)
 
     # ---- safety ----------------------------------------------------------
+
+    def test_printed_commands_use_the_real_binary_name(self) -> None:
+        # A host review caught every suggested command saying "apero" while
+        # the installed binary is "aperio"; the stage tests never noticed
+        # because they invoke the CLI through -m, not through the printed
+        # strings. Walk the loop and check every printed command prefix.
+        step = next_action(self.project)
+        self.assertTrue(step["command"].startswith("aperio "), step["command"])
+        task_id, plan_id = self.plan_and_write()
+        for command_args in (
+            ("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan"),
+            ("run", task_id, "--actor", "builder"),
+            ("verify", task_id),
+            ("review", task_id, "--reviewer", "independent", "--verdict", "confirmed"),
+            ("done", task_id),
+        ):
+            self.cli(*command_args)
+            step = next_action(self.project)
+            self.assertTrue(step["command"].startswith("aperio "), step["command"])
+            self.assertNotIn("apero ", step["command"])
 
     def test_next_writes_nothing(self) -> None:
         def snapshot() -> dict[str, bytes]:

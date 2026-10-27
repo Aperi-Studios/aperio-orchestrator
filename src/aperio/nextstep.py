@@ -4,6 +4,13 @@
 would otherwise have to reverse-engineer from refusals: what is the next legal
 action, the exact command that performs it, and why the loop requires it now.
 
+Gate steps are checked before lifecycle steps, in the order ``cmd_plan``
+refuses (learning, todo, preflight readiness, discovery): an unsatisfied gate
+is the first refusal any of approve, plan, or run would raise, so naming it
+first is always a legal action even mid-loop. Full readiness is deliberately
+not demanded before planning — the CLI requires only preflight there and full
+readiness at done and handoff.
+
 The module is deliberately read-only: it opens state, never writes, and never
 performs the action it names. Gates stay gates; this only narrates them.
 """
@@ -15,8 +22,7 @@ from typing import Any
 from .discovery import DiscoveryError
 from .discovery import status as discovery_status
 from .learning import status as learning_status
-from .readiness import ReadinessError
-from .readiness import status as readiness_status
+from .readiness import ReadinessError, validate_preflight
 from .store import Project
 from .todo import status as todo_status
 
@@ -31,15 +37,24 @@ def _discovery_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
     if progress is None:
         return _step(
             "discover.answer",
-            "apero discover answer <question-id> --text \"<owner's answer>\"",
+            "aperio discover answer <question-id> --text \"<owner's answer>\"",
             "discovery has not started; the plan gate refuses until every question "
             "is answered or explicitly waived by the owner",
         )
     if not progress["ready"]:
-        question = progress["next"]
+        question = progress.get("next")
+        if not question:
+            # The record could not name a question (corrupt or unreadable):
+            # route to the read-only lookup instead of printing an invalid id.
+            return _step(
+                "discover.next",
+                "aperio discover next --json",
+                "discovery is not ready but the record did not name the next "
+                "question; read the next question (or the error) before answering",
+            )
         return _step(
             "discover.answer",
-            f"apero discover answer {question} --text \"<owner's answer>\"",
+            f"aperio discover answer {question} --text \"<owner's answer>\"",
             f"discovery is {progress['answered']}/{progress['total']} answered; "
             "the plan gate refuses until it is ready",
             question=question,
@@ -51,14 +66,14 @@ def _learning_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
     if progress is None or progress.get("digest") is None:
         return _step(
             "learn.import",
-            "apero learn import <dossier.json>",
+            "aperio learn import <dossier.json>",
             "no learning dossier exists; plan, approve, and run refuse without one",
             issues=progress.get("issues", []) if progress else [],
         )
     if not progress["ready"]:
         return _step(
             "learn.proof",
-            "apero learn proof --command \"<command that proves the stack works>\"",
+            "aperio learn proof --command \"<command that proves the stack works>\"",
             "the dossier is imported but not proven; imported proof text is ignored, "
             "a local command must run and pass",
             issues=progress.get("issues", []),
@@ -70,7 +85,7 @@ def _todo_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
     if progress is None:
         return _step(
             "todo.add",
-            "apero todo add \"<title>\" --deliverable \"<what exists when done>\" "
+            "aperio todo add \"<title>\" --deliverable \"<what exists when done>\" "
             "--acceptance \"<how it is checked>\"",
             "the todo ledger is empty; plan refuses without exactly one task in progress",
         )
@@ -79,32 +94,28 @@ def _todo_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
         if pending is None:
             return _step(
                 "todo.add",
-                "apero todo add \"<title>\" --deliverable \"<what exists when done>\" "
+                "aperio todo add \"<title>\" --deliverable \"<what exists when done>\" "
                 "--acceptance \"<how it is checked>\"",
                 "every todo task is accepted or deferred; add the next slice",
             )
         return _step(
             "todo.start",
-            f"apero todo start {pending['id']}",
+            f"aperio todo start {pending['id']}",
             "plan requires exactly one todo task in progress",
             todo_id=pending["id"],
         )
     return None
 
 
-def _readiness_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
-    if progress is None:
+def _readiness_step(project: Project) -> dict[str, Any] | None:
+    """Preflight readiness only: cmd_plan requires preflight, done/handoff full."""
+    issues = validate_preflight(project)
+    if issues:
         return _step(
             "readiness.import",
-            "apero readiness import <readiness.json>",
-            "no readiness record exists; the preflight gate refuses to plan without one",
-        )
-    if not progress["ready"]:
-        return _step(
-            "readiness.import",
-            "apero readiness import <readiness.json> --replace",
-            "the readiness record has open issues",
-            issues=progress.get("issues", []),
+            "aperio readiness import <readiness.json>",
+            "pre-flight readiness is required before planning, approval, or run",
+            issues=issues[:6],
         )
     return None
 
@@ -123,20 +134,34 @@ def _stale_binding(project: Project, plan_id: str) -> dict[str, Any] | None:
     except Exception:  # noqa: BLE001 - any plan-load failure means re-plan
         return _step(
             "plan",
-            "apero plan <plan.json>",
+            "aperio plan <plan.json>",
             f"the plan {plan_id} cannot be loaded; write a fresh bounded plan",
         )
-    if plan.learning_digest:
-        current = learning_status(project)
-        if not current.get("ready") or current.get("digest") != plan.learning_digest:
+    if not plan.learning_digest:
+        # A missing binding is refused by approve/run exactly like a stale one.
+        return _step(
+            "plan",
+            "aperio plan <plan.json>",
+            "the plan has no learning binding; approve and run would refuse — "
+            "make a new plan against the current dossier",
+        )
+    current = learning_status(project)
+    if not current.get("ready") or current.get("digest") != plan.learning_digest:
+        return _step(
+            "plan",
+            "aperio plan <plan.json>",
+            "the learning dossier changed after this plan was created; "
+            "approve and run would refuse — make a new plan",
+        )
+    if not plan.discovery_digest:
+        if project.discovery() is not None:
             return _step(
                 "plan",
-                "apero plan <plan.json>",
-                "the learning dossier changed after this plan was created; "
-                "approve and run would refuse — make a new plan",
-                task_id=None,
+                "aperio plan <plan.json>",
+                "the plan has no discovery binding; approve would refuse — "
+                "make a new plan against the current discovery record",
             )
-    if plan.discovery_digest:
+    else:
         try:
             current = discovery_digest(project)
         except DiscoveryError:
@@ -144,22 +169,28 @@ def _stale_binding(project: Project, plan_id: str) -> dict[str, Any] | None:
         if current != plan.discovery_digest:
             return _step(
                 "plan",
-                "apero plan <plan.json>",
+                "aperio plan <plan.json>",
                 "discovery changed after this plan was created; "
                 "approve and run would refuse — make a new plan",
             )
-    if plan.readiness_digest:
-        try:
-            current = readiness_digest(project)
-        except ReadinessError:
-            current = None
-        if current != plan.readiness_digest:
-            return _step(
-                "plan",
-                "apero plan <plan.json>",
-                "the readiness record changed after this plan was created; "
-                "approve and run would refuse — make a new plan",
-            )
+    if not plan.readiness_digest:
+        return _step(
+            "plan",
+            "aperio plan <plan.json>",
+            "the plan has no readiness binding; approve and run would refuse — "
+            "make a new plan against the current readiness record",
+        )
+    try:
+        current = readiness_digest(project)
+    except ReadinessError:
+        current = None
+    if current != plan.readiness_digest:
+        return _step(
+            "plan",
+            "aperio plan <plan.json>",
+            "the readiness record changed after this plan was created; "
+            "approve and run would refuse — make a new plan",
+        )
     return None
 
 
@@ -180,7 +211,7 @@ def _task_step(project: Project) -> dict[str, Any] | None:
     if best is None:
         return _step(
             "plan",
-            "apero plan <plan.json>",
+            "aperio plan <plan.json>",
             "no task is in flight; write a bounded plan for the in-progress todo slice",
         )
 
@@ -195,7 +226,7 @@ def _task_step(project: Project) -> dict[str, Any] | None:
     if status == "planned":
         return _step(
             "approve",
-            f"apero approve {task['plan_id']} --by <owner> --confirm \"I approve this plan\"",
+            f"aperio approve {task['plan_id']} --by <owner> --confirm \"I approve this plan\"",
             "a plan exists and waits for the owner's explicit approval phrase",
             task_id=task["id"],
             plan_id=task["plan_id"],
@@ -203,41 +234,41 @@ def _task_step(project: Project) -> dict[str, Any] | None:
     if status == "approved":
         return _step(
             "run",
-            f"apero run {task['id']} --actor <builder>",
+            f"aperio run {task['id']} --actor <builder>",
             "the plan is approved; the run actor must differ from the approver",
             task_id=task["id"],
         )
     if status == "applied":
         return _step(
             "verify",
-            f"apero verify {task['id']}",
+            f"aperio verify {task['id']}",
             "the run applied cleanly; acceptance checks must pass before review",
             task_id=task["id"],
         )
     if status == "verified":
         return _step(
             "review",
-            f"apero review {task['id']} --reviewer <independent reviewer> --verdict confirmed",
+            f"aperio review {task['id']} --reviewer <independent reviewer> --verdict confirmed",
             "verification passed; an independent reviewer (never the builder) must confirm",
             task_id=task["id"],
         )
     if status == "reviewed":
         return _step(
             "done",
-            f"apero done {task['id']}",
+            f"aperio done {task['id']}",
             "the review is confirmed; full readiness is required to close the task",
             task_id=task["id"],
         )
     if status == "done":
         return _step(
             "handoff",
-            f"apero handoff {task['id']}",
+            f"aperio handoff {task['id']}",
             "the task is done; write the owner handoff describing the actual state",
             task_id=task["id"],
         )
     return _step(
         "recover",
-        f"apero status {task['id']}",
+        f"aperio status {task['id']}",
         f"the most advanced task is {status}; inspect it and decide: resume, roll back, or re-plan",
         task_id=task["id"],
     )
@@ -254,16 +285,11 @@ def next_action(project: Project) -> dict[str, Any]:
         discovery_ready = {"ready": False, "answered": 0, "total": 0, "next": None}
     learning_ready = learning_status(project)
     todo = todo_status(project)
-    readiness = None
-    try:
-        readiness = readiness_status(project)
-    except ReadinessError:
-        readiness = None
 
     for step in (
         _learning_step(learning_ready),
         _todo_step(todo),
-        _readiness_step(readiness),
+        _readiness_step(project),
         _discovery_step(discovery_ready),
     ):
         if step is not None:
@@ -276,6 +302,5 @@ def next_action(project: Project) -> dict[str, Any]:
         "discovery": discovery_ready["ready"] if discovery_ready else False,
         "learning": bool(learning_ready.get("ready")),
         "todo_in_progress": todo["in_progress"],
-        "readiness": bool(readiness.get("ready")) if readiness else False,
     }
     return step
