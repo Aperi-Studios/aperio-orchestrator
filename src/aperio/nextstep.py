@@ -178,12 +178,65 @@ def _readiness_step(project: Project) -> dict[str, Any] | None:
     """Preflight readiness only: cmd_plan requires preflight, done/handoff full."""
     issues = validate_preflight(project)
     if issues:
+        # An existing record needs --replace or the suggested import refuses
+        # (a host review caught the missing flag).
+        command = (
+            "aperio readiness import <readiness.json> --replace"
+            if (project.state / "readiness.json").exists()
+            else "aperio readiness import <readiness.json>"
+        )
         return _step(
             "readiness.import",
-            "aperio readiness import <readiness.json>",
+            command,
             "pre-flight readiness is required before planning, approval, or run",
             issues=issues[:6],
         )
+    return None
+
+
+def _stale_task_ids(project: Project) -> set[str]:
+    """Tasks whose plan bindings no longer match the current gate records."""
+    stale: set[str] = set()
+    for task in project.tasks():
+        if task.status not in {"planned", "approved"} or not task.plan_id:
+            continue
+        if _binding_problem(project, str(task.plan_id)) is not None:
+            stale.add(task.id)
+    return stale
+
+
+def _binding_problem(project: Project, plan_id: str) -> str | None:
+    """The stale/missing binding reason for a plan, or None when current."""
+    from .discovery import digest as discovery_digest
+    from .readiness import digest as readiness_digest
+
+    try:
+        plan = project.get_plan(plan_id)
+    except Exception:  # noqa: BLE001 - any plan-load failure means re-plan
+        return f"the plan {plan_id} cannot be loaded"
+    if not plan.learning_digest:
+        return "the plan has no learning binding"
+    current = learning_status(project)
+    if not current.get("ready") or current.get("digest") != plan.learning_digest:
+        return "the learning dossier changed after this plan was created"
+    if not plan.discovery_digest:
+        if project.discovery() is not None:
+            return "the plan has no discovery binding"
+    else:
+        try:
+            current = discovery_digest(project)
+        except DiscoveryError:
+            current = None
+        if current != plan.discovery_digest:
+            return "discovery changed after this plan was created"
+    if not plan.readiness_digest:
+        return "the plan has no readiness binding"
+    try:
+        current = readiness_digest(project)
+    except ReadinessError:
+        current = None
+    if current != plan.readiness_digest:
+        return "the readiness record changed after this plan was created"
     return None
 
 
@@ -193,79 +246,31 @@ def _stale_binding(project: Project, plan_id: str) -> dict[str, Any] | None:
     approve, run, and resume re-check the bindings and refuse on drift; naming
     it here saves the agent the refusal.
     """
-    from .discovery import digest as discovery_digest
-    from .readiness import digest as readiness_digest
-
-    try:
-        plan = project.get_plan(plan_id)
-    except Exception:  # noqa: BLE001 - any plan-load failure means re-plan
-        return _step(
-            "plan",
-            "aperio plan <plan.json>",
-            f"the plan {plan_id} cannot be loaded; write a fresh bounded plan",
-        )
-    if not plan.learning_digest:
-        # A missing binding is refused by approve/run exactly like a stale one.
-        return _step(
-            "plan",
-            "aperio plan <plan.json>",
-            "the plan has no learning binding; approve and run would refuse — "
-            "make a new plan against the current dossier",
-        )
-    current = learning_status(project)
-    if not current.get("ready") or current.get("digest") != plan.learning_digest:
-        return _step(
-            "plan",
-            "aperio plan <plan.json>",
-            "the learning dossier changed after this plan was created; "
-            "approve and run would refuse — make a new plan",
-        )
-    if not plan.discovery_digest:
-        if project.discovery() is not None:
-            return _step(
-                "plan",
-                "aperio plan <plan.json>",
-                "the plan has no discovery binding; approve would refuse — "
-                "make a new plan against the current discovery record",
-            )
-    else:
-        try:
-            current = discovery_digest(project)
-        except DiscoveryError:
-            current = None
-        if current != plan.discovery_digest:
-            return _step(
-                "plan",
-                "aperio plan <plan.json>",
-                "discovery changed after this plan was created; "
-                "approve and run would refuse — make a new plan",
-            )
-    if not plan.readiness_digest:
-        return _step(
-            "plan",
-            "aperio plan <plan.json>",
-            "the plan has no readiness binding; approve and run would refuse — "
-            "make a new plan against the current readiness record",
-        )
-    try:
-        current = readiness_digest(project)
-    except ReadinessError:
-        current = None
-    if current != plan.readiness_digest:
-        return _step(
-            "plan",
-            "aperio plan <plan.json>",
-            "the readiness record changed after this plan was created; "
-            "approve and run would refuse — make a new plan",
-        )
-    return None
+    problem = _binding_problem(project, plan_id)
+    if problem is None:
+        return None
+    return _step(
+        "plan",
+        "aperio plan <plan.json>",
+        f"{problem}; approve and run would refuse — make a new plan. The stale "
+        "task stays blocked; finish the new plan's slice instead",
+    )
 
 
 def _task_step(project: Project) -> dict[str, Any] | None:
-    """The most advanced in-flight task determines the loop stage."""
+    """The most advanced in-flight task determines the loop stage.
+
+    Tasks with stale plan bindings are skipped: a re-plan creates a new task,
+    and the advisor must follow the new slice rather than re-recommending a
+    re-plan for the task that can no longer proceed (a host review caught the
+    loop).
+    """
+    stale_ids = _stale_task_ids(project)
     stage_order = ["planned", "approved", "applied", "verified", "reviewed", "done"]
     best: tuple[int, dict[str, Any]] | None = None
     for task in project.tasks():
+        if task.id in stale_ids:
+            continue
         if task.status in {"failed", "blocked", "rolled_back"}:
             index = 0
         else:

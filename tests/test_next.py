@@ -160,7 +160,7 @@ class NextTests(unittest.TestCase):
             self.cli(*command)
         dossier = self.root / "learning.json"
         dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
-        self.cli("learn", "import", str(dossier), allow_rc={1})
+        self.cli("learn", "import", str(dossier), "--replace", allow_rc={1})
         self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
         self.cli(
             "todo", "add", "Build page",
@@ -175,10 +175,13 @@ class NextTests(unittest.TestCase):
             ).stdout
         )
         todo_id = listing["tasks"][0]["id"]
-        self.cli("todo", "start", todo_id)
+        # Idempotent: a second plan_and_write in one test must not re-start
+        # an already in-progress task.
+        if listing["tasks"][0]["status"] == "pending":
+            self.cli("todo", "start", todo_id)
         readiness_path = self.root / "readiness.json"
         readiness_path.write_text(json.dumps(READINESS), encoding="utf-8")
-        self.cli("readiness", "import", str(readiness_path))
+        self.cli("readiness", "import", str(readiness_path), "--replace")
 
     # ---- gate stages ----------------------------------------------------
 
@@ -194,7 +197,7 @@ class NextTests(unittest.TestCase):
         # genuinely the next refusal the agent would hit.
         dossier = self.root / "learning.json"
         dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
-        self.cli("learn", "import", str(dossier), allow_rc={1})
+        self.cli("learn", "import", str(dossier), "--replace", allow_rc={1})
         self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
         self.cli(
             "todo", "add", "Build page",
@@ -228,7 +231,7 @@ class NextTests(unittest.TestCase):
             self.cli(*command)
         dossier = self.root / "learning.json"
         dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
-        self.cli("learn", "import", str(dossier), allow_rc={1})
+        self.cli("learn", "import", str(dossier), "--replace", allow_rc={1})
         step = next_action(self.project)
         self.assertEqual(step["action"], "learn.proof")
         self.assertIn("learn proof", step["command"])
@@ -252,7 +255,7 @@ class NextTests(unittest.TestCase):
             self.cli(*command)
         path = self.root / "learning.json"
         path.write_text(json.dumps(dossier), encoding="utf-8")
-        self.cli("learn", "import", str(path), allow_rc={1})
+        self.cli("learn", "import", str(path), "--replace", allow_rc={1})
         step = next_action(self.project)
         self.assertEqual(step["action"], "learn.proof")
 
@@ -260,7 +263,7 @@ class NextTests(unittest.TestCase):
         self.complete_discovery_only()
         dossier = self.root / "learning.json"
         dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
-        self.cli("learn", "import", str(dossier), allow_rc={1})
+        self.cli("learn", "import", str(dossier), "--replace", allow_rc={1})
         self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
         readiness_path = self.root / "readiness.json"
         readiness_path.write_text(json.dumps(READINESS), encoding="utf-8")
@@ -342,7 +345,9 @@ class NextTests(unittest.TestCase):
         # A prior host review caught that the advisor recommended approve/run
         # without checking the plan's gate bindings. Mutating the readiness
         # record after planning must route to re-plan, because approve and run
-        # would refuse on the digest check.
+        # would refuse on the digest check. The stale task is then skipped by
+        # task selection (a later review caught the re-plan loop), so the
+        # advice lands on the generic plan step.
         _task_id, _plan_id = self.plan_and_write()
         record_path = self.root / ".aperio" / "readiness.json"
         record = json.loads(record_path.read_text(encoding="utf-8"))
@@ -350,14 +355,36 @@ class NextTests(unittest.TestCase):
         record_path.write_text(json.dumps(record), encoding="utf-8")
         step = next_action(self.project)
         self.assertEqual(step["action"], "plan")
-        self.assertIn("readiness record changed", step["why"])
+        self.assertIn("plan", step["command"])
 
     def test_stale_learning_binding_points_at_replan(self) -> None:
         _task_id, _plan_id = self.plan_and_write()
         self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(42)"')
         step = next_action(self.project)
         self.assertEqual(step["action"], "plan")
-        self.assertIn("learning dossier changed", step["why"])
+        self.assertIn("plan", step["command"])
+
+    def test_stale_task_is_skipped_for_a_fresh_planned_task(self) -> None:
+        # The re-plan loop a host review caught: after re-planning, the stale
+        # approved task must not outrank the new planned task; the advisor
+        # follows the new slice (approve), not another re-plan.
+        stale_task, _stale_plan = self.plan_and_write()
+        record_path = self.root / ".aperio" / "readiness.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record["preflight"]["constraints"] = ["changed after planning"]
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        # Re-import with current facts so the fresh plan binds cleanly.
+        readiness = json.loads(json.dumps(record))
+        readiness["preflight"]["constraints"] = ["current"]
+        source = self.root / "readiness-current.json"
+        source.write_text(json.dumps(readiness), encoding="utf-8")
+        self.cli("readiness", "import", str(source), "--replace")
+        fresh_task, _fresh_plan = self.plan_and_write()
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "approve")
+        self.assertNotEqual(step.get("task_id"), stale_task)
+        self.assertEqual(step["task_id"], fresh_task)
+        _ = stale_task  # named for readability
 
     def test_applied_task_points_at_verify(self) -> None:
         task_id, plan_id = self.plan_and_write()
@@ -429,7 +456,7 @@ class NextTests(unittest.TestCase):
         # first (a host review flagged the inverted order).
         dossier = self.root / "learning.json"
         dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
-        self.cli("learn", "import", str(dossier), allow_rc={1})
+        self.cli("learn", "import", str(dossier), "--replace", allow_rc={1})
         self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
         self.cli(
             "todo", "add", "Build page",
