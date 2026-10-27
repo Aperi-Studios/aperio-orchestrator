@@ -720,6 +720,17 @@ class NextTests(unittest.TestCase):
         self.cli("todo", "start", pending2)
         step = next_action(self.project)
         self.assertEqual(step["action"], "plan")
+        # A further pending todo must not outrank the started slice: the
+        # advisor plans the in-progress slice instead of an illegal start
+        # (a host review caught the inverted order).
+        self.cli(
+            "todo", "add", "Third slice",
+            "--deliverable", "third works",
+            "--acceptance", "third exists",
+        )
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "plan")
+        self.assertIn("plan", step["command"])
 
     def test_unreadable_discovery_routes_to_the_lookup(self) -> None:
         # A host review caught the advisor suggesting an answer command with

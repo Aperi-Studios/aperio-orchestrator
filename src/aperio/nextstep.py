@@ -373,6 +373,18 @@ def _task_step(project: Project) -> dict[str, Any] | None:
                     todo_id=unsettled["id"],
                     task_id=handed_off_by_todo[unsettled["id"]],
                 )
+            if unsettled is not None:
+                # An in-progress todo with no handed-off linkage: a fresh
+                # slice is underway and needs its plan. This outranks
+                # starting further pending todos — todo.start would refuse
+                # while this one is in progress (a host review caught the
+                # inverted order).
+                return _step(
+                    "plan",
+                    "aperio plan <plan.json>",
+                    "the next slice's todo is in progress and no plan exists "
+                    "for it yet; write the bounded plan for it",
+                )
             pending = next(
                 (item for item in ledger if item["status"] == "pending"),
                 None,
@@ -385,15 +397,6 @@ def _task_step(project: Project) -> dict[str, Any] | None:
                     "pending slice; start it before planning",
                     todo_id=pending["id"],
                     task_id=max(handed_off),
-                )
-            if unsettled is not None:
-                # An in-progress todo with no handed-off linkage: a fresh
-                # slice is underway and needs its plan.
-                return _step(
-                    "plan",
-                    "aperio plan <plan.json>",
-                    "the next slice's todo is in progress and no plan exists "
-                    "for it yet; write the bounded plan for it",
                 )
             return _step(
                 "complete",
