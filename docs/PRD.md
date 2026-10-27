@@ -331,7 +331,9 @@ decision near the top of this document.
 
 **Acceptance:** edit a real field, save it, refresh the public route, and show the change; verify permission denial, validation errors, draft and publish, media, and rollback. Exclusions outside approved scope are stated.
 
-### FR-20: Design-locked visual editor and blocks (P1)
+### FR-20: Design-locked visual editor and blocks (P1; target project, not Aperio scope)
+
+> The CMS/SEO requirements from FR-20 through FR-25 apply only when the owner selects a CMS-backed target project. Aperio does not ship this functionality. See the scope decision near the top of this document.
 
 For applicable CMS projects, provide a split-screen editor with a control sidebar and interactive preview. Selecting a preview element focuses its field. Owners can add, toggle, and reorder approved blocks without breaking tokens or layout.
 
@@ -901,6 +903,8 @@ The v2 tree is intentionally small. It does not inherit the old repository's tes
 ## 17. Requirement traceability
 
 Every completion report includes this table, filled from actual work:
+
+> Rows with empty cells are not separately traced in this table. An empty cell is **not** a claim of implementation or completion. Use `docs/STATUS.md` and `HANDOFF.md` for the measured state; use `docs/OWNER-REQUESTS.md` for the owner request trail.
 
 | Requirement | Owner ask | Implementation path | Wired call site | Test or live evidence | Status | Reviewer |
 |---|---|---|---|---|---|---|
