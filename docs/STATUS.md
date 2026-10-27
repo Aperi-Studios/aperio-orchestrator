@@ -100,6 +100,7 @@
 | GitHub Actions | tests pass on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
 | Handoff | `HANDOFF.md` is the incoming-agent entry point; `docs/OWNER-REQUESTS.md` maps owner requests to docs/tests | `HANDOFF.md`; `docs/OWNER-REQUESTS.md` |
 | Documentation drift | clean: links and inline paths resolve | `aperio drift` |
+| Independent host review of the hygiene sprint | fresh-context Codex review confirmed after 3 refuted rounds; 3 verified findings fixed (glob crossing `/`, STATUS per-suite drift, PRD table drift) | review `review-61c27b51d5`, task `task-sprint1` in the temporary goldfish project; earlier rounds `review-62d4842164` (2×P1), plus two P2 rounds; commits `01018bc`, `d317d42`, `68611b9`, `01c0ad8` |
 
 ## Not built
 
