@@ -46,8 +46,9 @@ class ExplainTests(unittest.TestCase):
 
     def test_command_guidance_is_shell_safe(self) -> None:
         # A host review caught bare <placeholders> (redirections) and
-        # omitted required flags. Every command line must quote its
-        # placeholders and carry the flags the CLI requires.
+        # omitted required flags; a later review caught an embedded
+        # apostrophe that made a quoted example unparseable. The oracle is
+        # sh -n on the assembled command: every printed command must parse.
         for topic in TOPICS:
             info = explain(topic, self.project)
             commands = info["text"].split("COMMANDS", 1)[1]
@@ -57,6 +58,14 @@ class ExplainTests(unittest.TestCase):
                     continue
                 # No unquoted placeholders.
                 self.assertNotRegex(stripped, r"(?<!['\w])<(?!')", f"{topic}: {stripped}")
+                # The command must parse as shell syntax.
+                check = subprocess.run(
+                    ["/bin/sh", "-n", "-c", stripped],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(
+                    check.returncode, 0, f"{topic}: {stripped}: {check.stderr.strip()}"
+                )
             # Required flags per topic.
             if topic == "review":
                 self.assertIn("--verdict", info["text"])
