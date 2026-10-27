@@ -626,6 +626,20 @@ class NextTests(unittest.TestCase):
         # Whatever the root, shlex.quote of it must appear verbatim.
         self.assertIn(f"--project {shlex.quote(str(self.project.root))}", step["command"])
 
+    def test_placeholders_are_quoted_against_shell_redirection(self) -> None:
+        # A host review caught bare <owner>-style placeholders: the shell
+        # reads them as redirections. Every placeholder must arrive quoted
+        # so the printed command is runnable as emitted.
+        step = next_action(self.project)  # learn import <dossier.json>
+        self.assertIn("'<dossier.json>'", step["command"])
+        self.assertNotIn(" <dossier.json>", step["command"])
+        self.complete_gates()
+        step = next_action(self.project)  # plan <plan.json>
+        self.assertIn("'<plan.json>'", step["command"])
+        _task_id, _plan_id = self.plan_and_write()
+        step = next_action(self.project)  # approve --by <owner>
+        self.assertIn("--by '<owner>'", step["command"])
+
     def test_run_todo_check_uses_the_named_task(self) -> None:
         # A host review caught the linked-todo check inspecting a different
         # approved task than the one named in the suggested run command.

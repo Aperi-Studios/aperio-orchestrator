@@ -31,6 +31,11 @@ from .todo import status as todo_status
 
 
 def _step(action: str, command: str, why: str, **extra: Any) -> dict[str, Any]:
+    # Bare <placeholders> are shell redirections; quoting keeps every
+    # suggested command runnable as printed (a host review caught this).
+    import re as _re
+
+    command = _re.sub(r"(?<!['\"])(<[^>]+>)(?!['\"])", r"'\1'", command)
     data = {"action": action, "command": command, "why": why}
     data.update(extra)
     return data
