@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COUNT_BEARING = [
     ("docs/TESTING.md", r"Expected on a clean v2 tree: (\d+) tests pass"),
     ("docs/STATUS.md", r"\| Total test suite \| (\d+) passed \|"),
+    ("docs/STATUS.md", r"The (\d+)-test suite"),
     ("docs/PRD.md", r"\| Total test suite \| \*\*(\d+) passed\*\* \|"),
     ("HANDOFF.md", r"\*\*(\d+) tests pass\*\*"),
     ("HANDOFF.md", r"Full suite: (\d+) tests"),
