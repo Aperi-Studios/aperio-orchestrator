@@ -75,15 +75,21 @@ class DocCountTests(unittest.TestCase):
         self.assertEqual(mismatches, [], "doc test-count drift")
 
     def test_status_per_suite_rows_match_the_measured_modules(self) -> None:
+        # Both count-bearing tables are checked: STATUS.md's plain rows and
+        # PRD.md's bold rows (a previous host review caught PRD drifting
+        # while STATUS was correct).
         mismatches: list[str] = []
-        for label, test_file in PER_SUITE:
-            measured = _file_test_count(test_file)
-            pattern = rf"\| {re.escape(label)} \| (\d+) passed \|"
-            match = re.search(pattern, (ROOT / "docs/STATUS.md").read_text(encoding="utf-8"))
-            if match is None:
-                mismatches.append(f"docs/STATUS.md: no per-suite row for {label}")
-            elif int(match.group(1)) != measured:
-                mismatches.append(f"docs/STATUS.md {label}: claims {match.group(1)}, measured {measured}")
+        for doc, bold in (("docs/STATUS.md", False), ("docs/PRD.md", True)):
+            text = (ROOT / doc).read_text(encoding="utf-8")
+            for label, test_file in PER_SUITE:
+                measured = _file_test_count(test_file)
+                claimed = r"\*\*(\d+) passed\*\*" if bold else r"(\d+) passed"
+                pattern = rf"\| {re.escape(label)} \| {claimed} \|"
+                match = re.search(pattern, text)
+                if match is None:
+                    mismatches.append(f"{doc}: no per-suite row for {label}")
+                elif int(match.group(1)) != measured:
+                    mismatches.append(f"{doc} {label}: claims {match.group(1)}, measured {measured}")
         self.assertEqual(mismatches, [], "per-suite doc drift")
 
 

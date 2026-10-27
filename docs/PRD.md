@@ -785,12 +785,12 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 
 | Item | Result | Command or evidence |
 |---|---|---|
-| Core unit tests | **50 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | **53 passed** | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | **17 passed** | same command; `tests/test_adapter.py` |
 | Drift tests | **5 passed** | same command; `tests/test_drift.py` |
 | Mesh tests | **5 passed** | same command; `tests/test_mesh.py` |
 | Mediator tests | **6 passed** | same command; `tests/test_mediator.py` |
-| CLI tests | **14 passed** | same command; `tests/test_cli.py` |
+| CLI tests | **16 passed** | same command; `tests/test_cli.py` |
 | Learning tests | **10 passed** | same command; `tests/test_learning.py` |
 | Skill tests | **8 passed** | same command; `tests/test_skillgen.py` |
 | Toolchain tests | **8 passed** | same command; `tests/test_toolchain.py` |
