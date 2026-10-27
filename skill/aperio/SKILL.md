@@ -408,7 +408,7 @@ working contact form.
 6. Do not call a task done without passing acceptance checks and a confirmed review.
 7. Do not put credentials, client identifiers, or private data in the plan, evidence, or handoff.
 8. Do not claim a deployment, link, or screenshot that was not actually produced.
-9. A shell step is not OS-sandboxed. Declare every expected write; undeclared changes are recorded as violations.
+9. A shell or read step is OS-sandboxed only when the plan sets `sandbox: true`. Otherwise declare every expected write; undeclared changes are recorded as violations.
 10. If a gate fails, stop and report the exact command, exit code, and result.
 
 ## Flow

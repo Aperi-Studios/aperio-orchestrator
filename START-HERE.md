@@ -1,32 +1,40 @@
 # START HERE
 
-This repository is Aperio v2, a clean rebuild. The old repository is preserved separately and is not the source of truth.
+This is the entry point for Aperio Orchestrator v2. The repository is the source of
+truth; do not rely on a previous chat or an agent's memory.
+
+## Read in this order
+
+1. **`HANDOFF.md`** — current state, commands, verification, boundaries, and the
+   incoming-agent checklist.
+2. **`docs/STATUS.md`** — measured implementation status and known limits.
+3. **`docs/OWNER-REQUESTS.md`** — the owner's substantive requests and where each
+   is recorded.
+4. **`docs/PRD.md`** — product requirements and scope decisions.
+5. **`docs/ARCHITECTURE.md`** — module map and state layout.
+6. **`docs/AGENTS.md`** — roles, task format, and handover rules.
+7. **`docs/TESTING.md`** — exact verification commands.
 
 ## If you are the owner
 
-1. Install: `./install.sh`
-2. Create a project: `aperio init . --name "Project"`
-3. Record what you want: `aperio ask "..." --source owner`
-4. Review the plan file. Approve it only if it is correct:
-   `aperio approve <plan-id> --by owner --confirm "I approve this plan"`
-5. Run, verify, review, and hand off with the commands in `README.md`.
+```bash
+./install.sh
+aperio init . --name "Project"
+aperio ask "What you want" --source owner
+```
 
-Do not approve a plan you have not read. The approval phrase is deliberately explicit.
+Use `README.md` for the full command sequence. Do not approve a plan you have not
+read. The approval phrase is deliberately explicit.
 
 ## If you are an agent
 
-Read these first, in order:
-
-1. `docs/STATUS.md` for measured current state.
-2. `docs/AGENTS.md` for roles and task boundaries.
-3. `docs/PRD.md` for required behavior.
-4. `docs/ARCHITECTURE.md` for the implementation map.
-5. `docs/TESTING.md` for the verification commands.
-
-Then run:
+Run the baseline before changing anything:
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
+ruff check src tests
+PYTHONPATH=src python3 -m aperio drift
+git status --short --branch
 ```
 
 Rules that are not optional:
@@ -36,8 +44,13 @@ Rules that are not optional:
 - Do not review your own work as the only reviewer.
 - Do not call a task done without passing acceptance checks and a confirmed review.
 - Do not claim a host, CMS, deployment, or public release works unless you ran it.
-- Do not put credentials or client data in the repository.
+- Do not put credentials, client data, or local `.aperio` state in the repository.
 
-## Current state
+## Scope in one paragraph
 
-The core loop and installer are tested. Host dispatch, mesh chat, CMS, SEO, and deployment are roadmap items. See `docs/STATUS.md` for the exact evidence.
+Aperio is a local, stack-neutral orchestrator: ask, discover, learn, todo, plan,
+approve, apply, verify, independent review, done, handoff. CMS/SEO delivery and
+deployment execution belong to a target project, not Aperio. Optional shell
+sandboxing, toolchain installation, secret scanning, a read-only dashboard, queue
+recovery, checkpoints, and resume are implemented. See `HANDOFF.md` for the exact
+verified baseline and the deferred/out-of-scope list.

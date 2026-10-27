@@ -1,5 +1,9 @@
 # Rebuild Report: 2026-10-26
 
+> **Historical record.** This page describes the rebuild snapshot, not the current
+> product state. Use `HANDOFF.md` and `docs/STATUS.md` for current status. Counts
+> and feature claims below are historical and may be stale.
+
 ## What was requested
 
 The owner asked for the documentation to be cleaned up before further work, and for Aperio-Orchestrator to be rebuilt from the beginning rather than patched further.
@@ -67,17 +71,20 @@ Run on the final public tree:
 
 The demo was run through the full loop: unapproved run refused, approved run applied, acceptance passed, review confirmed, task done.
 
-## What is not built
+## What was not built at rebuild time
+
+This is the rebuild snapshot, not a current gap list.
 
 - Dispatch to hosts beyond the Claude, Codex, and Goose adapters.
-- A distributed or live two-host mesh; the local store and mediator are implemented.
-- CMS, media, SEO, and Astro/Lumos delivery.
-- Web dashboard.
-- OS sandbox for host or shell steps.
-- Remote deployment.
+- A distributed or live two-host mesh; the local store and mediator were implemented.
+- CMS, media, SEO, and Astro/Lumos delivery. **Now out of scope for Aperio.**
+- Web dashboard. **A generated read-only dashboard now exists.**
+- OS sandbox for host or shell steps. **Shell/read sandboxing is now optional and tested.**
+- Remote deployment. **Now out of scope for Aperio.**
 - Native Windows execution of `aperio.cmd`; PowerShell is tested under `pwsh` on macOS.
 
-The README and `docs/STATUS.md` say this plainly. Do not describe the repository as feature-complete.
+The current scope is in `HANDOFF.md`; the current measured state is in
+`docs/STATUS.md`. Do not use this historical section as a task list.
 
 ## Handover from the previous agent
 
@@ -91,7 +98,10 @@ Claude acknowledged the mediator handover, reported the history rewrite complete
 
 The old repository was not force-pushed. The public product is the new repository, not the rewritten old one.
 
-## Next task
+## Next task at rebuild time
+
+This was the next task when the report was written, not the current queue. See
+`HANDOFF.md` for the current starting point.
 
 M1: one real host adapter that accepts a plan and returns a bounded patch or command result, followed by a different reviewer. It must use the same approval, evidence, and review path. No adapter gets its own write path.
 

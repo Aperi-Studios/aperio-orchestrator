@@ -98,6 +98,8 @@
 | Static checks | ruff and shellcheck pass | `ruff check src tests`; `shellcheck install.sh` |
 | Public repository | public at `https://github.com/Aperio-Studios-Private/Aperio-Orchestrator` | `gh repo view Aperio-Studios-Private/Aperio-Orchestrator --json visibility,url` |
 | GitHub Actions | tests pass on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
+| Handoff | `HANDOFF.md` is the incoming-agent entry point; `docs/OWNER-REQUESTS.md` maps owner requests to docs/tests | `HANDOFF.md`; `docs/OWNER-REQUESTS.md` |
+| Documentation drift | clean: links and inline paths resolve | `aperio drift` |
 
 ## Not built
 

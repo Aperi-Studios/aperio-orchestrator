@@ -1,10 +1,11 @@
 # Custom CMS design and delivery roadmap
 
-**Status: design only. No CMS is implemented. No framework is selected yet.**
+**Status: separate target-project method. Not an Aperio feature. No CMS is implemented in Aperio. No framework is selected yet.**
 
-This document defines how Aperio should design and build a complete custom CMS
-for a real client project. The framework, database, media store, and hosting
-model are **outputs of the project discovery**, not defaults chosen in advance.
+This document defines how a **target project** should design and build a complete
+custom CMS. It is not a feature list for Aperio. The framework, database, media
+store, and hosting model are **outputs of the project discovery**, not defaults
+chosen in advance.
 
 ## 1. Decision order
 

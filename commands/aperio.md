@@ -16,4 +16,4 @@ Load the Aperio skill and use its bounded loop:
 8. Finish with `aperio done` only after a confirmed review.
 9. Write the handoff with `aperio handoff`.
 
-Do not run an unapproved plan. Do not write outside the plan's allowed paths. Do not claim a host, CMS, deployment, or public release works unless you ran it.
+Do not run an unapproved plan. Do not write outside the plan's allowed paths. Do not claim a host, deployment, or target-project delivery works unless you ran it.

@@ -2,7 +2,7 @@
 
 Aperio turns an owner request into a bounded, approved plan, applies it, runs acceptance checks, requires an independent review, and writes evidence and a handoff.
 
-**Status: early rebuild.** The core loop and installer work. Discovery, learning, readiness, todo approval, optional shell sandboxing, toolchain installation, secret scanning, and a generated read-only dashboard are implemented. CMS/SEO delivery and deployment execution are outside Aperio's scope. Do not describe this as feature-complete.
+**Status: handoff-ready for the local tool.** The core loop and installer work. Discovery, learning, readiness, todo approval, optional shell sandboxing, toolchain installation, secret scanning, and a generated read-only dashboard are implemented. CMS/SEO delivery and deployment execution are outside Aperio's scope. Do not describe this as feature-complete.
 
 ## Why this rebuild exists
 
@@ -162,7 +162,9 @@ The shell limitation is real. A command can change a file before Aperio detects 
 
 ## Documentation
 
-- `docs/PRD.md`: full product requirements and acceptance scenarios.
+- `HANDOFF.md`: authoritative handoff for the next agent; read this first.
+- `docs/OWNER-REQUESTS.md`: owner request trail and where each item is recorded.
+- `docs/PRD.md`: full product requirements and scope decisions.
 - `docs/DISCOVERY.md`: discovery domains, first questionnaire, facet profiles, evidence model, and module gates.
 - `docs/ARCHITECTURE.md`: components, state layout, and safety boundaries.
 - `docs/AUDIT.md`: source-anchored security audit ledger, schema, and limits.

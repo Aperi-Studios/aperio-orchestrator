@@ -5,7 +5,7 @@
 **Audit pin:** `ad36105`; retained as a historical external audit.
 **Current disposition:** F1, F3, F4, and F5 are fixed. F2 is a documented trust
 limit: a local label cannot authenticate a second person. See `docs/STATUS.md`.
-**Target:** `/Users/maryamahad/Desktop/Aperio-Orchestrator-v2`
+**Target:** `<repository-root>`
 **Mode:** read-only. Nothing in the v2 tree was edited. Every reproduction ran in
 a copy under `$TMPDIR`.
 

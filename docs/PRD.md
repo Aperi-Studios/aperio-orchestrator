@@ -55,13 +55,13 @@ Aperio is a private, project-scoped engineering foreman and delivery system for 
 - deliver the actual requested artifact in the actual target repository;
 - leave a current, readable state that another host can resume.
 
-Aperio has two connected layers.
+Aperio has two connected responsibilities, but only one of them is shipped here.
 
-**Workflow layer:** intake, research, planning, approval gates, project memory, task queue, host/model selection, fan-out, peer communication, independent review, recovery, evidence, handoff.
+**Workflow layer (Aperio):** intake, research, planning, approval gates, project memory, task queue, host/model selection, fan-out, peer communication, independent review, recovery, evidence, handoff.
 
-**Delivery layer:** design research, frontend implementation, CMS and backend integration, SEO, responsive and accessibility checks, tests, assets, release preparation, client handover.
+**Delivery layer (target project, not Aperio):** design research, frontend implementation, CMS and backend integration, SEO, responsive and accessibility checks, tests, assets, release preparation, client handover.
 
-Neither layer substitutes for the other. Governance without delivery is failure. A pretty page without working controls, data, or proof is also failure.
+Aperio orchestrates the delivery layer; it does not ship a CMS, CMS editor, deployment runtime, or SEO product. Neither layer substitutes for the other. Governance without delivery is failure. A pretty page without working controls, data, or proof is also failure.
 
 ---
 
@@ -101,7 +101,7 @@ Aperio is the teacher and gatekeeper for every executing agent. It owns the lear
 4. Use multiple agents only when it improves coverage, quality, or time, and prove that it did.
 5. Make critical rules executable where feasible, with negative tests proving they can fail.
 6. Produce domain-appropriate design and content, not generic template output.
-7. Ship CMS-backed experiences only when the project requires a CMS, and then ship the public surface and admin controls together.
+7. When a target project requires a CMS, ship the public surface and admin controls together in that project; Aperio itself ships no CMS.
 8. Make SEO, accessibility, performance, and security claims testable and scoped to the approved project contract.
 9. Protect client data, credentials, private history, and owner work.
 10. Force stack mastery and teaching evidence before implementation; a confident agent claim is not knowledge.
@@ -321,9 +321,13 @@ Verify at 390x844 before desktop approval, then at 1440x900 or the project's app
 
 **Acceptance:** automated checks and real browser inspection prove the selected breakpoints; failures are fixed or explicitly accepted by the owner. Do not claim an accessibility score without a real test.
 
-### FR-19: Real CMS coupling (P0 for CMS projects)
+### FR-19: Real CMS coupling (conditional on the target project; not Aperio scope)
 
-Every CMS-managed frontend section ships with connected admin controls, persisted content, authorization, validation, output safety, draft and publish behavior, and tests in the same slice. No "CMS later."
+Aperio does not ship a CMS. When the owner selects a CMS-backed target project,
+that project's every CMS-managed frontend section ships with connected admin
+controls, persisted content, authorization, validation, output safety, draft and
+publish behavior, and tests in the same slice. No "CMS later." See the scope
+decision near the top of this document.
 
 **Acceptance:** edit a real field, save it, refresh the public route, and show the change; verify permission denial, validation errors, draft and publish, media, and rollback. Exclusions outside approved scope are stated.
 
@@ -755,6 +759,8 @@ Track from actual runs, not estimates:
 | Artifact | Purpose | Canonical path | Rule |
 |---|---|---|---|
 | Product requirements | What Aperio must do | `docs/PRD.md` | One current specification; amendments through a decision record |
+| Handoff | Current entry point for the next agent | `HANDOFF.md` | Repository-only handoff; never rely on a chat transcript |
+| Owner requests | What the owner asked and where it landed | `docs/OWNER-REQUESTS.md` | Reconstructed request ledger; code and STATUS win on conflict |
 | Start page | Minimal boot guide | `START-HERE.md` | Links to current state; no stale install claims |
 | Current state | What is true now | `docs/STATUS.md` | One authoritative status page; re-measure before relying on it |
 | Active queue | Tasks and statuses | `.aperio/queue.json` (local) | `DONE` only after acceptance and review; do not commit project state |
@@ -763,7 +769,7 @@ Track from actual runs, not estimates:
 | Decisions and approvals | Owner-authorized actions | `docs/DECISIONS.md` and the plan approval record | Agent reports are not approval |
 | Laws and enforcement | Rule, enforcement path, negative test | `src/aperio/policy.py`, `src/aperio/runner.py`, `tests/` | A hard rule requires a working check |
 | Reports | Current evidence and known limits | `docs/STATUS.md` | Dated, measured, linked to a command or artifact |
-| Communications | Peer messages | not built in v2 | Do not claim a live mesh |
+| Communications | Peer messages | `.aperio/mesh/messages.sqlite3` (local) | Local durable store and mediator implemented; distributed transport not built |
 | Tests | Executable checks | `tests/` | Run the suite; do not cite a file name as proof |
 | Source | Implementation | `src/`, `skill/`, `install.sh` | No duplicate implementation unless mechanically checked |
 | Evidence | Requirement-specific proof | `.aperio/evidence/` (local), target project | Each claim maps to a real file or output |
@@ -1036,7 +1042,7 @@ implemented merely by appearing in this table.
 
 | ID | Suggestion | Priority | Acceptance proof |
 |---|---|---|---|
-| Z-01 | Optional OS sandbox for `run`/`host` steps using `sandbox-exec` or `bubblewrap` when available, with an honest detect-only fallback | P1 | sandboxed and fallback tests; evidence shows whether isolation was active |
+| Z-01 | Optional OS sandbox for `run`/`read` shell steps using `sandbox-exec` or `bubblewrap` when available; host steps are not sandboxed | P1 | sandboxed and fallback tests; evidence shows whether isolation was active |
 | Z-02 | Make `.git` and `.aperio` non-overridable protected paths, independent of project policy | P1 | plan/run attempts through those paths fail even if policy omits them |
 | Z-03 | Add a read-only step kind for exploration and audit work | P1 | schema, runner, and policy tests prove the step cannot write |
 | Z-04 | Add `type` and `version` to every mutable `.aperio` JSON document | P1 | migration/refusal tests; old and new documents read predictably |

@@ -10,7 +10,7 @@ both sides can cite the same message id.
 The repository itself must be an initialized Aperio project:
 
 ```bash
-cd /Users/maryamahad/Desktop/Aperio-Orchestrator-v2
+cd <repository-root>
 PYTHONPATH=src python3 -m aperio --project . init . --name "Aperio Orchestrator"
 ```
 
@@ -19,7 +19,7 @@ The channel id is `builder-auditor`. The two roles are `builder` and `auditor`.
 ## Send
 
 ```bash
-cd /Users/maryamahad/Desktop/Aperio-Orchestrator-v2
+cd <repository-root>
 PYTHONPATH=src python3 -m aperio --project . message send \
   --from builder --to auditor --thread builder-auditor \
   --kind task --body "What to verify, with file/line evidence and the commit range."

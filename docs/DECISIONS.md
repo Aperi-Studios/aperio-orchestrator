@@ -24,13 +24,13 @@
 
 **Consequence:** automation cannot approve without intentionally supplying the phrase. That is the point.
 
-## ADR-004: Detect, do not claim to jail
+## ADR-004: Policy first, optional OS sandbox later
 
-**Decision:** shell steps are allowed only inside an approved plan, with declared writes and a changed-file check. The documentation states that this is not an OS sandbox.
+**Decision:** shell and read steps are allowed only inside an approved plan, with declared writes and a changed-file check. A plan may set `sandbox: true` to require `sandbox-exec` on macOS or `bwrap` on Linux; when requested and unavailable, the run fails closed. Host steps are not OS-sandboxed.
 
-**Why:** claiming a path check is isolation would be false. A real sandbox is a later, separately reviewed feature.
+**Why:** claiming a path check is isolation would be false. A real sandbox is opt-in and separately tested. Evidence records whether isolation was active.
 
-**Consequence:** a malicious or careless shell command can change a file before detection. The run is marked failed and the evidence records the violation; rollback uses the snapshot.
+**Consequence:** without `sandbox: true`, a malicious or careless shell command can change a file before detection. The run is marked failed and the evidence records the violation; rollback uses the snapshot. With `sandbox: true`, the command runs under the OS boundary and evidence says so.
 
 ## ADR-005: Independent review is a gate
 
@@ -58,8 +58,8 @@
 
 ## ADR-008: One canonical document set
 
-**Decision:** the active documentation is the README, START-HERE, and the files in `docs/`. Historical reports, generated PRDs, and audits are not active state.
+**Decision:** the active documentation is `README.md`, `START-HERE.md`, `HANDOFF.md`, and the files in `docs/`. Historical reports, generated PRDs, and audits are not active state.
 
 **Why:** 1,241 Markdown files and contradictory status pages made the old repository harder to trust.
 
-**Consequence:** new evidence goes into `docs/STATUS.md` or a dated file linked from it. Do not create a second queue, a second PRD, or a second handoff.
+**Consequence:** new evidence goes into `docs/STATUS.md` or a dated file linked from it. The incoming agent starts at `HANDOFF.md`. Do not create a second queue, a second PRD, or a second handoff.

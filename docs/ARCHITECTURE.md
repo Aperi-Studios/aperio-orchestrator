@@ -29,7 +29,7 @@ src/aperio/
   repo.py       read-only branch, commit, and working-tree facts
   mesh.py       local durable message store
   mediator.py   evidence-based task disposition
-  runner.py     apply, detect changes, verify, review, finish, rollback
+  runner.py     apply, detect changes, verify, review, finish, rollback, resume
   handoff.py    owner-facing markdown from actual state
   hosts.py      read-only host detection
 skill/aperio/   host skill instructions

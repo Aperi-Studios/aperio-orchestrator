@@ -39,12 +39,12 @@ PATTERNS = [
     (
         "assigned-secret",
         re.compile(
-            # the trailing [a-z0-9_]* (with (?i)) also matches keyword-internal
-            # names: SECRET_FALLBACK, AWS_SECRET_ACCESS_KEY, API_KEY_RESTRICTED.
-            # A leading \b instead of the lookbehind missed underscore-prefixed
-            # names like DB_PASSWORD (S1).
-            r"(?i)(?<![A-Za-z])(?:api[_-]?key|secret|token|password|passwd|client[_-]?secret)[a-z0-9_]*"
-            r"\s*[:=]\s*['\"]?([^\s'\"#]{8,})"
+            # no prefix restriction: letter-prefixed compounds like MYSECRET,
+            # AUTHTOKEN, ADMINPASSWORD count (assignment context and the value
+            # filters gate prose). {12,} mirrors the value filter's <12 drop —
+            # anything the regex admits this short would never become a finding.
+            r"(?i)(?:api[_-]?key|secret|token|password|passwd|client[_-]?secret)[a-z0-9_]*"
+            r"\s*[:=]\s*['\"]?([^\s'\"#]{12,})"
         ),
         "medium",
     ),

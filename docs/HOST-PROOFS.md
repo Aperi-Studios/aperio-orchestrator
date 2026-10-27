@@ -106,9 +106,13 @@ historical; it is not used to override the owner's host choice.
 
 ## What these proofs do not cover
 
-- No OS sandbox. Host changes outside the plan are detected after execution,
-  not prevented at the kernel level.
+- No OS sandbox for host steps. Host changes outside the plan are detected after
+  execution, not prevented at the kernel level. Shell/read steps can opt into an
+  OS sandbox with `plan.sandbox: true`; that is tested separately in
+  `tests/test_core.py`.
 - No native Windows execution.
 - No live Goose run; the local bridge failed.
 - No distributed or two-product live host exchange over the message store.
-- No CMS, SEO, or Astro/Lumos delivery.
+- No live proof for OpenCode, KiloCode, Cline, or agy.
+- CMS, SEO, Astro/Lumos, and deployment are target-project concerns and outside
+  Aperio's scope. This file does not claim them.

@@ -1,86 +1,112 @@
 # Roadmap
 
-The order is deliberate. Do not build a large feature surface on an unproven loop.
+This is the current roadmap, not the original rebuild wish list. The source of
+measured status is `docs/STATUS.md`; the handoff entry is `HANDOFF.md`.
 
-## M0: Core loop (implemented)
+## M0: Core loop — done
 
-- Project state, asks, plans, approval, bounded apply, verification, review, finish, rollback, handoff.
-- Installer with dry run, idempotent reinstall, and uninstall.
+- Project state, asks, plans, explicit approval, bounded apply, verification,
+  independent review, finish, rollback, and handoff.
+- Installer with dry run, idempotent reinstall, `/aperio` skill, and uninstall.
 - Unit, CLI, and installer tests.
 - Demo plan that creates and verifies a static page.
 
-**Exit criteria:** all tests pass; install, initialize, run, verify, review, and handoff work from a clean temporary home.
+**Exit:** all tests pass; install, initialize, plan, approve, run, verify, review,
+and handoff work from a clean temporary home.
 
-## M1: Host adapter and real work dispatch (implemented for Claude; Goose partial)
+## M1: Host dispatch — done for the used hosts; others deferred
 
 - Host step in the plan schema: host, prompt, declared writes, timeout, budget.
-- The host works in a disposable project copy; changes outside declared paths are rejected before they reach the real project.
-- Claude adapter proven end to end on a disposable project: file written, acceptance passed, review confirmed, done.
-- Goose adapter command path tested with a fake binary. A live Goose call returned HTTP 500 from its local bridge, so it is not claimed as working.
-- Evidence records host, command, prompt digest, exit code, duration, stdout/stderr, changes, and violations.
+- The host works in a disposable project copy; changes outside declared paths are
+  rejected before they reach the real project.
+- Claude and Codex are live-proven on current or recorded code; see
+  `docs/HOST-PROOFS.md` for the date and limits.
+- Goose and dsh adapters are command-shape tested; live calls were blocked by a
+  local bridge HTTP 500 and a missing `RIVER_API_KEY`, respectively.
+- OpenCode, KiloCode, Cline, and agy are command-shape tested. Live proofs are
+  deferred until those hosts are actually used.
 
-**Exit criteria:** one host completes one bounded task through the same plan and evidence path; no self-review; no credential in logs.
+**Exit:** one host completes one bounded task through the same plan and evidence
+path; no self-review; no credential in logs. Met for Claude/Codex.
 
-**Status:** Claude met the criterion. Goose did not, because of an external bridge failure. Other hosts are not connected.
+## M2: Independent review and local coordination — done
 
-## M2: Independent review and mesh (review implemented; mesh not)
+- Fresh-context host review builds a brief-only workspace with the plan, changed
+  files, acceptance, and evidence; the reviewer has no builder conversation.
+- A self-review by the builder label is refused.
+- Local durable message store: send, read, reply, ack, filters, restart
+  persistence.
+- Mediator records `CONFIRMED`, `REFUTED`, or `BLOCKED` from run, verify, and
+  review evidence.
+- Distributed transport and a direct two-host thread are not built.
 
-- Fresh-context host review implemented: `aperio review <task> --host claude` builds a brief-only workspace with the plan, changed files, acceptance, and evidence; the reviewer has no builder conversation and cannot edit.
-- A real Claude reviewer confirmed a verified task. A self-review by the builder host is refused.
-- A local durable message store is implemented: send, read, reply, ack, filters, and restart persistence.
-- A mediator command records `CONFIRMED`, `REFUTED`, or `BLOCKED` from run, verify, and review evidence.
-- Add a distributed transport and prove two real hosts exchange a task and a reply.
+**Exit:** a real fresh-context review is recorded, a bidirectional local message
+test passes, restart persistence passes, and the mediator records a disposition.
+Met locally; the distributed transport remains deferred.
 
-**Exit criteria:** a real fresh-context review is recorded, a bidirectional message test passes, restart persistence passes, and the mediator records a disposition.
+## M3: Owner gates and execution safety — done
 
-**Status:** fresh-context review, local messaging, restart persistence, and mediator disposition met. Real Claude and Codex processes each used the store in separate exchanges. A direct two-host thread over a distributed transport is not built.
+- Persistent discovery with explicit owner waivers and review dates.
+- Learning dossier and real local proof gate; plan records the digest.
+- Ordered todo ledger with evidence-backed acceptance and one-task-at-a-time rule.
+- Readiness record for pre-flight, deployment data, after-sales, design, and
+  security; full readiness is required for done/handoff.
+- Non-overridable `.git`/`.aperio` protected paths.
+- Read-only plan steps.
+- Versioned `.aperio` state, queue recovery from the event journal, run
+  checkpoints, and safe `resume` from the pre-run snapshot.
+- Optional OS sandbox for shell/read steps; fail closed when unavailable.
+- Toolchain/MCP manifest installation with owner approval for risky tools.
+- Bounded local secret scan.
+- Generated read-only status dashboard.
 
-## M3: CMS and delivery slice
+**Exit:** each item has a test and a `docs/STATUS.md` row. Met; the deferred host
+and platform proofs are not part of this milestone.
 
-See `docs/CMS-ROADMAP.md` for the stack-neutral design, deployment decision
-tree, phases, and exit proof. The framework is selected after discovery, not
-before.
+## M4: Installer and portability — done for macOS; Windows deferred
 
-- Add a target-project adapter for one approved stack.
-- Build one public section and its admin controls together.
-- Prove edit, save, publish, permission denial, and rollback.
-- Run SEO and accessibility checks against built output.
-- Generate a client handoff with setup, content, and recovery steps.
+- Bash installer and PowerShell installer with `--check`, `--update` backup, and
+  `--rollback`.
+- Fresh clone, spaces in paths, read-only prefix failure, and interrupted install
+  are tested where available.
+- Native Windows `.cmd` execution is deferred; PowerShell is tested under
+  `pwsh` 7.6.7 on macOS.
+- Linux `bwrap` is implemented but not live-tested here.
 
-**Exit criteria:** a real target project runs, a real content change persists and renders, and the acceptance evidence is reproducible.
+**Exit:** documented pass, fail, or unsupported status per platform. Met for
+macOS; Windows/Linux live proof deferred.
 
-## M4: Installer and portability
+## M5: Public handoff — this document set
 
-- PowerShell installer is implemented and tested under `pwsh` on macOS; native Windows `.cmd` execution is not tested.
-- Bash and PowerShell update/recovery: `--check`, `--update` with a bounded library backup, and `--rollback` are implemented and tested under `pwsh`/bash on macOS.
-- Test fresh clone, different home, spaces in paths, read-only prefix failure, and interrupted install.
-- Remove any hard-coded home, checkout, or model path.
+- `HANDOFF.md` is the incoming-agent entry point.
+- `docs/OWNER-REQUESTS.md` records the owner's substantive requests and where each
+  is addressed.
+- `docs/STATUS.md` records measured results and known limits.
+- `docs/PRD.md` records requirements and scope decisions.
+- `docs/AGENTS.md`, `docs/ARCHITECTURE.md`, and `docs/TESTING.md` explain roles,
+  modules, and verification.
+- Privacy/secret scan exists; an external penetration test is optional and not
+  claimed.
 
-**Exit criteria:** documented pass, fail, or unsupported status per platform. No destructive test on the owner's machine.
+**Exit:** a new agent can start from the repository alone, run the baseline, and
+find every owner decision and boundary. Met at handoff.
 
-**Status:** Bash installer verified; PowerShell install, launcher version, and uninstall verified under `pwsh` 7.6.7 on macOS. Update/recovery are implemented and tested on macOS; native Windows execution is not tested.
+## Out of scope for Aperio
 
-## H: Audit-derived hardening (planned)
+- CMS, media, editorial workflow, visual editor, and SEO delivery.
+- Deployment execution, provider credentials, and hosting operations.
+- Automatic public release, force-push, or history rewrite.
+- Multi-tenant SaaS and autonomous spending.
 
-The ZCode audit backlog is recorded in `docs/PRD.md` Appendix A. Implement the
-P1 items in this order: non-overridable protected paths, read-only step kind,
-versioned state, event-sourced recovery/checkpoints, then optional OS sandbox.
-P2 interop and observability items wait until those are verified.
+## Deferred work
 
-## M5: Public beta
+These are optional environment proofs, not release blockers:
 
-- Privacy scan of the worktree, tracked files, history, branches, and artifacts.
-- Secret scan with no unresolved finding.
-- Public README, license, support boundary, and known limits.
-- Release notes that match measured behavior.
-- Owner approval for the visibility change.
+- live OpenCode/KiloCode/Cline/agy dispatch;
+- live Goose/dsh dispatch;
+- native Windows `.cmd` and Linux `bwrap`;
+- live host skill loading and a teacher UI;
+- dependency-history scanning and external penetration testing.
 
-**Exit criteria:** a new user can install, run the demo, read the evidence, and understand exactly what is not built.
-
-## Not planned yet
-
-- Multi-tenant SaaS.
-- Automatic deployment.
-- Autonomous spending.
-- A universal design system forced on every project.
-- A CMS for projects that do not need one.
+Do not start a deferred item unless the owner asks for that environment or the
+task explicitly requires it. Do not describe it as done before it is run.

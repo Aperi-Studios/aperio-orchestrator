@@ -31,7 +31,7 @@ A task without allowed paths and acceptance evidence is not assignable.
 
 ## Handover from another agent
 
-The outgoing agent writes:
+The outgoing agent updates `HANDOFF.md` and records:
 
 - repository, branch, HEAD, and worktree status;
 - changed but uncommitted files;
@@ -40,7 +40,7 @@ The outgoing agent writes:
 - files the outgoing agent considers its own;
 - exact commands to reproduce the state.
 
-The mediator re-runs the baseline and compares it with the handover. A mismatch is recorded, not smoothed over.
+The mediator re-runs the baseline and compares it with the handover. A mismatch is recorded, not smoothed over. Incoming agents start at `HANDOFF.md`, not at a chat transcript.
 
 ## Rules
 
