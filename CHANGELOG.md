@@ -4,6 +4,7 @@
 
 Initial clean rebuild.
 
+- `apero next` and `apero next --json`: a read-only next-action advisor that names the single next legal action, its exact command, and the gate that requires it, from first contact through handoff.
 - Added a standard-library core for asks, plans, approval, bounded apply, verification, independent review, finish, rollback, and handoff.
 - Added path safety for relative paths, parent traversal, and symlink components.
 - Added declared-write enforcement for shell steps. Undeclared changes are recorded as violations.

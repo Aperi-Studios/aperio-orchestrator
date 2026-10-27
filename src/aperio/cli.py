@@ -78,6 +78,7 @@ from .model import (
     new_id,
     plan_body_digest,
 )
+from .nextstep import next_action
 from .policy import PolicyError
 from .readiness import ReadinessError, import_readiness, validate_preflight
 from .readiness import format_status as format_readiness
@@ -527,6 +528,25 @@ def cmd_status(args: argparse.Namespace) -> int:
             print("No tasks. Add an ask or a plan.")
         for task in tasks:
             _print_task(task)
+    return 0
+
+
+def cmd_next(args: argparse.Namespace) -> int:
+    project = _project(args)
+    step = next_action(project)
+    if args.json:
+        print(json.dumps(step, indent=2, sort_keys=True))
+    else:
+        print(f"next: {step['action']}")
+        print(f"  command: {step['command']}")
+        print(f"  why: {step['why']}")
+        for key in ("question", "todo_id", "task_id", "plan_id"):
+            if key in step:
+                print(f"  {key}: {step[key]}")
+        if step.get("issues"):
+            print("  issues:")
+            for issue in step["issues"][:6]:
+                print(f"    - {issue}")
     return 0
 
 
@@ -1057,6 +1077,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("task_id", nargs="?")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser(
+        "next",
+        help="show the next legal action, its exact command, and why (read-only)",
+    )
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_next)
 
     p = sub.add_parser("handoff", help="write the owner handoff")
     p.add_argument("task_id")

@@ -270,12 +270,14 @@ aperio review <task-id> --host claude
 aperio done <task-id>
 aperio rollback <task-id> --yes
 aperio handoff <task-id> --print
-aperio drift
+aperio next            # read-only: the next legal action, its exact command, and why
 aperio status --json
 aperio message send --from builder --to reviewer --body "please review" --task <task-id>
 aperio mediate <task-id>
 aperio hosts
 ```
+
+When unsure what to do next — after a refusal, on resume, or on first contact with an existing project — run `apero next` (or `apero next --json`). It reads the state and names the one legal action, the exact command, and the gate that requires it. It never performs the action and never bypasses a gate.
 
 ## Security audit ledger
 
