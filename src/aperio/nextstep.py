@@ -344,17 +344,41 @@ def _task_step(project: Project) -> dict[str, Any] | None:
         # done — but a pending todo slice means there is next work to start
         # (a host review flagged complete masking a ready ledger).
         if handed_off:
+            ledger = todo_status(project)["tasks"]
+            # todo.start refuses while an earlier ledger entry is neither
+            # accepted nor deferred (a host review caught the advisor
+            # recommending an illegal start), so settle the predecessor
+            # first. The handed-off task's own todo is the usual blocker.
+            unsettled = next(
+                (
+                    item
+                    for item in ledger
+                    if item["status"] == "in_progress"
+                ),
+                None,
+            )
+            if unsettled is not None:
+                return _step(
+                    "todo.accept",
+                    f"aperio todo accept {unsettled['id']} --by '<owner>' "
+                    "--evidence '<what proves the deliverable>' "
+                    "--confirm 'I accept this task'",
+                    "the handed-off slice's todo is still in progress; todo start "
+                    "refuses until every earlier task is accepted or deferred — "
+                    "accept it with the review evidence (or defer it with a reason)",
+                    todo_id=unsettled["id"],
+                    task_id=max(handed_off),
+                )
             pending = next(
-                (item for item in todo_status(project)["tasks"] if item["status"] == "pending"),
+                (item for item in ledger if item["status"] == "pending"),
                 None,
             )
             if pending is not None:
                 return _step(
                     "todo.start",
                     f"aperio todo start {pending['id']}",
-                    "the last slice is handed off and the ledger holds the next "
-                    "pending slice; accept or defer the handed-off predecessor's "
-                    "todo, then start this one before planning",
+                    "the previous slice is settled and the ledger holds the next "
+                    "pending slice; start it before planning",
                     todo_id=pending["id"],
                     task_id=max(handed_off),
                 )

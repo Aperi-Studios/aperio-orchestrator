@@ -626,6 +626,27 @@ class NextTests(unittest.TestCase):
         self.cli("review", task_id, "--reviewer", "independent", "--verdict", "confirmed")
         self.cli("done", task_id)
         self.cli("handoff", task_id)
+        # The slice's todo is still in progress; the advisor must route to
+        # todo.accept before anything else (a host review caught the illegal
+        # todo.start recommendation).
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "todo.accept")
+        self.assertIn("todo accept", step["command"])
+        self.assertIn("--confirm", step["command"])
+        listing = json.loads(
+            subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "todo", "list", "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            ).stdout
+        )
+        linked = listing["tasks"][0]["id"]
+        self.cli(
+            "todo", "accept", linked,
+            "--by", "owner",
+            "--evidence", "acceptance checks passed and the review confirmed",
+            "--confirm", "I accept this task",
+        )
         step = next_action(self.project)
         self.assertEqual(step["action"], "complete")
         self.assertEqual(step["task_id"], task_id)
@@ -663,6 +684,23 @@ class NextTests(unittest.TestCase):
             "todo", "add", "Next slice",
             "--deliverable", "next works",
             "--acceptance", "next exists",
+        )
+        # The in-progress predecessor blocks a legal start; settle it first.
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "todo.accept")
+        listing = json.loads(
+            subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "todo", "list", "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            ).stdout
+        )
+        linked = next(item["id"] for item in listing["tasks"] if item["status"] == "in_progress")
+        self.cli(
+            "todo", "accept", linked,
+            "--by", "owner",
+            "--evidence", "acceptance checks passed and the review confirmed",
+            "--confirm", "I accept this task",
         )
         step = next_action(self.project)
         self.assertEqual(step["action"], "todo.start")
