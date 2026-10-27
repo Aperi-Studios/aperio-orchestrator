@@ -348,16 +348,20 @@ def _task_step(project: Project) -> dict[str, Any] | None:
             # todo.start refuses while an earlier ledger entry is neither
             # accepted nor deferred (a host review caught the advisor
             # recommending an illegal start), so settle the predecessor
-            # first. The handed-off task's own todo is the usual blocker.
+            # first. Only an in-progress todo belonging to a handed-off
+            # plan is a leftover: an in-progress todo WITHOUT that linkage
+            # is a fresh next slice awaiting its plan (a later review
+            # caught the advisor asking to accept unworked work).
+            handed_off_by_todo: dict[str, str] = {}
+            for done_id in handed_off:
+                done_task = project.get_task(done_id)
+                if done_task.plan_id:
+                    handed_off_by_todo[project.get_plan(done_task.plan_id).todo_id] = done_id
             unsettled = next(
-                (
-                    item
-                    for item in ledger
-                    if item["status"] == "in_progress"
-                ),
+                (item for item in ledger if item["status"] == "in_progress"),
                 None,
             )
-            if unsettled is not None:
+            if unsettled is not None and unsettled["id"] in handed_off_by_todo:
                 return _step(
                     "todo.accept",
                     f"aperio todo accept {unsettled['id']} --by '<owner>' "
@@ -367,7 +371,7 @@ def _task_step(project: Project) -> dict[str, Any] | None:
                     "refuses until every earlier task is accepted or deferred — "
                     "accept it with the review evidence (or defer it with a reason)",
                     todo_id=unsettled["id"],
-                    task_id=max(handed_off),
+                    task_id=handed_off_by_todo[unsettled["id"]],
                 )
             pending = next(
                 (item for item in ledger if item["status"] == "pending"),
@@ -381,6 +385,15 @@ def _task_step(project: Project) -> dict[str, Any] | None:
                     "pending slice; start it before planning",
                     todo_id=pending["id"],
                     task_id=max(handed_off),
+                )
+            if unsettled is not None:
+                # An in-progress todo with no handed-off linkage: a fresh
+                # slice is underway and needs its plan.
+                return _step(
+                    "plan",
+                    "aperio plan <plan.json>",
+                    "the next slice's todo is in progress and no plan exists "
+                    "for it yet; write the bounded plan for it",
                 )
             return _step(
                 "complete",

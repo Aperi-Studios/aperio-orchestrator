@@ -705,6 +705,21 @@ class NextTests(unittest.TestCase):
         step = next_action(self.project)
         self.assertEqual(step["action"], "todo.start")
         self.assertIn("todo start", step["command"])
+        # Once the next slice's todo is started, the advisor must route to
+        # plan for the new slice — not ask to accept unworked work (a host
+        # review caught the accept recommendation firing on any in-progress
+        # todo).
+        listing2 = json.loads(
+            subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "todo", "list", "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            ).stdout
+        )
+        pending2 = next(item["id"] for item in listing2["tasks"] if item["status"] == "pending")
+        self.cli("todo", "start", pending2)
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "plan")
 
     def test_unreadable_discovery_routes_to_the_lookup(self) -> None:
         # A host review caught the advisor suggesting an answer command with
