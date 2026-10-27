@@ -62,11 +62,15 @@ def _with_project(step: dict[str, Any], root: str) -> dict[str, Any]:
 
 def _discovery_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
     if progress is None:
+        # No usable progress: route to the read-only lookup so the agent
+        # gets a valid question id instead of a placeholder (a host review
+        # flagged the unnamed variant).
         return _step(
-            "discover.answer",
-            "aperio discover answer <question-id> --text \"<owner's answer>\"",
-            "discovery has not started; the plan gate refuses until every question "
-            "is answered or explicitly waived by the owner",
+            "discover.next",
+            "aperio discover next --json",
+            "discovery state is unreadable or absent; read the next question "
+            "(or the error) before answering — the plan gate refuses until "
+            "every question is answered or explicitly waived by the owner",
         )
     if not progress["ready"]:
         question = progress.get("next")
@@ -143,14 +147,15 @@ def _todo_active_step(progress: dict[str, Any]) -> dict[str, Any] | None:
     if progress["in_progress"] > 1:
         # _active_todo refuses any count other than exactly one; there is no
         # unstart command, so route to the ledger to defer the extras (a
-        # host review caught the missing branch).
+        # host review caught the missing branch). The why stays prose: any
+        # runnable command belongs in the project-scoped command field.
         active = [item["id"] for item in progress["tasks"] if item["status"] == "in_progress"]
         return _step(
             "recover",
             "aperio todo list",
             f"{progress['in_progress']} todo tasks are in progress; plan refuses "
-            f"unless exactly one is — defer the extras ({', '.join(active[:3])}) "
-            "with aperio todo defer <id> --by <owner> --reason <reason>",
+            "unless exactly one is — inspect the ledger and defer the extras "
+            f"({', '.join(active[:3])}) until one remains",
         )
     return None
 
@@ -335,14 +340,29 @@ def _task_step(project: Project) -> dict[str, Any] | None:
         if best is None or index > best[0]:
             best = (index, task.to_dict())
     if best is None:
-        # No active task. If a completed slice exists, the loop is done;
-        # otherwise a plan is the next action.
+        # No active task. If a completed slice exists, the loop for it is
+        # done — but a pending todo slice means there is next work to start
+        # (a host review flagged complete masking a ready ledger).
         if handed_off:
+            pending = next(
+                (item for item in todo_status(project)["tasks"] if item["status"] == "pending"),
+                None,
+            )
+            if pending is not None:
+                return _step(
+                    "todo.start",
+                    f"aperio todo start {pending['id']}",
+                    "the last slice is handed off and the ledger holds the next "
+                    "pending slice; accept or defer the handed-off predecessor's "
+                    "todo, then start this one before planning",
+                    todo_id=pending["id"],
+                    task_id=max(handed_off),
+                )
             return _step(
                 "complete",
                 "aperio status --json",
                 "the last task is done and its handoff is written; the loop for "
-                "this slice is complete — start the next todo slice with aperio plan",
+                "this slice is complete — start the next todo slice, then plan it",
                 task_id=max(handed_off),
             )
         return _step(

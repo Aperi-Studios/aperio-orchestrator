@@ -647,6 +647,58 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["task_id"], fresh_task)
         self.assertNotEqual(step["task_id"], finished)
 
+    def test_complete_yields_to_a_pending_todo_slice(self) -> None:
+        # A host review caught complete masking a pending next slice: after
+        # handoff, a pending todo must route to todo.start (the plan gate
+        # needs exactly one in progress), not to a complete that pretends
+        # there is no next work.
+        finished, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.cli("run", finished, "--actor", "builder")
+        self.cli("verify", finished)
+        self.cli("review", finished, "--reviewer", "independent", "--verdict", "confirmed")
+        self.cli("done", finished)
+        self.cli("handoff", finished)
+        self.cli(
+            "todo", "add", "Next slice",
+            "--deliverable", "next works",
+            "--acceptance", "next exists",
+        )
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "todo.start")
+        self.assertIn("todo start", step["command"])
+
+    def test_unreadable_discovery_routes_to_the_lookup(self) -> None:
+        # A host review caught the advisor suggesting an answer command with
+        # an unnamed question id. When discovery state is unreadable the
+        # advisor must route to the read-only discover next lookup — after
+        # the earlier-order gates (learning, todo, readiness) are satisfied,
+        # exactly as the CLI would reach the discovery refusal.
+        (self.root / ".aperio" / "discovery.json").write_text("not json{", encoding="utf-8")
+        dossier = self.root / "learning.json"
+        dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
+        self.cli("learn", "import", str(dossier), "--replace", allow_rc={1})
+        self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
+        self.cli(
+            "todo", "add", "Build page",
+            "--deliverable", "page works",
+            "--acceptance", "page exists",
+        )
+        listing = json.loads(
+            subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "todo", "list", "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            ).stdout
+        )
+        self.cli("todo", "start", listing["tasks"][0]["id"])
+        readiness_path = self.root / "readiness.json"
+        readiness_path.write_text(json.dumps(READINESS), encoding="utf-8")
+        self.cli("readiness", "import", str(readiness_path))
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "discover.next")
+        self.assertIn("discover next --json", step["command"])
+
     def test_project_path_is_shell_safe(self) -> None:
         # A host review caught naive double quotes: a root containing a
         # single quote broke the suggested command. The path must be
