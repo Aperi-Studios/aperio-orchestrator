@@ -651,6 +651,49 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "complete")
         self.assertEqual(step["task_id"], task_id)
 
+    def test_legacy_plan_without_discovery_routes_to_approve(self) -> None:
+        # _require_current_discovery passes a plan with no binding when no
+        # discovery record exists; the advisor must not demand discovery
+        # before approve in that case (a host review caught the
+        # over-gating). Build the legacy state directly: gates satisfied,
+        # a hand-made plan without a discovery digest, no discovery record.
+        self.complete_gates()
+        (self.root / ".aperio" / "discovery.json").unlink()
+        from aperio.model import (
+            Acceptance,
+            Approval,
+            Plan,
+            Step,
+            Task,
+            plan_body_digest,
+        )
+
+        task = Task(id="task-legacy", title="legacy", request="legacy", status="planned")
+        tasks = self.project.tasks()
+        tasks.append(task)
+        self.project.save_tasks(tasks)
+        # Learning and readiness digests are pinned (the CLI requires them
+        # unconditionally); discovery is the legacy gap under test.
+        from aperio.learning import status as learning_status
+        from aperio.readiness import digest as readiness_digest
+
+        plan = Plan(
+            id="plan-legacy", task_id=task.id, title="legacy", request="legacy",
+            allowed_paths=["a.txt"],
+            steps=[Step(id="s", kind="write", path="a.txt", content="x")],
+            acceptance=[Acceptance(id="c", command="test -f a.txt")],
+            learning_digest=learning_status(self.project)["digest"],
+            readiness_digest=readiness_digest(self.project),
+        )
+        task.plan_id = plan.id
+        self.project.put_task(task)
+        plan.approval = Approval(approved_by="o", plan_sha256=plan_body_digest(plan))
+        self.project.save_plan(plan)
+        saved = self.project.get_plan("plan-legacy")
+        self.assertEqual(saved.discovery_digest, "")
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "approve")
+
     def test_handed_off_task_does_not_mask_newer_work(self) -> None:
         # A host review caught a P1: the done task outranked a newer planned
         # task, so the advisor returned complete forever. After a new plan,

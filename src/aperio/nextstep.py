@@ -495,6 +495,17 @@ def next_action(project: Project) -> dict[str, Any]:
     assert step is not None
     action = step["action"]
 
+    # A legacy plan with no discovery record AND no binding passes
+    # _require_current_discovery, so the discovery gate must not prefix
+    # approve/run advice for it (a host review caught the over-gating).
+    def discovery_gate() -> dict[str, Any] | None:
+        plan_id = step.get("plan_id")
+        if plan_id and project.discovery() is None:
+            plan = project.get_plan(plan_id)
+            if not plan.discovery_digest:
+                return None
+        return _discovery_step(discovery_ready)
+
     if action == "plan":
         for gate_step in (
             ready(_learning_step(learning_ready)),
@@ -509,7 +520,7 @@ def next_action(project: Project) -> dict[str, Any]:
         for gate_step in (
             ready(_learning_step(learning_ready)),
             ready(_readiness_step(project)),
-            ready(_discovery_step(discovery_ready)),
+            ready(discovery_gate()),
         ):
             if gate_step is not None:
                 return gate_step
@@ -517,7 +528,7 @@ def next_action(project: Project) -> dict[str, Any]:
         for gate_step in (
             ready(_learning_step(learning_ready)),
             ready(_readiness_step(project)),
-            ready(_discovery_step(discovery_ready)),
+            ready(discovery_gate()),
             ready(_run_todo_step(project, todo, step)),
         ):
             if gate_step is not None:
