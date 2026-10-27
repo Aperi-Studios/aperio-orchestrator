@@ -222,6 +222,19 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(result["steps"][0]["sandbox"]["active"], True)
         self.assertEqual(result["steps"][0]["sandbox"]["kind"], sandbox.kind())
 
+    @unittest.skipUnless(sandbox.kind(), "no supported OS sandbox on this host")
+    def test_sandboxed_read_records_active_isolation(self) -> None:
+        # read steps take the same OS isolation as run steps (R3)
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="peek", kind="read", command=f'{sys.executable} -c "print(7)"')],
+            sandbox=True,
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(result["steps"][0]["sandbox"]["active"], True)
+        self.assertEqual(result["steps"][0]["sandbox"]["kind"], sandbox.kind())
+
     def test_sandbox_blocks_a_write_outside_the_project(self) -> None:
         if sandbox.kind() != "sandbox-exec":
             self.skipTest("sandbox-exec profile test is macOS-specific")

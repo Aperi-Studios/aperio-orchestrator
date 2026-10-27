@@ -40,9 +40,10 @@ PATTERNS = [
         "assigned-secret",
         re.compile(
             # no prefix restriction: letter-prefixed compounds like MYSECRET,
-            # AUTHTOKEN, ADMINPASSWORD count (assignment context and the value
-            # filters gate prose). {12,} mirrors the value filter's <12 drop —
-            # anything the regex admits this short would never become a finding.
+            # AUTHTOKEN, ADMINPASSWORD count. Prose can false-positive (e.g.
+            # "password: authentication") — findings are reviewable output,
+            # not automated actions. {12,} mirrors the value filter's <12
+            # drop: anything the regex admits this short never becomes a finding.
             r"(?i)(?:api[_-]?key|secret|token|password|passwd|client[_-]?secret)[a-z0-9_]*"
             r"\s*[:=]\s*['\"]?([^\s'\"#]{12,})"
         ),
