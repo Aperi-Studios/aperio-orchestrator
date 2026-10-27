@@ -775,6 +775,27 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "plan")
         self.assertIn("plan", step["command"])
 
+    def test_next_does_not_migrate_legacy_state(self) -> None:
+        # Same contract as explain (a host review caught the migration):
+        # advising a legacy (schema-less) project must not write.
+        import hashlib
+
+        for name in ("queue.json", "project.json"):
+            path = self.project.state / name
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data.pop("schema", None)
+            path.write_text(json.dumps(data), encoding="utf-8")
+        before = {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(self.project.state.glob("*.json"))
+        }
+        next_action(self.project)
+        after = {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(self.project.state.glob("*.json"))
+        }
+        self.assertEqual(before, after, "next_action must not migrate or write legacy state")
+
     def test_unreadable_discovery_routes_to_the_lookup(self) -> None:
         # A host review caught the advisor suggesting an answer command with
         # an unnamed question id. When discovery state is unreadable the

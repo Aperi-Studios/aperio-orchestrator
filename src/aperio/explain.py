@@ -163,8 +163,8 @@ def _approval(project: Project | None) -> str:
         "  aperio plan '<plan.json>'            create or replace the plan first"
     )
     if project is not None:
-        approved = [p for p in project.plans() if p.approval is not None]
-        text += _project_line(f"{len(approved)} approved plan(s) of {len(project.plans())}")
+        approved = [p for p in project.plans_readonly() if p.approval is not None]
+        text += _project_line(f"{len(approved)} approved plan(s) of {len(project.plans_readonly())}")
     return text
 
 
@@ -219,7 +219,7 @@ def _review(project: Project | None) -> str:
         "  aperio mediate '<task-id>'"
     )
     if project is not None:
-        tasks = project.tasks()
+        tasks = project.tasks_readonly()
         reviewed = [t for t in tasks if t.review is not None]
         text += _project_line(f"{len(reviewed)} reviewed task(s) of {len(tasks)}")
     return text

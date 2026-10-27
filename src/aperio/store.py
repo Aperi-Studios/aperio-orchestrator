@@ -89,11 +89,15 @@ class Project:
 
     # ---- low-level JSON -------------------------------------------------
 
-    def _read_state_json(self, path: Path, default: Any = None) -> Any:
+    def _read_state_json(self, path: Path, default: Any = None, *, persist_migration: bool = True) -> Any:
         """Read a versioned state file, migrating a missing schema on read.
 
         A state file written by a newer build is refused rather than guessed at.
-        Existing v1 files predate the schema field, so they are migrated in place.
+        Existing v1 files predate the schema field, so they are migrated in place
+        — EXCEPT for read-only callers, which pass persist_migration=False and
+        get the migration in memory only: advising or explaining a legacy project
+        must never write it (a host review caught explain migrating legacy state
+        under a read-only contract).
         """
         data = self._read_json(path, default)
         if not isinstance(data, dict):
@@ -101,7 +105,7 @@ class Project:
         schema = data.get("schema")
         if schema is None:
             data["schema"] = SCHEMA_VERSION
-            if path.is_file():
+            if persist_migration and path.is_file():
                 try:
                     self._write_json(path, data)
                 except OSError:
@@ -226,6 +230,13 @@ class Project:
             return None
         return self._read_state_json(path)
 
+    def discovery_readonly(self) -> dict[str, Any] | None:
+        """Read discovery without persisting a schema migration (read-only advisors)."""
+        path = self.state / "discovery.json"
+        if not path.is_file():
+            return None
+        return self._read_state_json(path, persist_migration=False)
+
     def save_discovery(self, data: dict[str, Any]) -> None:
         data = dict(data)
         data["schema"] = SCHEMA_VERSION
@@ -259,6 +270,11 @@ class Project:
 
     def tasks(self) -> list[Task]:
         data = self._read_state_json(self.state / "queue.json", {"tasks": []})
+        return [Task.from_dict(row) for row in data.get("tasks", [])]
+
+    def tasks_readonly(self) -> list[Task]:
+        """Read the queue without persisting a schema migration (read-only advisors)."""
+        data = self._read_state_json(self.state / "queue.json", {"tasks": []}, persist_migration=False)
         return [Task.from_dict(row) for row in data.get("tasks", [])]
 
     def save_tasks(self, tasks: list[Task]) -> None:
@@ -314,6 +330,13 @@ class Project:
                 return task
         raise StoreError(f"unknown task: {task_id}")
 
+    def get_task_readonly(self, task_id: str) -> Task:
+        """Read one task without persisting a schema migration (read-only advisors)."""
+        for task in self.tasks_readonly():
+            if task.id == task_id:
+                return task
+        raise StoreError(f"unknown task: {task_id}")
+
     def put_task(self, task: Task) -> None:
         task.touch()
         tasks = self.tasks()
@@ -346,11 +369,31 @@ class Project:
         except ModelError as exc:
             raise StoreError(f"invalid plan {plan_id}: {exc}") from exc
 
+    def get_plan_readonly(self, plan_id: str) -> Plan:
+        """Read one plan without persisting a schema migration (read-only advisors)."""
+        path = self.plan_path(plan_id)
+        if not path.is_file():
+            raise StoreError(f"unknown plan: {plan_id}")
+        try:
+            return Plan.from_dict(self._read_state_json(path, persist_migration=False))
+        except ModelError as exc:
+            raise StoreError(f"invalid plan {plan_id}: {exc}") from exc
+
     def plans(self) -> list[Plan]:
         result: list[Plan] = []
         for path in sorted((self.state / "plans").glob("*.json")):
             try:
                 result.append(Plan.from_dict(self._read_state_json(path)))
+            except ModelError:
+                continue
+        return result
+
+    def plans_readonly(self) -> list[Plan]:
+        """Read plans without persisting schema migrations (read-only advisors)."""
+        result: list[Plan] = []
+        for path in sorted((self.state / "plans").glob("*.json")):
+            try:
+                result.append(Plan.from_dict(self._read_state_json(path, persist_migration=False)))
             except ModelError:
                 continue
         return result

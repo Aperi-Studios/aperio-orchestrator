@@ -169,7 +169,7 @@ def _run_todo_step(project: Project, progress: dict[str, Any], task: dict[str, A
     plan_id = task.get("plan_id")
     if not plan_id:
         return None
-    plan = project.get_plan(plan_id)
+    plan = project.get_plan_readonly(plan_id)
     if not plan.todo_id:
         return None
     linked = next(
@@ -224,7 +224,7 @@ def _readiness_step(project: Project) -> dict[str, Any] | None:
 def _stale_task_ids(project: Project) -> set[str]:
     """Tasks whose plan bindings no longer match the current gate records."""
     stale: set[str] = set()
-    for task in project.tasks():
+    for task in project.tasks_readonly():
         if task.status not in {"planned", "approved"} or not task.plan_id:
             continue
         if _binding_problem(project, str(task.plan_id)) is not None:
@@ -238,7 +238,7 @@ def _binding_problem(project: Project, plan_id: str) -> str | None:
     from .readiness import digest as readiness_digest
 
     try:
-        plan = project.get_plan(plan_id)
+        plan = project.get_plan_readonly(plan_id)
     except Exception:  # noqa: BLE001 - any plan-load failure means re-plan
         return f"the plan {plan_id} cannot be loaded"
     if not plan.learning_digest:
@@ -247,7 +247,7 @@ def _binding_problem(project: Project, plan_id: str) -> str | None:
     if not current.get("ready") or current.get("digest") != plan.learning_digest:
         return "the learning dossier changed after this plan was created"
     if not plan.discovery_digest:
-        if project.discovery() is not None:
+        if project.discovery_readonly() is not None:
             return "the plan has no discovery binding"
     else:
         try:
@@ -319,12 +319,12 @@ def _task_step(project: Project) -> dict[str, Any] | None:
     stale_ids = _stale_task_ids(project)
     handed_off = {
         task.id
-        for task in project.tasks()
+        for task in project.tasks_readonly()
         if task.status == "done" and _handoff_written(project, task.id)
     }
     stage_order = ["planned", "approved", "applied", "verified", "reviewed", "done"]
     best: tuple[int, dict[str, Any]] | None = None
-    for task in project.tasks():
+    for task in project.tasks_readonly():
         # A handed-off task is finished: it must not mask newer in-flight
         # work (a host review caught the done task winning forever), and a
         # stale task can no longer proceed.
@@ -354,9 +354,9 @@ def _task_step(project: Project) -> dict[str, Any] | None:
             # caught the advisor asking to accept unworked work).
             handed_off_by_todo: dict[str, str] = {}
             for done_id in handed_off:
-                done_task = project.get_task(done_id)
+                done_task = project.get_task_readonly(done_id)
                 if done_task.plan_id:
-                    handed_off_by_todo[project.get_plan(done_task.plan_id).todo_id] = done_id
+                    handed_off_by_todo[project.get_plan_readonly(done_task.plan_id).todo_id] = done_id
             unsettled = next(
                 (item for item in ledger if item["status"] == "in_progress"),
                 None,
@@ -500,8 +500,8 @@ def next_action(project: Project) -> dict[str, Any]:
     # approve/run advice for it (a host review caught the over-gating).
     def discovery_gate() -> dict[str, Any] | None:
         plan_id = step.get("plan_id")
-        if plan_id and project.discovery() is None:
-            plan = project.get_plan(plan_id)
+        if plan_id and project.discovery_readonly() is None:
+            plan = project.get_plan_readonly(plan_id)
             if not plan.discovery_digest:
                 return None
         return _discovery_step(discovery_ready)

@@ -138,6 +138,29 @@ class ExplainTests(unittest.TestCase):
             self.assertTrue(data["read_only"])
         self.assertEqual(before, snapshot(), "explain must not write any state")
 
+    def test_explain_does_not_migrate_legacy_state(self) -> None:
+        # A host review caught explain migrating a legacy (schema-less) state
+        # file under the read-only contract. Strip schemas, run every topic,
+        # and assert the files are byte-identical.
+        import hashlib
+
+        for name in ("queue.json", "project.json"):
+            path = self.project.state / name
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data.pop("schema", None)
+            path.write_text(json.dumps(data), encoding="utf-8")
+        before = {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(self.project.state.glob("*.json"))
+        }
+        for topic in TOPICS:
+            explain(topic, self.project)
+        after = {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(self.project.state.glob("*.json"))
+        }
+        self.assertEqual(before, after, "explain must not migrate or write legacy state")
+
     def test_cli_rejects_an_unknown_topic(self) -> None:
         result = subprocess.run(
             [sys.executable, "-m", "aperio", "--project", str(self.root), "explain", "nonsense"],
