@@ -441,6 +441,21 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "readiness.import")
         self.assertIn("pre-flight", step["why"])
 
+    def test_applied_task_routes_to_verify_even_when_a_gate_drifted(self) -> None:
+        # cmd_verify does not re-check the plan gates, so an applied task must
+        # route to verify even if learning became unready after the run (a
+        # host review flagged gate-first routing misadvising this stage).
+        task_id, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.cli("run", task_id, "--actor", "builder")
+        record_path = self.root / ".aperio" / "learning.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record["competency"]["verdict"] = "not_demonstrated"
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "verify")
+        self.assertEqual(step["task_id"], task_id)
+
     # ---- safety ----------------------------------------------------------
 
     def test_printed_commands_use_the_real_binary_name(self) -> None:

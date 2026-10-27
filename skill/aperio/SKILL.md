@@ -277,7 +277,7 @@ aperio mediate <task-id>
 aperio hosts
 ```
 
-When unsure what to do next — after a refusal, on resume, or on first contact with an existing project — run `apero next` (or `apero next --json`). It reads the state and names the one legal action, the exact command, and the gate that requires it. It never performs the action and never bypasses a gate.
+When unsure what to do next — after a refusal, on resume, or on first contact with an existing project — run `aperio next` (or `aperio next --json`). It reads the state and names the one legal action, the exact command, and the gate that requires it. It never performs the action and never bypasses a gate.
 
 ## Security audit ledger
 

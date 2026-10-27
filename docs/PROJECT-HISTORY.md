@@ -107,7 +107,7 @@ done until its own suite run, ruff, drift, and — for pushed code — CI agree.
   readiness digest bound into plans (run currently re-validates preflight but
   does not pin its content); sandbox host-wide reads are comment-only
   disclosure; the toolchain approval gate is advisory by design; drift is not
-  yet a CI job; `apero doctor` does not yet surface learning/readiness state.
+  yet a CI job; `aperio doctor` does not yet surface learning/readiness state.
 
 ## 7. Where things stand right now
 

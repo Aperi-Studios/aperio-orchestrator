@@ -4,12 +4,13 @@
 would otherwise have to reverse-engineer from refusals: what is the next legal
 action, the exact command that performs it, and why the loop requires it now.
 
-Gate steps are checked before lifecycle steps, in the order ``cmd_plan``
-refuses (learning, todo, preflight readiness, discovery): an unsatisfied gate
-is the first refusal any of approve, plan, or run would raise, so naming it
-first is always a legal action even mid-loop. Full readiness is deliberately
-not demanded before planning — the CLI requires only preflight there and full
-readiness at done and handoff.
+Gate steps prefix the lifecycle advice only when the next lifecycle command
+actually refuses on them (plan, approve, run, recover): verify and review do
+not re-check the gates, so an applied task routes to verify even if a gate
+later drifted. Within the gate check the order is the one ``cmd_plan``
+refuses in (learning, todo-nonempty, preflight readiness, single in-progress
+todo, discovery). Full readiness is demanded only before done and handoff,
+matching the CLI.
 
 The module is deliberately read-only: it opens state, never writes, and never
 performs the action it names. Gates stay gates; this only narrates them.
@@ -313,22 +314,27 @@ def next_action(project: Project) -> dict[str, Any]:
     def ready(step: dict[str, Any] | None) -> dict[str, Any] | None:
         return _with_project(step, root) if step is not None else None
 
-    # Pre-plan gates, in the order cmd_plan reaches its refusals: learning,
-    # todo-nonempty, preflight readiness, the single in-progress todo, then
-    # discovery (host reviews flagged both orderings).
-    for step in (
-        ready(_learning_step(learning_ready)),
-        ready(_todo_nonempty_step(todo)),
-        ready(_readiness_step(project)),
-        ready(_todo_active_step(todo)),
-        ready(_discovery_step(discovery_ready)),
-    ):
-        if step is not None:
-            return step
-
-    # All pre-plan gates satisfied: the loop itself is the next action.
+    # Which lifecycle command is next? Gates are only prefixed when that
+    # command actually refuses on them: plan/approve/run re-check learning,
+    # todo, preflight, and discovery; verify and review do not (a host
+    # review flagged gate-first routing misadvising an applied task).
     step = _task_step(project)
     assert step is not None
+    gate_enforcing = step["action"] in {"plan", "approve", "run", "recover"}
+
+    if gate_enforcing:
+        # In the order cmd_plan reaches its refusals: learning, todo-nonempty,
+        # preflight readiness, the single in-progress todo, then discovery.
+        for gate_step in (
+            ready(_learning_step(learning_ready)),
+            ready(_todo_nonempty_step(todo)),
+            ready(_readiness_step(project)),
+            ready(_todo_active_step(todo)),
+            ready(_discovery_step(discovery_ready)),
+        ):
+            if gate_step is not None:
+                return gate_step
+
     # done and handoff require FULL readiness, not just preflight; route the
     # gap before recommending them (a host review flagged this).
     if step["action"] in {"done", "handoff"}:
