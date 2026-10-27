@@ -27,9 +27,10 @@
 | Audit tests | 16 passed | same command; `tests/test_audit.py` |
 | Repo tests | 4 passed | same command; `tests/test_repo.py` |
 | Next advisor tests | 34 passed | same command; `tests/test_next.py` |
+| Explainer tests | 7 passed | same command; `tests/test_explain.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 278 passed | same command |
+| Total test suite | 285 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -102,6 +103,7 @@
 | Handoff | `HANDOFF.md` is the incoming-agent entry point; `docs/OWNER-REQUESTS.md` maps owner requests to docs/tests | `HANDOFF.md`; `docs/OWNER-REQUESTS.md` |
 | Documentation drift | clean: links and inline paths resolve | `aperio drift` |
 | Independent host review of the next-action advisor | fresh-context Codex review confirmed after 15 refuted rounds; the loop drove 13 fixes (binary name across 21 commands, gate order, stale/missing bindings, preflight vs full readiness, handoff completion, task-selection mismatches, shell-safe paths, placeholder quoting, legacy-plan discovery exemption) | review `review-a8def7727b`, task `task-next1` in the temporary goldfish project; commits `3a50af7` through `751de0c` |
+| Gate explainer | `aperio explain <topic>` explains discovery, learning, todo, readiness, approval, writes, and review: what each checks, the incident that motivated it, and live project status; read-only (a test asserts no state change); every printed command uses the real binary name | `src/aperio/explain.py`; `src/aperio/cli.py::cmd_explain`; `tests/test_explain.py`; craft page `docs/TEACHING.md` |
 | Next-action advisor | `aperio next` / `aperio next --json` computes the single next legal action from state (learning, todo, preflight readiness, discovery — the order cmd_plan refuses in, preflight-only before planning — then the task lifecycle with stale-binding and missing-binding detection; full readiness before done/handoff; --project on every suggested command); read-only: a test asserts it writes nothing | `src/aperio/nextstep.py`; `src/aperio/cli.py::cmd_next`; `tests/test_next.py` |
 | Independent host review of the hygiene sprint | fresh-context Codex review confirmed after 3 refuted rounds; 3 verified findings fixed (glob crossing `/`, STATUS per-suite drift, PRD table drift) | review `review-61c27b51d5`, task `task-sprint1` in the temporary goldfish project; earlier rounds `review-62d4842164` (2×P1), plus two P2 rounds; commits `01018bc`, `d317d42`, `68611b9`, `01c0ad8` |
 
@@ -122,7 +124,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 278-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 285-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps are not jailed. Shell/read steps are sandboxed only when a plan sets `sandbox: true`; otherwise changes are detected after execution.
 - `review --host` supports only the reviewer adapters (claude, codex, dsh, goose); opencode, kilocode, cline, and agy are dispatch-only adapters for `run`.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.

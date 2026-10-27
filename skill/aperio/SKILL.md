@@ -271,11 +271,14 @@ aperio done <task-id>
 aperio rollback <task-id> --yes
 aperio handoff <task-id> --print
 aperio next            # read-only: the next legal action, its exact command, and why
+apero explain <topic>  # read-only: what a gate checks, why it exists, live status
 aperio status --json
 aperio message send --from builder --to reviewer --body "please review" --task <task-id>
 aperio mediate <task-id>
 aperio hosts
 ```
+
+The craft pages live in `docs/TEACHING.md`: writing plans, writing acceptance checks that cannot lie, and reviewing honestly — each rule anchored to a real incident in this repository.
 
 When unsure what to do next — after a refusal, on resume, or on first contact with an existing project — run `aperio next` (or `aperio next --json`). It reads the state and names the one legal action, the exact command, and the gate that requires it. It never performs the action and never bypasses a gate.
 

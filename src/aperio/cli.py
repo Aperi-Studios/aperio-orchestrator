@@ -55,6 +55,8 @@ from .drift import format_findings as format_drift
 from .evidence import add as evidence_add
 from .evidence import entries as evidence_entries
 from .evidence import format_entries as format_evidence
+from .explain import TOPICS as EXPLAIN_TOPICS
+from .explain import explain
 from .handoff import write_handoff
 from .hosts import detect_hosts
 from .inspect import InspectionError
@@ -547,6 +549,20 @@ def cmd_next(args: argparse.Namespace) -> int:
             print("  issues:")
             for issue in step["issues"][:6]:
                 print(f"    - {issue}")
+    return 0
+
+
+def cmd_explain(args: argparse.Namespace) -> int:
+    project = None
+    try:
+        project = _project(args)
+    except StoreError:
+        project = None  # explaining gates works without a project
+    info = explain(args.topic, project)
+    if args.json:
+        print(json.dumps(info, indent=2, sort_keys=True))
+    else:
+        print(info["text"])
     return 0
 
 
@@ -1084,6 +1100,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_next)
+
+    p = sub.add_parser(
+        "explain",
+        help="explain a gate: what it checks, why it exists, live status (read-only)",
+    )
+    p.add_argument("topic", choices=EXPLAIN_TOPICS)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_explain)
 
     p = sub.add_parser("handoff", help="write the owner handoff")
     p.add_argument("task_id")

@@ -75,6 +75,7 @@ aperio review <task-id> --host claude
 aperio done <task-id>
 aperio todo accept <todo-id> --by owner --evidence "command exit 0" --confirm "I accept this task"
 aperio next            # read-only GPS: next legal action + exact command + why
+apero explain <topic>  # read-only: what a gate checks, why, live status
 aperio handoff <task-id> --print
 aperio recover
 aperio drift
@@ -111,6 +112,7 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Readiness record for pre-flight, deployment, after-sales, design, and security facts; `aperio readiness validate` refuses gaps and high/critical unresolved risk.
 - Project-scoped skill creation: `aperio skill create` writes a validated scaffold under `.aperio/skills/` and refuses to overwrite a foreign skill.
 - Bounded local secret scan: `aperio security scan` flags high-confidence tokens, private keys, sensitive filenames, and assigned secrets; it does not replace a dependency or history scanner.
+- Gate explainer: `aperio explain <topic>` teaches each gate — what it checks, why it exists, and this project's live status; strictly read-only.
 - Next-action advisor: `aperio next` reads the state and names the single next legal action, the exact command, and which gate requires it; strictly read-only.
 - Generated read-only status dashboard: `aperio dashboard` writes self-contained HTML from the state files with no scripts or network.
 - Manifest-driven toolchain installation: `aperio tool import` validates source, version, license, permissions, risk flags, cost, install argv, and verify argv; risky tools require exact owner confirmation.

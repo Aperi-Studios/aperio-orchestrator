@@ -1,0 +1,128 @@
+# Teaching: the craft of working inside Aperio
+
+> **For agents.** This page teaches the three skills the loop demands: writing
+> a plan that can be approved, writing acceptance checks that cannot lie, and
+> reviewing honestly. Every rule is anchored to a real incident from this
+> repository's history — the reference points to the ledger row or test that
+> proves it. Read `apero explain <topic>` for the live per-gate version of
+> this page.
+
+## 1. Writing a plan
+
+A plan is a contract with three parts: what may change (`allowed_paths`), what
+will change (`steps` with their `writes`), and how we will know it worked
+(`acceptance`). The approval phrase binds all three by hash — anything edited
+after approval invalidates the plan (Z-D binding tests; `test_plan_body_tamper_after_approval_is_refused`).
+
+### 1.1 Declare writes at the narrowest true scope
+
+- Name exact files when you know them: `writes: ["src/cli.py"]`.
+- Use a directory when the step legitimately creates files: `writes: ["dist/"]`.
+  A directory target accepts files the step creates (fixed in `27dcfb7` after
+  Z-D1: directory targets used to reject new files).
+- Use a glob only when the set is genuinely dynamic: `writes: ["out/*.html"]`.
+  Globs match one segment per `*` — `out/*.html` does **not** reach
+  `out/sub/x.html`; recursion needs `**` (Z-D6, found by a live host review).
+- A shell step that writes outside its declared `writes` fails the run even
+  if the path is inside `allowed_paths` (Z-P1 class;
+  `test_host_change_outside_step_writes_is_rejected`).
+
+**The craft:** `allowed_paths` is the fence; step `writes` are the doors. An
+agent that opens the whole fence ("allowed_paths: [\"*\"]") to avoid thinking
+about doors is announcing that it does not know what its own commands do.
+Narrow both, and the run's post-check becomes a real detector instead of a
+formality.
+
+### 1.2 One step, one effect
+
+A step that builds, tests, and deploys in one `run` cannot be verified,
+rolled back, or reviewed separately. Split it. The runner snapshots before
+each step sequence and restores on failure; a monolithic step makes rollback
+all-or-nothing (`apply_plan` in `src/aperio/runner.py`; rollback test
+`test_rollback_restores_modified_and_removes_created`).
+
+### 1.3 Read-only work is a `read` step
+
+Exploration, inspection, and audit commands declare `kind: read` and must not
+mutate the project — the runner diffs the tree around the step and fails the
+run on any change (`test_read_step_cannot_change_the_project`). A `read`
+step cannot even declare writes (schema refusal in `model.py::Step.validate`).
+
+## 2. Writing acceptance checks that cannot lie
+
+The acceptance section is the plan's conscience. The recurring failure in this
+repo's history is the check that technically passes but proves nothing.
+
+- **No-ops are refused at plan time** — `true`, `exit 0`, `/bin/true`
+  (`model.py::Acceptance.validate`; incident F4 in `docs/AUDIT-CLAUDE-20261026.md`).
+- **A check that mutates the project fails verification** — the runner diffs
+  the tree around the checks and deletes stray files
+  (`test_acceptance_check_cannot_mutate_the_project`).
+- **A timeout cannot pass** — a check that hangs is a failure, not a pass
+  (`test_verification_timeout_cannot_pass`).
+- **Presence is not behavior.** `test -f index.html` proves the file exists;
+  it does not prove the form sends or the page renders. The existing Plan
+  quality section says this; the craft is to pair one existence check with
+  one behavior check per must-have (assert output content, run the built
+  artifact, exercise the endpoint).
+- **Prefer exact assertions.** Compare full output or a hash, not "contains
+  the word OK". The house A/B rule: a test that passes against the old code
+  is not evidence; the same rule applies to acceptance checks.
+
+**The craft:** before writing the plan, write the acceptance checks first —
+if you cannot say how the work will be proven, you do not yet know what the
+work is.
+
+## 3. Reviewing honestly
+
+The reviewer is the loop's second pair of eyes, and the rules exist because
+each was once missing:
+
+- **The builder cannot review their own work** — refused by label match
+  (`policy.py::assert_reviewer`; incident F1: self-approval was once a no-op).
+  Host review goes further: a separate process, a brief-only workspace, no
+  builder conversation.
+- **The reviewer cannot change the project** — the runner fingerprints the
+  tree around the review and refuses on any change
+  (`test_reviewer_cannot_change_the_project`).
+- **A reviewer verdict must engage with the brief.** The goldfish reviewer
+  sees only the brief, the changed files, and the evidence. Confirming
+  without reading is the reviewer's version of the no-op acceptance check.
+- **Findings need evidence and a location.** "This looks wrong" is not a
+  finding; "this function drops the error at src/x.py:42, here is the
+  failing input" is. The audit ledger enforces exactly this shape
+  (`docs/AUDIT.md`; `needs_validation` cannot carry severity).
+
+**The craft:** the reviewer's job is to *refute the work*, not to approve it.
+Confirmation is earned only when the refutation attempts fail.
+
+## 4. The gates, in one table
+
+| Gate | Refuses when | Because |
+|---|---|---|
+| Discovery | questions unanswered at `plan` | plans built on guesses rework later; waivers are explicit and dated |
+| Learning | dossier missing/unproven at `plan`/`approve`/`run` | imported proof text is ignored; only a locally run command proves the stack |
+| Todo | ledger empty or ≠1 in progress at `plan`; linked todo unsettled at `run` | one slice at a time keeps review and rollback meaningful |
+| Readiness | preflight incomplete at `plan`; full record incomplete at `done`/`handoff` | deployment facts and threat model are owner decisions, not agent guesses |
+| Approval | phrase mismatch, plan edited, approver == actor | the phrase binds the plan hash; self-approval was incident F1 |
+| Writes | outside declared paths, protected paths, control state | Z-02, Z-P1, control-state tamper tests |
+| Review | builder as reviewer, tampering, missing evidence | F1, tamper tests |
+
+## 5. Working the loop with `apero next`
+
+`apero next` computes the single next legal action from state, with the exact
+command and the gate that requires it. Its routing mirrors the CLI's refusal
+conditions per command — it was review-driven to match the CLI over 16 host
+review rounds (`review-a8def7727b`). When a refusal surprises you, run
+`aperio next` before guessing: the refusal text and the advisor name the same
+gate.
+
+## 6. Where the incidents live
+
+- `docs/PRD.md` — the Z-D / Z-P defect and proposal ledger with dispositions.
+- `docs/AUDIT-CLAUDE-20261026.md`, `docs/AUDIT-CODEX-20261026.md` — the
+  independent audits that produced F1–F5 and the P-rows.
+- `docs/PROJECT-HISTORY.md` — the builder/monitor/owner loop that produced
+  this discipline, and the hard rules it enforces.
+- `tests/` — every rule above has a named test; `docs/STATUS.md` maps rows
+  to tests.

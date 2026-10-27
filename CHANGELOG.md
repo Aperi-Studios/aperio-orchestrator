@@ -4,6 +4,7 @@
 
 Initial clean rebuild.
 
+- `aperio explain <topic>`: a read-only gate explainer — what each gate checks, the incident that motivated it, and the project's live status; plus `docs/TEACHING.md`, an incident-anchored craft page for plan-writing, acceptance checks, and review.
 - `aperio next` and `aperio next --json`: a read-only next-action advisor that names the single next legal action, its exact command, and the gate that requires it, from first contact through handoff.
 - Added a standard-library core for asks, plans, approval, bounded apply, verification, independent review, finish, rollback, and handoff.
 - Added path safety for relative paths, parent traversal, and symlink components.
