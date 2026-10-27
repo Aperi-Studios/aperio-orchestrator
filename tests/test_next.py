@@ -396,6 +396,51 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "handoff")
         self.assertEqual(step["task_id"], task_id)
 
+    def test_incomplete_full_readiness_blocks_done_recommendation(self) -> None:
+        # A host review caught the advisor recommending done while cmd_done
+        # requires FULL readiness: strip a non-preflight section after the
+        # review and the advisor must route to readiness first.
+        task_id, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.cli("run", task_id, "--actor", "builder")
+        self.cli("verify", task_id)
+        self.cli("review", task_id, "--reviewer", "independent", "--verdict", "confirmed")
+        record_path = self.root / ".aperio" / "readiness.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record.pop("aftersales")
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "readiness.import")
+        self.assertIn("full project readiness", step["why"])
+
+    def test_suggested_commands_carry_the_project_flag(self) -> None:
+        # A host review caught bare commands that would act on the caller's
+        # cwd instead of the advised project. Every command must target the
+        # project root explicitly.
+        _task_id, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        step = next_action(self.project)
+        # project.root is the resolved path (macOS /var -> /private/var).
+        self.assertIn(f'--project "{self.project.root}"', step["command"])
+
+    def test_preflight_gap_beats_pending_todo_start(self) -> None:
+        # cmd_plan reaches _require_preflight before _active_todo, so with a
+        # pending todo AND broken preflight the advisor must name readiness
+        # first (a host review flagged the inverted order).
+        dossier = self.root / "learning.json"
+        dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
+        self.cli("learn", "import", str(dossier), allow_rc={1})
+        self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
+        self.cli(
+            "todo", "add", "Build page",
+            "--deliverable", "page works",
+            "--acceptance", "page exists",
+        )
+        # No readiness record at all: preflight is the first refusal.
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "readiness.import")
+        self.assertIn("pre-flight", step["why"])
+
     # ---- safety ----------------------------------------------------------
 
     def test_printed_commands_use_the_real_binary_name(self) -> None:
