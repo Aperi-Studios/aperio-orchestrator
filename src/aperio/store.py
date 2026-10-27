@@ -84,7 +84,10 @@ class Project:
         project = cls(Path(root).expanduser())
         if not (project.state / "project.json").is_file():
             raise StoreError(f"not an Aperio project: {project.root} (run aperio init)")
-        project._read_state_json(project.state / "project.json")
+        # Read-only commands go through open() too, so opening must not
+        # persist a schema migration; the next real write stamps the schema
+        # (a host review caught the CLI migrating legacy state on explain).
+        project._read_state_json(project.state / "project.json", persist_migration=False)
         return project
 
     # ---- low-level JSON -------------------------------------------------

@@ -52,19 +52,33 @@ class ExplainTests(unittest.TestCase):
         for topic in TOPICS:
             info = explain(topic, self.project)
             commands = info["text"].split("COMMANDS", 1)[1]
+            # Assemble backslash continuations into whole commands first (a
+            # host review caught per-line checking missing malformed joins).
+            assembled: list[str] = []
+            buffer = ""
             for line in commands.splitlines():
-                stripped = line.strip().removesuffix("\\").strip()
-                if not stripped.startswith("aperio "):
+                stripped_line = line.strip()
+                if stripped_line.endswith("\\"):
+                    buffer += stripped_line[:-1].rstrip() + " "
+                else:
+                    buffer += stripped_line
+                    if buffer.strip():
+                        assembled.append(buffer.strip())
+                    buffer = ""
+            if buffer.strip():
+                assembled.append(buffer.strip())
+            for command in assembled:
+                if not command.startswith("aperio "):
                     continue
                 # No unquoted placeholders.
-                self.assertNotRegex(stripped, r"(?<!['\w])<(?!')", f"{topic}: {stripped}")
+                self.assertNotRegex(command, r"(?<!['\w])<(?!')", f"{topic}: {command}")
                 # The command must parse as shell syntax.
                 check = subprocess.run(
-                    ["/bin/sh", "-n", "-c", stripped],
+                    ["/bin/sh", "-n", "-c", command],
                     capture_output=True, text=True, check=False,
                 )
                 self.assertEqual(
-                    check.returncode, 0, f"{topic}: {stripped}: {check.stderr.strip()}"
+                    check.returncode, 0, f"{topic}: {command}: {check.stderr.strip()}"
                 )
             # Required flags per topic.
             if topic == "review":
@@ -140,8 +154,10 @@ class ExplainTests(unittest.TestCase):
 
     def test_explain_does_not_migrate_legacy_state(self) -> None:
         # A host review caught explain migrating a legacy (schema-less) state
-        # file under the read-only contract. Strip schemas, run every topic,
-        # and assert the files are byte-identical.
+        # file under the read-only contract — including via Project.open,
+        # which the CLI always calls. Run the real CLI against the legacy
+        # state and assert byte-identical files (a later review caught the
+        # library-level test bypassing open()).
         import hashlib
 
         for name in ("queue.json", "project.json"):
@@ -154,7 +170,12 @@ class ExplainTests(unittest.TestCase):
             for p in sorted(self.project.state.glob("*.json"))
         }
         for topic in TOPICS:
-            explain(topic, self.project)
+            result = subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.project.root), "explain", topic],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            )
+            self.assertEqual(result.returncode, 0, topic)
         after = {
             p.name: hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sorted(self.project.state.glob("*.json"))
