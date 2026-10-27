@@ -254,6 +254,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
         todo_id=todo_id,
         learning_digest=str(learning.get("digest") or ""),
         readiness_digest=readiness_digest_value,
+        sandbox=bool(data.get("sandbox", False)),
     )
     plan.validate()
     if not plan.acceptance:

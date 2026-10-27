@@ -22,6 +22,7 @@ import json
 from typing import Any
 
 from .discovery import DiscoveryError
+from .discovery import readonly_load as discovery_readonly_load
 from .discovery import status as discovery_status
 from .learning import status as learning_status
 from .readiness import ReadinessError, validate_preflight
@@ -476,7 +477,8 @@ def next_action(project: Project) -> dict[str, Any]:
     root = str(project.root)
     discovery_ready = None
     try:
-        discovery_ready = discovery_status(project)
+        with discovery_readonly_load():
+            discovery_ready = discovery_status(project)
     except DiscoveryError:
         discovery_ready = {"ready": False, "answered": 0, "total": 0, "next": None}
     learning_ready = learning_status(project)

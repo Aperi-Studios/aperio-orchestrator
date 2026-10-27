@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from .discovery import DiscoveryError
+from .discovery import readonly_load as discovery_readonly_load
 from .discovery import status as discovery_status
 from .learning import status as learning_status
 from .readiness import ReadinessError
@@ -33,8 +34,9 @@ def _discovery(project: Project | None) -> str:
         "  explicit dated owner waiver can skip a question.\n"
         "WHY IT EXISTS\n"
         "  Plans built on guesses get reworked after approval. The interview is\n"
-        "  cheap; rework is not — this is the documented reason the v1\n"
-        "  repository was rebuilt (docs/PROJECT-HISTORY.md section 1). Waivers\n"
+        "  cheap; rework is not — the interview exists so plans bind to owner\n"
+        "  facts rather than guesses (docs/PROJECT-HISTORY.md records why the\n"
+        "  v1 repository was rebuilt). Waivers\n"
         "  exist because some questions genuinely do not apply — but a waiver is\n"
         "  an owner decision with a review date and an exact confirmation\n"
         "  phrase (skill/aperio/SKILL.md, discovery waiver), not an agent\n"
@@ -48,7 +50,8 @@ def _discovery(project: Project | None) -> str:
     )
     if project is not None:
         try:
-            progress = discovery_status(project)
+            with discovery_readonly_load():
+                progress = discovery_status(project)
             text += _project_line(
                 f"{progress['answered']}/{progress['total']} answered, "
                 f"ready={progress['ready']}"
@@ -121,7 +124,8 @@ def _readiness(project: Project | None) -> str:
     text = (
         "WHAT IT CHECKS\n"
         "  `plan` requires the preflight section (audience, success measure,\n"
-        "  features, constraints, review owner, approval path). `done` and\n"
+        "  features, out_of_scope, integrations, constraints, review owner,\n"
+        "  approval path). `done` and\n"
         "  `handoff` require the FULL record: deploy, after-sales, design, and\n"
         "  security sections. High/critical unresolved security risk blocks full\n"
         "  readiness.\n"
@@ -210,7 +214,7 @@ def _review(project: Project | None) -> str:
         "  Self-approval was incident F1 (docs/AUDIT-CLAUDE-20261026.md). The\n"
         "  reviewer's job is to refute the work; confirmation is earned when\n"
         "  refutation attempts fail. Findings need evidence and a location —\n"
-        "  the audit ledger enforces that shape (docs/AUDIT.md;\n"
+        "  the audit ledger enforces that shape (docs/AUDIT-CLAUDE-20261026.md;\n"
         "  tests/test_core.py::test_reviewer_cannot_change_the_project).\n"
         "COMMANDS\n"
         "  aperio review '<task-id>' --host claude\n"

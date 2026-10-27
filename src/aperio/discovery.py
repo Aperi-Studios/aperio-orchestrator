@@ -397,9 +397,31 @@ def _applicable(data: dict[str, Any]) -> list[Question]:
     ]
 
 
+_READONLY_LOAD = [False]
+
+
+class _readonly_load:
+    """Context manager: discovery reads skip persisting schema migration.
+
+    For the read-only advisors (next, explain): narrating a legacy project
+    must not write it (a host review caught discovery_status migrating
+    legacy state under a read-only contract).
+    """
+
+    def __enter__(self) -> None:
+        _READONLY_LOAD[0] = True
+
+    def __exit__(self, *exc: object) -> None:
+        _READONLY_LOAD[0] = False
+
+
+def readonly_load() -> _readonly_load:
+    return _readonly_load()
+
+
 def _load(project: Project) -> dict[str, Any] | None:
     try:
-        return project.discovery()
+        return project.discovery_readonly() if _READONLY_LOAD[0] else project.discovery()
     except StoreError as exc:
         raise DiscoveryError(str(exc)) from exc
 

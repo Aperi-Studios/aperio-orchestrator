@@ -36,9 +36,11 @@ formality.
 ### 1.2 One step, one effect
 
 A step that builds, tests, and deploys in one `run` cannot be verified,
-rolled back, or reviewed separately. Split it. The runner snapshots before
-each step sequence and restores on failure; a monolithic step makes rollback
-all-or-nothing (`apply_plan` in `src/aperio/runner.py`; rollback test
+rolled back, or reviewed separately. Split it. The runner snapshots declared
+targets before the run and restores them when a step raises or a host step
+escapes its workspace; a failed *command exit* leaves the changes in place
+for explicit `aperio rollback` instead (`apply_plan` in
+`src/aperio/runner.py`; rollback test
 `test_rollback_restores_modified_and_removes_created`).
 
 ### 1.3 Read-only work is a `read` step
@@ -91,7 +93,7 @@ each was once missing:
 - **Findings need evidence and a location.** "This looks wrong" is not a
   finding; "this function drops the error at src/x.py:42, here is the
   failing input" is. The audit ledger enforces exactly this shape
-  (`docs/AUDIT.md`; `needs_validation` cannot carry severity).
+  (`docs/AUDIT-CLAUDE-20261026.md`; `needs_validation` cannot carry severity).
 
 **The craft:** the reviewer's job is to *refute the work*, not to approve it.
 Confirmation is earned only when the refutation attempts fail.
