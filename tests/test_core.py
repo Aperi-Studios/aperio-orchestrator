@@ -355,6 +355,54 @@ class CoreTests(unittest.TestCase):
         verified = verify(self.project, task.id)
         self.assertEqual(verified["status"], "passed", verified)
 
+    def test_glob_write_accepts_files_created_by_a_run(self) -> None:
+        # Regression: a glob-pattern step write used to expand to its pre-run
+        # matches only, so a command that created a NEW matching file was
+        # rejected as "changed outside declared writes" even though the plan
+        # and the policy both allowed it.
+        (self.root / "out").mkdir()
+        (self.root / "out" / "old.html").write_text("<p>old</p>\n", encoding="utf-8")
+        command = (
+            f"{sys.executable} -c \"from pathlib import Path; "
+            "Path('out/newer.html').write_text('<p>new</p>')\""
+        )
+        acceptance_command = (
+            f"{sys.executable} -c \"from pathlib import Path; "
+            "assert Path('out/newer.html').read_text() == '<p>new</p>'\""
+        )
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="build", kind="run", command=command, writes=["out/*.html"])],
+            allowed=["out/"],
+            acceptance=[Acceptance(id="check", command=acceptance_command)],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(result["violations"], [], result)
+        self.assertTrue((self.root / "out/newer.html").is_file())
+        verified = verify(self.project, task.id)
+        self.assertEqual(verified["status"], "passed", verified)
+
+    def test_glob_write_still_rejects_files_outside_the_pattern(self) -> None:
+        # The glob fix must not become an allow-all: a new file that does not
+        # match the declared pattern is still a violation.
+        (self.root / "out").mkdir()
+        command = (
+            f"{sys.executable} -c \"from pathlib import Path; "
+            "Path('out/escape.txt').write_text('sneaky')\""
+        )
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="build", kind="run", command=command, writes=["out/*.html"])],
+            allowed=["out/"],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed", result)
+        self.assertTrue(
+            any("changed outside declared writes: out/escape.txt" in v for v in result["violations"]),
+            result["violations"],
+        )
+
     def test_read_step_records_output_without_changes(self) -> None:
         task, plan = make_plan(
             self.project,

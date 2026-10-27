@@ -9,6 +9,7 @@ import signal
 import subprocess
 import time
 import uuid
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,19 @@ def _iter_project_symlinks(root: Path) -> list[Path]:
     return links
 
 
+def _matches_target(rel: str, target: str) -> bool:
+    """Whether a changed path is covered by a snapshot target.
+
+    A glob target covers files that match it, including files the step
+    creates that did not exist when the pattern was expanded.
+    """
+    if any(char in target for char in "*?["):
+        if fnmatchcase(rel, target):
+            return True
+        return bool("**/" in target and fnmatchcase(rel, target.replace("**/", "")))
+    return rel == target or rel.startswith(target.rstrip("/") + "/")
+
+
 def _expand_targets(project: Project, plan: Plan) -> list[str]:
     targets: set[str] = set()
     for step in plan.steps:
@@ -81,6 +95,10 @@ def _expand_targets(project: Project, plan: Plan) -> list[str]:
                 normalized = assert_writable(item, plan)
                 candidate = project.root / normalized
                 if any(char in normalized for char in "*?["):
+                    # Keep the pattern itself as a target: pre-existing matches
+                    # are snapshotted below, and files the step creates that
+                    # also match the pattern are accepted by _matches_target.
+                    targets.add(normalized)
                     for path in project.root.glob(normalized):
                         if path.is_file() and not path.is_symlink():
                             rel = relative_posix(project.root, path)
@@ -510,11 +528,7 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
         failed = True
         evidence["violations"].append("a step changed Aperio's control state (project, queue, plan, or evidence)")
     allowed = set(targets)
-    outside = [
-        rel
-        for rel in changed
-        if not any(rel == target or rel.startswith(target.rstrip("/") + "/") for target in allowed)
-    ]
+    outside = [rel for rel in changed if not any(_matches_target(rel, target) for target in allowed)]
     if outside:
         failed = True
         evidence["violations"].extend(f"changed outside declared writes: {rel}" for rel in outside)

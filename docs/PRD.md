@@ -804,7 +804,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
 | Installer tests | **23 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **238 passed** | same command |
+| Total test suite | **240 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -1032,6 +1032,7 @@ reproducible test or command proves it. Listing an item here is not a claim.
 |---|---|---|---|
 | Z-D1 | Directory-form step writes rejected files created by the step | **Verified fixed** | `27dcfb7`; `test_directory_write_accepts_files_created_by_a_run` |
 | Z-D2 | `review --host` help advertised unsupported adapters | **Verified fixed** | `890eff6`; `test_review_help_lists_only_supported_hosts` |
+| Z-D5 | Glob-form step writes rejected files created by the step (found by the 2026-10-27 independent re-audit) | **Verified fixed** | A/B: new tests fail on the pre-fix runner; `test_glob_write_accepts_files_created_by_a_run`, `test_glob_write_still_rejects_files_outside_the_pattern` |
 | Z-D3 | Six stale documentation statements | **Verified fixed** | `0394f84`; `docs/STATUS.md`, `docs/TESTING.md` |
 | Z-D4a | Evidence name filter missed `env` and `.env2` | **Verified fixed** | `src/aperio/evidence.py`; expanded refusal test |
 | Z-D4b | Mesh `read(mark_read=True)` re-selected after commit | **Implemented** | `src/aperio/mesh.py`; `test_send_read_ack_and_reply` does not yet discriminate (passes against the pre-fix code too) |
