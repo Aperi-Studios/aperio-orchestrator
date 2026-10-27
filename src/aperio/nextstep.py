@@ -18,6 +18,7 @@ performs the action it names. Gates stay gates; this only narrates them.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .discovery import DiscoveryError
@@ -40,13 +41,17 @@ def _with_project(step: dict[str, Any], root: str) -> dict[str, Any]:
 
     `apero next --project X` must not suggest commands that would act on
     whatever directory the caller happens to be in (a host review caught
-    this). The placeholder form <project-root> keeps literal commands
-    copyable while stating the required target.
+    this). The path is shell-quoted so suggested commands stay safe and
+    runnable for valid paths containing shell metacharacters (a later
+    review caught the naive double quotes).
     """
+    import shlex
+
     command = step["command"]
     if command.startswith("aperio ") and "--project" not in command:
         head, _, rest = command.partition(" ")
-        step["command"] = f'{head} --project "{root}" {rest}' if rest else f'{head} --project "{root}"'
+        quoted = shlex.quote(root)
+        step["command"] = f"{head} --project {quoted} {rest}" if rest else f"{head} --project {quoted}"
     return step
 
 
@@ -133,16 +138,16 @@ def _todo_active_step(progress: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def _run_todo_step(project: Project, progress: dict[str, Any]) -> dict[str, Any] | None:
-    """cmd_run's linked-todo rule: the plan's todo must be in progress or accepted."""
-    task = max(
-        (item for item in project.tasks() if item.status == "approved"),
-        key=lambda item: item.updated_at,
-        default=None,
-    )
-    if task is None or not task.plan_id:
+def _run_todo_step(project: Project, progress: dict[str, Any], task: dict[str, Any]) -> dict[str, Any] | None:
+    """cmd_run's linked-todo rule for the SAME task the advice names.
+
+    A host review caught this helper picking its own approved task while the
+    suggestion named a different one; both must use the selected task.
+    """
+    plan_id = task.get("plan_id")
+    if not plan_id:
         return None
-    plan = project.get_plan(task.plan_id)
+    plan = project.get_plan(plan_id)
     if not plan.todo_id:
         return None
     linked = next(
@@ -166,10 +171,10 @@ def _run_todo_step(project: Project, progress: dict[str, Any]) -> dict[str, Any]
             )
         return _step(
             "recover",
-            f"aperio status {task.id}",
+            f"aperio status {task['task_id']}",
             f"the plan's linked todo task is {linked['status']}; run refuses — "
             "inspect the task and decide: resume, roll back, or re-plan",
-            task_id=task.id,
+            task_id=task["task_id"],
         )
     return None
 
@@ -257,6 +262,30 @@ def _stale_binding(project: Project, plan_id: str) -> dict[str, Any] | None:
     )
 
 
+def _handoff_written(project: Project, task_id: Any) -> bool:
+    """Whether a handoff artifact exists for this done task.
+
+    write_handoff records a handoff.written event with the task id; the
+    advisory treats that as loop completion because cmd_handoff leaves the
+    task status at done.
+    """
+    if not task_id:
+        return False
+    events = project.state / "events.jsonl"
+    if not events.is_file():
+        return False
+    for line in events.read_text(encoding="utf-8").splitlines():
+        if '"handoff.written"' not in line or task_id not in line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if row.get("event") == "handoff.written" and row.get("data", {}).get("task_id") == task_id:
+            return True
+    return False
+
+
 def _task_step(project: Project) -> dict[str, Any] | None:
     """The most advanced in-flight task determines the loop stage.
 
@@ -309,6 +338,7 @@ def _task_step(project: Project) -> dict[str, Any] | None:
             f"aperio run {task['id']} --actor <builder>",
             "the plan is approved; the run actor must differ from the approver",
             task_id=task["id"],
+            plan_id=task["plan_id"],
         )
     if status == "applied":
         return _step(
@@ -393,7 +423,7 @@ def next_action(project: Project) -> dict[str, Any]:
             ready(_learning_step(learning_ready)),
             ready(_readiness_step(project)),
             ready(_discovery_step(discovery_ready)),
-            ready(_run_todo_step(project, todo)),
+            ready(_run_todo_step(project, todo, step)),
         ):
             if gate_step is not None:
                 return gate_step
@@ -412,6 +442,21 @@ def next_action(project: Project) -> dict[str, Any]:
                 ),
                 root,
             )
+
+    # A handoff already written for this done task means the loop is complete;
+    # cmd_handoff does not change task status, so without this the advisor
+    # would recommend handoff forever (a host review flagged this).
+    if step["action"] == "handoff" and _handoff_written(project, step.get("task_id")):
+        return _with_project(
+            _step(
+                "complete",
+                "aperio status --json",
+                "the task is done and its handoff is written; the loop for this "
+                "slice is complete — start the next todo slice with aperio plan",
+                task_id=step.get("task_id"),
+            ),
+            root,
+        )
     step = _with_project(step, root)
     step["gates"] = {
         "discovery": discovery_ready["ready"] if discovery_ready else False,

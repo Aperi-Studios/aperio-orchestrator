@@ -448,7 +448,9 @@ class NextTests(unittest.TestCase):
         self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
         step = next_action(self.project)
         # project.root is the resolved path (macOS /var -> /private/var).
-        self.assertIn(f'--project "{self.project.root}"', step["command"])
+        # shlex.quote leaves safe paths unquoted; assert the resolved root
+        # is present as the --project value.
+        self.assertIn(f"--project {self.project.root} ", step["command"])
 
     def test_preflight_gap_beats_pending_todo_start(self) -> None:
         # cmd_plan reaches _require_preflight before _active_todo, so with a
@@ -578,6 +580,44 @@ class NextTests(unittest.TestCase):
         self.project.put_task(task)
         step = next_action(self.project)
         self.assertEqual(step["action"], "recover")
+        self.assertEqual(step["task_id"], task_id)
+
+    def test_handoff_written_reports_complete(self) -> None:
+        # cmd_handoff leaves the task at done, so the advisor recommended
+        # handoff forever (a host review caught this). After the handoff
+        # event exists, the advisor must report the loop complete.
+        task_id, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.cli("run", task_id, "--actor", "builder")
+        self.cli("verify", task_id)
+        self.cli("review", task_id, "--reviewer", "independent", "--verdict", "confirmed")
+        self.cli("done", task_id)
+        self.cli("handoff", task_id)
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "complete")
+        self.assertEqual(step["task_id"], task_id)
+
+    def test_project_path_is_shell_safe(self) -> None:
+        # A host review caught naive double quotes: a root containing a
+        # single quote broke the suggested command. The path must be
+        # shlex-quoted so the command stays runnable.
+        import shlex
+
+        _task_id, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        step = next_action(self.project)
+        # Whatever the root, shlex.quote of it must appear verbatim.
+        self.assertIn(f"--project {shlex.quote(str(self.project.root))}", step["command"])
+
+    def test_run_todo_check_uses_the_named_task(self) -> None:
+        # A host review caught the linked-todo check inspecting a different
+        # approved task than the one named in the suggested run command.
+        # With one approved task whose linked todo is in progress, the run
+        # advice must survive the linked-todo check for THAT task.
+        task_id, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "run")
         self.assertEqual(step["task_id"], task_id)
 
     def complete_discovery_only(self) -> None:
