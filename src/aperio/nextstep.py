@@ -133,6 +133,47 @@ def _todo_active_step(progress: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _run_todo_step(project: Project, progress: dict[str, Any]) -> dict[str, Any] | None:
+    """cmd_run's linked-todo rule: the plan's todo must be in progress or accepted."""
+    task = max(
+        (item for item in project.tasks() if item.status == "approved"),
+        key=lambda item: item.updated_at,
+        default=None,
+    )
+    if task is None or not task.plan_id:
+        return None
+    plan = project.get_plan(task.plan_id)
+    if not plan.todo_id:
+        return None
+    linked = next(
+        (item for item in progress["tasks"] if item["id"] == plan.todo_id), None
+    )
+    if linked is None:
+        return _step(
+            "plan",
+            "aperio plan <plan.json>",
+            "the approved plan is linked to a todo task that no longer exists; "
+            "run would refuse — make a new plan",
+        )
+    if linked["status"] not in {"in_progress", "accepted"}:
+        if linked["status"] == "pending":
+            return _step(
+                "todo.start",
+                f"aperio todo start {linked['id']}",
+                "the plan's linked todo task is pending; run refuses until it is "
+                "started or accepted",
+                todo_id=linked["id"],
+            )
+        return _step(
+            "recover",
+            f"aperio status {task.id}",
+            f"the plan's linked todo task is {linked['status']}; run refuses — "
+            "inspect the task and decide: resume, roll back, or re-plan",
+            task_id=task.id,
+        )
+    return None
+
+
 def _readiness_step(project: Project) -> dict[str, Any] | None:
     """Preflight readiness only: cmd_plan requires preflight, done/handoff full."""
     issues = validate_preflight(project)
@@ -315,22 +356,39 @@ def next_action(project: Project) -> dict[str, Any]:
         return _with_project(step, root) if step is not None else None
 
     # Which lifecycle command is next? Gates are only prefixed when that
-    # command actually refuses on them: plan/approve/run re-check learning,
-    # todo, preflight, and discovery; verify and review do not (a host
-    # review flagged gate-first routing misadvising an applied task).
+    # command actually refuses on them (host reviews flagged both over- and
+    # under-gating): plan enforces the full preplan set; approve enforces
+    # learning/discovery/readiness bindings but has no todo check; run adds
+    # the plan's linked todo; verify, review, done, handoff, and the status
+    # inspection for a failed task enforce none of these.
     step = _task_step(project)
     assert step is not None
-    gate_enforcing = step["action"] in {"plan", "approve", "run", "recover"}
+    action = step["action"]
 
-    if gate_enforcing:
-        # In the order cmd_plan reaches its refusals: learning, todo-nonempty,
-        # preflight readiness, the single in-progress todo, then discovery.
+    if action == "plan":
         for gate_step in (
             ready(_learning_step(learning_ready)),
             ready(_todo_nonempty_step(todo)),
             ready(_readiness_step(project)),
             ready(_todo_active_step(todo)),
             ready(_discovery_step(discovery_ready)),
+        ):
+            if gate_step is not None:
+                return gate_step
+    elif action == "approve":
+        for gate_step in (
+            ready(_learning_step(learning_ready)),
+            ready(_readiness_step(project)),
+            ready(_discovery_step(discovery_ready)),
+        ):
+            if gate_step is not None:
+                return gate_step
+    elif action == "run":
+        for gate_step in (
+            ready(_learning_step(learning_ready)),
+            ready(_readiness_step(project)),
+            ready(_discovery_step(discovery_ready)),
+            ready(_run_todo_step(project, todo)),
         ):
             if gate_step is not None:
                 return gate_step

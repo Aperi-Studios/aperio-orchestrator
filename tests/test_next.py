@@ -456,6 +456,47 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "verify")
         self.assertEqual(step["task_id"], task_id)
 
+    def test_approved_task_routes_to_run_when_todo_deferred(self) -> None:
+        # cmd_approve has no todo check, so a planned task routes to approve
+        # even when no todo is in progress; and cmd_run checks the plan's
+        # LINKED todo (in progress or accepted), not the global count. A
+        # deferred linked todo must route to the linked task's recovery, not
+        # to a generic todo.start (host review flagged both).
+        task_id, plan_id = self.plan_and_write()
+        listing = json.loads(
+            subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "todo", "list", "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            ).stdout
+        )
+        linked = listing["tasks"][0]["id"]
+        self.cli("todo", "defer", linked, "--by", "probe", "--reason", "probe")
+        step = next_action(self.project)
+        # planned + no todo in progress: approve has no todo gate
+        self.assertEqual(step["action"], "approve")
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        step = next_action(self.project)
+        # approved + linked todo deferred: run would refuse
+        self.assertEqual(step["action"], "recover")
+        self.assertEqual(step["task_id"], task_id)
+
+    def test_failed_task_inspection_skips_gates(self) -> None:
+        # The recover routing suggests aperio status, which enforces no gates;
+        # a failed task with a broken gate must still route to the inspection.
+        task_id, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        record_path = self.root / ".aperio" / "readiness.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record.pop("preflight")
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        task = self.project.get_task(task_id)
+        task.status = "failed"
+        self.project.put_task(task)
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "recover")
+        self.assertEqual(step["task_id"], task_id)
+
     # ---- safety ----------------------------------------------------------
 
     def test_printed_commands_use_the_real_binary_name(self) -> None:
