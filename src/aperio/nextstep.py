@@ -48,11 +48,12 @@ def _discovery_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
 
 
 def _learning_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
-    if progress is None:
+    if progress is None or progress.get("digest") is None:
         return _step(
             "learn.import",
             "apero learn import <dossier.json>",
             "no learning dossier exists; plan, approve, and run refuse without one",
+            issues=progress.get("issues", []) if progress else [],
         )
     if not progress["ready"]:
         return _step(
@@ -108,6 +109,60 @@ def _readiness_step(progress: dict[str, Any] | None) -> dict[str, Any] | None:
     return None
 
 
+def _stale_binding(project: Project, plan_id: str) -> dict[str, Any] | None:
+    """A re-plan step when the plan's discovery/learning/readiness pin is stale.
+
+    approve, run, and resume re-check the bindings and refuse on drift; naming
+    it here saves the agent the refusal.
+    """
+    from .discovery import digest as discovery_digest
+    from .readiness import digest as readiness_digest
+
+    try:
+        plan = project.get_plan(plan_id)
+    except Exception:  # noqa: BLE001 - any plan-load failure means re-plan
+        return _step(
+            "plan",
+            "apero plan <plan.json>",
+            f"the plan {plan_id} cannot be loaded; write a fresh bounded plan",
+        )
+    if plan.learning_digest:
+        current = learning_status(project)
+        if not current.get("ready") or current.get("digest") != plan.learning_digest:
+            return _step(
+                "plan",
+                "apero plan <plan.json>",
+                "the learning dossier changed after this plan was created; "
+                "approve and run would refuse — make a new plan",
+                task_id=None,
+            )
+    if plan.discovery_digest:
+        try:
+            current = discovery_digest(project)
+        except DiscoveryError:
+            current = None
+        if current != plan.discovery_digest:
+            return _step(
+                "plan",
+                "apero plan <plan.json>",
+                "discovery changed after this plan was created; "
+                "approve and run would refuse — make a new plan",
+            )
+    if plan.readiness_digest:
+        try:
+            current = readiness_digest(project)
+        except ReadinessError:
+            current = None
+        if current != plan.readiness_digest:
+            return _step(
+                "plan",
+                "apero plan <plan.json>",
+                "the readiness record changed after this plan was created; "
+                "approve and run would refuse — make a new plan",
+            )
+    return None
+
+
 def _task_step(project: Project) -> dict[str, Any] | None:
     """The most advanced in-flight task determines the loop stage."""
     stage_order = ["planned", "approved", "applied", "verified", "reviewed", "done"]
@@ -131,6 +186,12 @@ def _task_step(project: Project) -> dict[str, Any] | None:
 
     task = best[1]
     status = task["status"]
+    # approve and run re-validate the plan's gate bindings; advise a re-plan
+    # when any binding is stale instead of pointing at a refusal.
+    if status in {"planned", "approved"} and task.get("plan_id"):
+        stale = _stale_binding(project, str(task["plan_id"]))
+        if stale is not None:
+            return stale
     if status == "planned":
         return _step(
             "approve",
@@ -184,7 +245,8 @@ def _task_step(project: Project) -> dict[str, Any] | None:
 
 def next_action(project: Project) -> dict[str, Any]:
     """The single next legal action for this project, or done when complete."""
-    # Gates first, in the order the real commands enforce them.
+    # Gates first, in the order cmd_plan enforces them: learning, todo,
+    # preflight readiness, then discovery.
     discovery_ready = None
     try:
         discovery_ready = discovery_status(project)
@@ -199,10 +261,10 @@ def next_action(project: Project) -> dict[str, Any]:
         readiness = None
 
     for step in (
-        _discovery_step(discovery_ready),
         _learning_step(learning_ready),
         _todo_step(todo),
         _readiness_step(readiness),
+        _discovery_step(discovery_ready),
     ):
         if step is not None:
             return step

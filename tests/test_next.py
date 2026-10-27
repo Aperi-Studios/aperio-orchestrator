@@ -182,13 +182,36 @@ class NextTests(unittest.TestCase):
 
     # ---- gate stages ----------------------------------------------------
 
-    def test_fresh_project_points_at_discovery(self) -> None:
+    def test_fresh_project_points_at_learning_first(self) -> None:
+        # cmd_plan checks learning before discovery; the advisor mirrors that
+        # refusal order (a prior host review caught the mismatch).
         step = next_action(self.project)
-        self.assertEqual(step["action"], "discover.answer")
-        self.assertIn("discover answer", step["command"])
-        self.assertIn("plan gate", step["why"])
+        self.assertEqual(step["action"], "learn.import")
+        self.assertIn("learn import", step["command"])
 
     def test_partly_answered_discovery_names_the_next_question(self) -> None:
+        # Satisfy the gates cmd_plan checks before discovery so discovery is
+        # genuinely the next refusal the agent would hit.
+        dossier = self.root / "learning.json"
+        dossier.write_text(json.dumps(DOSSIER), encoding="utf-8")
+        self.cli("learn", "import", str(dossier), allow_rc={1})
+        self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(1)"')
+        self.cli(
+            "todo", "add", "Build page",
+            "--deliverable", "page works",
+            "--acceptance", "page exists",
+        )
+        listing = json.loads(
+            subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "todo", "list", "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            ).stdout
+        )
+        self.cli("todo", "start", listing["tasks"][0]["id"])
+        readiness_path = self.root / "readiness.json"
+        readiness_path.write_text(json.dumps(READINESS), encoding="utf-8")
+        self.cli("readiness", "import", str(readiness_path))
         self.cli("discover", "answer", "idea", "--text", "Build a page")
         step = next_action(self.project)
         self.assertEqual(step["action"], "discover.answer")
@@ -315,6 +338,27 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["task_id"], task_id)
         self.assertIn("--actor", step["command"])
 
+    def test_stale_readiness_binding_points_at_replan(self) -> None:
+        # A prior host review caught that the advisor recommended approve/run
+        # without checking the plan's gate bindings. Mutating the readiness
+        # record after planning must route to re-plan, because approve and run
+        # would refuse on the digest check.
+        _task_id, _plan_id = self.plan_and_write()
+        record_path = self.root / ".aperio" / "readiness.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record["preflight"]["constraints"] = ["changed after planning"]
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "plan")
+        self.assertIn("readiness record changed", step["why"])
+
+    def test_stale_learning_binding_points_at_replan(self) -> None:
+        _task_id, _plan_id = self.plan_and_write()
+        self.cli("learn", "proof", "--command", f'{sys.executable} -c "print(42)"')
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "plan")
+        self.assertIn("learning dossier changed", step["why"])
+
     def test_applied_task_points_at_verify(self) -> None:
         task_id, plan_id = self.plan_and_write()
         self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
@@ -373,7 +417,10 @@ class NextTests(unittest.TestCase):
         step = next_action(self.project)
         after = snapshot()
         self.assertEqual(before, after, "next_action must not write any state")
-        self.assertEqual(step["question"], "users")
+        # Learning precedes discovery in cmd_plan's refusal order, and no
+        # dossier exists here, so the advisor must still point at learn import
+        # even though discovery is now partly answered.
+        self.assertEqual(step["action"], "learn.import")
 
     def test_failed_task_routes_to_recover(self) -> None:
         task_id, plan_id = self.plan_and_write()

@@ -26,10 +26,10 @@
 | Evidence tests | 6 passed | same command; `tests/test_evidence.py` |
 | Audit tests | 16 passed | same command; `tests/test_audit.py` |
 | Repo tests | 4 passed | same command; `tests/test_repo.py` |
-| Next advisor tests | 15 passed | same command; `tests/test_next.py` |
+| Next advisor tests | 17 passed | same command; `tests/test_next.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 259 passed | same command |
+| Total test suite | 261 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -101,7 +101,7 @@
 | GitHub Actions | tests pass on Python 3.10, 3.12, and 3.14 | [tests workflow](https://github.com/Aperio-Studios-Private/Aperio-Orchestrator/actions/workflows/tests.yml) |
 | Handoff | `HANDOFF.md` is the incoming-agent entry point; `docs/OWNER-REQUESTS.md` maps owner requests to docs/tests | `HANDOFF.md`; `docs/OWNER-REQUESTS.md` |
 | Documentation drift | clean: links and inline paths resolve | `aperio drift` |
-| Next-action advisor | `apero next` / `next --json` computes the single next legal action from state (discovery, learning, todo, readiness, then the task lifecycle planned→…→done→handoff); read-only: a test asserts it writes nothing | `src/aperio/nextstep.py`; `src/aperio/cli.py::cmd_next`; `tests/test_next.py` |
+| Next-action advisor | `apero next` / `next --json` computes the single next legal action from state (learning, todo, readiness, discovery — the order cmd_plan refuses in — then the task lifecycle with stale-binding detection); read-only: a test asserts it writes nothing | `src/aperio/nextstep.py`; `src/aperio/cli.py::cmd_next`; `tests/test_next.py` |
 | Independent host review of the hygiene sprint | fresh-context Codex review confirmed after 3 refuted rounds; 3 verified findings fixed (glob crossing `/`, STATUS per-suite drift, PRD table drift) | review `review-61c27b51d5`, task `task-sprint1` in the temporary goldfish project; earlier rounds `review-62d4842164` (2×P1), plus two P2 rounds; commits `01018bc`, `d317d42`, `68611b9`, `01c0ad8` |
 
 ## Not built
@@ -121,7 +121,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 259-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 261-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps are not jailed. Shell/read steps are sandboxed only when a plan sets `sandbox: true`; otherwise changes are detected after execution.
 - `review --host` supports only the reviewer adapters (claude, codex, dsh, goose); opencode, kilocode, cline, and agy are dispatch-only adapters for `run`.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
