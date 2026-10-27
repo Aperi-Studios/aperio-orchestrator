@@ -295,10 +295,18 @@ def _task_step(project: Project) -> dict[str, Any] | None:
     loop).
     """
     stale_ids = _stale_task_ids(project)
+    handed_off = {
+        task.id
+        for task in project.tasks()
+        if task.status == "done" and _handoff_written(project, task.id)
+    }
     stage_order = ["planned", "approved", "applied", "verified", "reviewed", "done"]
     best: tuple[int, dict[str, Any]] | None = None
     for task in project.tasks():
-        if task.id in stale_ids:
+        # A handed-off task is finished: it must not mask newer in-flight
+        # work (a host review caught the done task winning forever), and a
+        # stale task can no longer proceed.
+        if task.id in stale_ids or task.id in handed_off:
             continue
         if task.status in {"failed", "blocked", "rolled_back"}:
             index = 0
@@ -310,6 +318,16 @@ def _task_step(project: Project) -> dict[str, Any] | None:
         if best is None or index > best[0]:
             best = (index, task.to_dict())
     if best is None:
+        # No active task. If a completed slice exists, the loop is done;
+        # otherwise a plan is the next action.
+        if handed_off:
+            return _step(
+                "complete",
+                "aperio status --json",
+                "the last task is done and its handoff is written; the loop for "
+                "this slice is complete — start the next todo slice with aperio plan",
+                task_id=max(handed_off),
+            )
         return _step(
             "plan",
             "aperio plan <plan.json>",

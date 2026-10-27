@@ -597,6 +597,23 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "complete")
         self.assertEqual(step["task_id"], task_id)
 
+    def test_handed_off_task_does_not_mask_newer_work(self) -> None:
+        # A host review caught a P1: the done task outranked a newer planned
+        # task, so the advisor returned complete forever. After a new plan,
+        # the advisor must follow the new slice's approve step.
+        finished, plan_id = self.plan_and_write()
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.cli("run", finished, "--actor", "builder")
+        self.cli("verify", finished)
+        self.cli("review", finished, "--reviewer", "independent", "--verdict", "confirmed")
+        self.cli("done", finished)
+        self.cli("handoff", finished)
+        fresh_task, _fresh_plan = self.plan_and_write()
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "approve")
+        self.assertEqual(step["task_id"], fresh_task)
+        self.assertNotEqual(step["task_id"], finished)
+
     def test_project_path_is_shell_safe(self) -> None:
         # A host review caught naive double quotes: a root containing a
         # single quote broke the suggested command. The path must be
