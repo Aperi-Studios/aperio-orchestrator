@@ -140,6 +140,18 @@ def _todo_active_step(progress: dict[str, Any]) -> dict[str, Any] | None:
             "plan requires exactly one todo task in progress",
             todo_id=pending["id"],
         )
+    if progress["in_progress"] > 1:
+        # _active_todo refuses any count other than exactly one; there is no
+        # unstart command, so route to the ledger to defer the extras (a
+        # host review caught the missing branch).
+        active = [item["id"] for item in progress["tasks"] if item["status"] == "in_progress"]
+        return _step(
+            "recover",
+            "aperio todo list",
+            f"{progress['in_progress']} todo tasks are in progress; plan refuses "
+            f"unless exactly one is — defer the extras ({', '.join(active[:3])}) "
+            "with aperio todo defer <id> --by <owner> --reason <reason>",
+        )
     return None
 
 

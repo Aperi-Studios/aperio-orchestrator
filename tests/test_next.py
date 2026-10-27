@@ -470,6 +470,39 @@ class NextTests(unittest.TestCase):
         self.assertEqual(step["action"], "readiness.import")
         self.assertIn("pre-flight", step["why"])
 
+    def test_multiple_in_progress_todos_block_plan_advice(self) -> None:
+        # _active_todo refuses any count other than exactly one; a host
+        # review caught the advisor staying silent at two in progress.
+        self.complete_gates()
+        self.cli(
+            "todo", "add", "Second slice",
+            "--deliverable", "second works",
+            "--acceptance", "second exists",
+        )
+        listing = json.loads(
+            subprocess.run(
+                [sys.executable, "-m", "aperio", "--project", str(self.root), "todo", "list", "--json"],
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT), env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(SRC)),
+            ).stdout
+        )
+        pending = next(item["id"] for item in listing["tasks"] if item["status"] == "pending")
+        # The CLI refuses a second start, so the only way to reach >1 in
+        # progress is external ledger editing — exactly the corruption case
+        # the advisor should catch.
+        from aperio.todo import _read, _write
+
+        data = _read(self.project)
+        for item in data["tasks"]:
+            if item["id"] == pending:
+                item["status"] = "in_progress"
+                item["updated_at"] = item["updated_at"]
+        _write(self.project, data)
+        step = next_action(self.project)
+        self.assertEqual(step["action"], "recover")
+        self.assertIn("in progress", step["why"])
+        self.assertIn("todo list", step["command"])
+
     def test_applied_task_routes_to_verify_even_when_a_gate_drifted(self) -> None:
         # cmd_verify does not re-check the plan gates, so an applied task must
         # route to verify even if learning became unready after the run (a
