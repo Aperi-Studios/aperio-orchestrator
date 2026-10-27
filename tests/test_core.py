@@ -403,6 +403,28 @@ class CoreTests(unittest.TestCase):
             result["violations"],
         )
 
+    def test_glob_write_does_not_cross_directories(self) -> None:
+        # Reviewer finding (review for task-sprint1): fnmatch's * crosses /,
+        # so "out/*.html" used to accept "out/sub/escape.html" although
+        # Path.glob rejects it. A single * must match one segment only;
+        # recursion requires **.
+        (self.root / "out" / "sub").mkdir(parents=True)
+        command = (
+            f"{sys.executable} -c \"from pathlib import Path; "
+            "Path('out/sub/escape.html').write_text('sneaky')\""
+        )
+        _task, plan = make_plan(
+            self.project,
+            steps=[Step(id="build", kind="run", command=command, writes=["out/*.html"])],
+            allowed=["out/"],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed", result)
+        self.assertTrue(
+            any("changed outside declared writes: out/sub/escape.html" in v for v in result["violations"]),
+            result["violations"],
+        )
+
     def test_read_step_records_output_without_changes(self) -> None:
         task, plan = make_plan(
             self.project,

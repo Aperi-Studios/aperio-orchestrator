@@ -72,6 +72,34 @@ def _iter_project_symlinks(root: Path) -> list[Path]:
     return links
 
 
+def _glob_matches(rel: str, pattern: str) -> bool:
+    """Glob match with pathlib semantics: a single * does not cross /.
+
+    fnmatch's * matches slashes, which would let "out/*.html" accept
+    "out/sub/escape.html" although Path.glob rejects it. Split on / and
+    match segment by segment; ** is the only segment that crosses.
+    """
+    rel_parts = rel.split("/")
+    pattern_parts = pattern.split("/")
+
+    def match(parts: list[str], pattern: list[str]) -> bool:
+        if not pattern:
+            return not parts
+        head = pattern[0]
+        if head == "**":
+            # ** matches zero or more path segments.
+            return any(match(parts[i:], pattern[1:]) for i in range(len(parts) + 1))
+        if not parts:
+            return False
+        if not any(char in head for char in "*?["):
+            return parts[0] == head and match(parts[1:], pattern[1:])
+        if not fnmatchcase(parts[0], head):
+            return False
+        return match(parts[1:], pattern[1:])
+
+    return match(rel_parts, pattern_parts)
+
+
 def _matches_target(rel: str, target: str) -> bool:
     """Whether a changed path is covered by a snapshot target.
 
@@ -79,9 +107,9 @@ def _matches_target(rel: str, target: str) -> bool:
     creates that did not exist when the pattern was expanded.
     """
     if any(char in target for char in "*?["):
-        if fnmatchcase(rel, target):
+        if _glob_matches(rel, target):
             return True
-        return bool("**/" in target and fnmatchcase(rel, target.replace("**/", "")))
+        return bool("**/" in target and _glob_matches(rel, target.replace("**/", "")))
     return rel == target or rel.startswith(target.rstrip("/") + "/")
 
 

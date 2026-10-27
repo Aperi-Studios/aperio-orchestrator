@@ -804,7 +804,7 @@ Measured on 2026-10-26 in the fresh v2 tree. Re-measure before relying on any ro
 | Audit tests | **16 passed** | same command; `tests/test_audit.py` |
 | Repo tests | **4 passed** | same command; `tests/test_repo.py` |
 | Installer tests | **23 passed** | same command; `tests/test_installer.py` |
-| Total test suite | **242 passed** | same command |
+| Total test suite | **244 passed** | same command |
 | CLI end-to-end | **passed**: unapproved run refused, approved run applied, acceptance passed, review confirmed, done | `tests/test_cli.py::test_full_cli_flow` |
 | Demo project | **applied, verified, reviewed, done** | `examples/demo-site-plan.json` through the CLI |
 | Rollback | **restores modified files and removes created files** | `tests/test_core.py::test_rollback_restores_modified_and_removes_created` |
@@ -1033,6 +1033,8 @@ reproducible test or command proves it. Listing an item here is not a claim.
 | Z-D1 | Directory-form step writes rejected files created by the step | **Verified fixed** | `27dcfb7`; `test_directory_write_accepts_files_created_by_a_run` |
 | Z-D2 | `review --host` help advertised unsupported adapters | **Verified fixed** | `890eff6`; `test_review_help_lists_only_supported_hosts` |
 | Z-D5 | Glob-form step writes rejected files created by the step (found by the 2026-10-27 independent re-audit) | **Verified fixed** | A/B: new tests fail on the pre-fix runner; `test_glob_write_accepts_files_created_by_a_run`, `test_glob_write_still_rejects_files_outside_the_pattern` |
+| Z-D6 | Glob matching crossed `/`: `out/*.html` accepted `out/sub/escape.html` although `Path.glob` rejects it (found by a live Codex host review, task-sprint1) | **Verified fixed** | A/B: `test_glob_write_does_not_cross_directories` fails on the fnmatch version; segment-wise `_glob_matches` in `src/aperio/runner.py` |
+| Z-D7 | STATUS.md per-suite rows drifted from the modules they count (core 50 vs 53, CLI 14 vs 16; found by the same host review) | **Verified fixed** | the doc-count guard now also checks per-suite rows: `tests/test_doc_counts.py::DocCountTests.test_status_per_suite_rows_match_the_measured_modules` |
 | Z-D3 | Six stale documentation statements | **Verified fixed** | `0394f84`; `docs/STATUS.md`, `docs/TESTING.md` |
 | Z-D4a | Evidence name filter missed `env` and `.env2` | **Verified fixed** | `src/aperio/evidence.py`; expanded refusal test |
 | Z-D4b | Mesh `read(mark_read=True)` re-selected after commit | **Implemented** | `src/aperio/mesh.py`; `test_send_read_ack_and_reply` does not yet discriminate (passes against the pre-fix code too) |
