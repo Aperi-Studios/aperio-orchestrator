@@ -75,7 +75,7 @@ aperio review <task-id> --host claude
 aperio done <task-id>
 aperio todo accept <todo-id> --by owner --evidence "command exit 0" --confirm "I accept this task"
 aperio next            # read-only GPS: next legal action + exact command + why
-apero explain <topic>  # read-only: what a gate checks, why, live status
+aperio explain <topic>  # read-only: what a gate checks, why, live status
 aperio handoff <task-id> --print
 aperio recover
 aperio drift

@@ -271,7 +271,7 @@ aperio done <task-id>
 aperio rollback <task-id> --yes
 aperio handoff <task-id> --print
 aperio next            # read-only: the next legal action, its exact command, and why
-apero explain <topic>  # read-only: what a gate checks, why it exists, live status
+aperio explain <topic>  # read-only: what a gate checks, why it exists, live status
 aperio status --json
 aperio message send --from builder --to reviewer --body "please review" --task <task-id>
 aperio mediate <task-id>

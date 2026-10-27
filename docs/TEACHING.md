@@ -4,7 +4,7 @@
 > a plan that can be approved, writing acceptance checks that cannot lie, and
 > reviewing honestly. Every rule is anchored to a real incident from this
 > repository's history — the reference points to the ledger row or test that
-> proves it. Read `apero explain <topic>` for the live per-gate version of
+> proves it. Read `aperio explain <topic>` for the live per-gate version of
 > this page.
 
 ## 1. Writing a plan
@@ -108,9 +108,9 @@ Confirmation is earned only when the refutation attempts fail.
 | Writes | outside declared paths, protected paths, control state | Z-02, Z-P1, control-state tamper tests |
 | Review | builder as reviewer, tampering, missing evidence | F1, tamper tests |
 
-## 5. Working the loop with `apero next`
+## 5. Working the loop with `aperio next`
 
-`apero next` computes the single next legal action from state, with the exact
+`aperio next` computes the single next legal action from state, with the exact
 command and the gate that requires it. Its routing mirrors the CLI's refusal
 conditions per command — it was review-driven to match the CLI over 16 host
 review rounds (`review-a8def7727b`). When a refusal surprises you, run

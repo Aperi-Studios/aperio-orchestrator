@@ -57,8 +57,14 @@ class ExplainTests(unittest.TestCase):
         self.assertNotIn("no dossier", after)
 
     def test_cli_explain_is_read_only_and_json(self) -> None:
-        def snapshot() -> set[str]:
-            return {str(p.relative_to(self.root)) for p in self.root.rglob("*") if p.is_file()}
+        def snapshot() -> dict[str, bytes]:
+            # Contents, not just paths: an in-place state edit must be caught
+            # too (a host review caught the path-only snapshot).
+            return {
+                str(p.relative_to(self.root)): p.read_bytes()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file()
+            }
 
         before = snapshot()
         for topic in ("discovery", "approval", "writes"):
