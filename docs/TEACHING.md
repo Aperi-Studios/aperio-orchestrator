@@ -83,7 +83,9 @@ The reviewer is the loop's second pair of eyes, and the rules exist because
 each was once missing:
 
 - **The builder cannot review their own work** — refused by label match
-  (`policy.py::assert_reviewer`; incident F1: self-approval was once a no-op).
+  (`policy.py::assert_reviewer`; incident F2: reviewer identity was once a
+  free-text label one process could self-assert. The self-approval no-op was
+  incident F1, the approval gate's motivation).
   Host review goes further: a separate process, a brief-only workspace, no
   builder conversation.
 - **A reviewer's changes are detected and the review is refused** — the
