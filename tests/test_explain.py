@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from aperio.explain import TOPICS, explain
+from aperio.model import Acceptance, Plan, Step
 from aperio.store import Project
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -160,14 +161,28 @@ class ExplainTests(unittest.TestCase):
         # library-level test bypassing open()).
         import hashlib
 
-        for name in ("queue.json", "project.json"):
+        for name in ("queue.json", "project.json", "discovery.json"):
             path = self.project.state / name
+            if not path.is_file():
+                continue
             data = json.loads(path.read_text(encoding="utf-8"))
             data.pop("schema", None)
             path.write_text(json.dumps(data), encoding="utf-8")
+        # A legacy plan file too: save one, then strip its schema.
+        plan = Plan(
+            id="plan-legacy-ro", task_id="task-legacy-ro", title="t", request="r",
+            allowed_paths=["a.txt"],
+            steps=[Step(id="s", kind="write", path="a.txt", content="x")],
+            acceptance=[Acceptance(id="c", command="test -f a.txt")],
+        )
+        self.project.save_plan(plan)
+        plan_path = self.project.state / "plans" / "plan-legacy-ro.json"
+        pdata = json.loads(plan_path.read_text(encoding="utf-8"))
+        pdata.pop("schema", None)
+        plan_path.write_text(json.dumps(pdata), encoding="utf-8")
         before = {
             p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(self.project.state.glob("*.json"))
+            for p in sorted(self.project.state.rglob("*.json"))
         }
         for topic in TOPICS:
             result = subprocess.run(
@@ -178,7 +193,7 @@ class ExplainTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, topic)
         after = {
             p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(self.project.state.glob("*.json"))
+            for p in sorted(self.project.state.rglob("*.json"))
         }
         self.assertEqual(before, after, "explain must not migrate or write legacy state")
 

@@ -30,7 +30,7 @@ def _discovery(project: Project | None) -> str:
     text = (
         "WHAT IT CHECKS\n"
         "  `plan` refuses while discovery questions are unanswered. Answers are\n"
-        "  recorded on the owner's behalf, evidence is referenced, and only an\n"
+        "  recorded on the owner's behalf, evidence references are optional, and only an\n"
         "  explicit dated owner waiver can skip a question.\n"
         "WHY IT EXISTS\n"
         "  Plans built on guesses get reworked after approval. The interview is\n"
@@ -167,7 +167,8 @@ def _approval(project: Project | None) -> str:
         "  (docs/AUDIT-CLAUDE-20261026.md).\n"
         "COMMANDS\n"
         "  aperio approve '<plan-id>' --by '<owner>' --confirm 'I approve this plan'\n"
-        "  aperio plan '<plan.json>'            create or replace the plan first"
+        "  aperio plan '<plan.json>'\n"
+        "                                 write a fresh plan; re-planning creates a new task"
     )
     if project is not None:
         approved = [p for p in project.plans_readonly() if p.approval is not None]

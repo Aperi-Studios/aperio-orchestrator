@@ -12,7 +12,7 @@
 A plan is a contract with three parts: what may change (`allowed_paths`), what
 will change (`steps` with their `writes`), and how we will know it worked
 (`acceptance`). The approval phrase binds all three by hash — anything edited
-after approval invalidates the plan (Z-D binding tests; `test_plan_body_tamper_after_approval_is_refused`).
+after approval invalidates the plan (Z-D binding tests; `tests/test_discovery.py::test_plan_body_tamper_after_approval_is_refused`).
 
 ### 1.1 Declare writes at the narrowest true scope
 
