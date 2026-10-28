@@ -45,7 +45,7 @@ def _discovery(project: Project | None) -> str:
         "  shortcut.\n"
         "COMMANDS\n"
         "  aperio discover next --json     the next question, its id, and choices\n"
-        "  aperio discover answer '<question-id>' --choice '<choice-label>' \\\n"
+        "  aperio discover answer '<question-id>' --choice '<option-number-or-value>' \\\n"
         "      --text '<the owner answer>' --evidence '<optional source>'\n"
         "  aperio discover waive '<question-id>' --by '<owner>' --risk '<risk>' \\\n"
         "      --review-at 'YYYY-MM-DD' --confirm 'I accept this risk'\n"

@@ -86,8 +86,10 @@ each was once missing:
   (`policy.py::assert_reviewer`; incident F1: self-approval was once a no-op).
   Host review goes further: a separate process, a brief-only workspace, no
   builder conversation.
-- **The reviewer cannot change the project** — the runner fingerprints the
-  tree around the review and refuses on any change
+- **A reviewer's changes are detected and the review is refused** — the
+  runner fingerprints the tree before and after the host process; a change
+  raises and the verdict is discarded. The process is not sandboxed, so its
+  edits may remain until rollback
   (`tests/test_adapter.py::test_reviewer_cannot_change_the_project`).
 - **A reviewer verdict must engage with the brief.** The goldfish reviewer
   sees only the brief, the changed files, and the evidence. Confirming
