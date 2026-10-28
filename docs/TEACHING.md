@@ -46,8 +46,10 @@ for explicit `aperio rollback` instead (`apply_plan` in
 ### 1.3 Read-only work is a `read` step
 
 Exploration, inspection, and audit commands declare `kind: read` and must not
-mutate the project — the runner diffs the tree around the step and fails the
-run on any change (`test_read_step_cannot_change_the_project`). A `read`
+mutate the project — the runner diffs the scanned tree around the step and
+fails the run on any change it can see
+(`tests/test_core.py::test_read_step_cannot_change_the_project`; excluded
+directories and outside-project writes are documented limits). A `read`
 step cannot even declare writes (schema refusal in `model.py::Step.validate`).
 
 ## 2. Writing acceptance checks that cannot lie
@@ -86,14 +88,17 @@ each was once missing:
   builder conversation.
 - **The reviewer cannot change the project** — the runner fingerprints the
   tree around the review and refuses on any change
-  (`test_reviewer_cannot_change_the_project`).
+  (`tests/test_adapter.py::test_reviewer_cannot_change_the_project`).
 - **A reviewer verdict must engage with the brief.** The goldfish reviewer
   sees only the brief, the changed files, and the evidence. Confirming
   without reading is the reviewer's version of the no-op acceptance check.
 - **Findings need evidence and a location.** "This looks wrong" is not a
   finding; "this function drops the error at src/x.py:42, here is the
-  failing input" is. The audit ledger enforces exactly this shape
-  (`docs/AUDIT-CLAUDE-20261026.md`; `needs_validation` cannot carry severity).
+  failing input" is. The audit ledger enforces exactly this shape for its
+  own findings (`docs/AUDIT-CLAUDE-20261026.md`; `needs_validation` cannot
+  carry severity) — host review verdicts are validated for verdict and
+  reviewer identity, not finding structure, so read returned findings
+  rather than trusting them.
 
 **The craft:** the reviewer's job is to *refute the work*, not to approve it.
 Confirmation is earned only when the refutation attempts fail.
