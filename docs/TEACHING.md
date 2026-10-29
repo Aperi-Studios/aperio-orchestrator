@@ -2,9 +2,10 @@
 
 > **For agents.** This page teaches the three skills the loop demands: writing
 > a plan that can be approved, writing acceptance checks that cannot lie, and
-> reviewing honestly. Every rule is anchored to a real incident from this
-> repository's history — the reference points to the ledger row or test that
-> proves it. Read `aperio explain <topic>` for the live per-gate version of
+> reviewing honestly. Rules are anchored to traceable sources — some to real
+> incidents from this repository's history (F1, F2, F4, Z-D6), some to the
+> rebuild's design decisions — and the reference points to the ledger row or
+> test that proves it. Read `aperio explain <topic>` for the live per-gate version of
 > this page.
 
 ## 1. Writing a plan
