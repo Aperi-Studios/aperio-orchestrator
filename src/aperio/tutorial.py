@@ -249,8 +249,24 @@ def check(directory: str | Path) -> dict[str, Any]:
     step("independent review confirmed", reviewed, "aperio review <task-id> --reviewer mentor --verdict confirmed")
     done = planned and task is not None and task.status == "done"
     step("task closed", done, "aperio done <task-id>")
-    handoff_written = (project.state / "handoff.md").is_file()
-    step("handoff written", handoff_written, "aperio handoff <task-id>")
+    # The handoff file is shared across tasks; bind the check to THIS task
+    # via the journal entry write_handoff records (a host review caught an
+    # earlier task's handoff counting for the current flight).
+    handoff_written = False
+    if task is not None:
+        events = project.state / "events.jsonl"
+        if events.is_file():
+            for line in events.read_text(encoding="utf-8").splitlines():
+                if '"handoff.written"' not in line or task.id not in line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if row.get("event") == "handoff.written" and row.get("data", {}).get("task_id") == task.id:
+                    handoff_written = True
+                    break
+    step("handoff written for this task", handoff_written, "aperio handoff <task-id>")
     page_ok = (root / "site" / "index.html").is_file()
     step("artifact exists", page_ok, "the run should have created site/index.html")
 
