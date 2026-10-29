@@ -337,7 +337,10 @@ class AdapterTests(unittest.TestCase):
             sandbox=True,
         )
         result = apply_plan(self.project, plan, actor="builder")
-        self.assertEqual(result["status"], "applied", result)
+        self.assertEqual(
+            result["status"], "applied",
+            f"violations={result['violations']} stderr={result['steps'][0].get('stderr', '')[-400:]}",
+        )
         record = result["steps"][0]["sandbox"]
         self.assertTrue(record["active"])
         from aperio.sandbox import kind as sandbox_kind
