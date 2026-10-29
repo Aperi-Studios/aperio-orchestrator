@@ -91,7 +91,12 @@ def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dic
     # A dedicated writable tmp dir instead of all of /tmp: binding /tmp
     # wholesale would make the project writable too whenever the project
     # lives under /tmp (CI runners do exactly that), defeating the boundary
-    # (a host review + a Linux CI failure caught this).
+    # (a host review + a Linux CI failure caught this). The dedicated dir is
+    # mounted AT /tmp, and the project root is re-bound READ-ONLY at its
+    # real path afterwards so it stays visible under the new /tmp mount
+    # (bwrap binds apply in order; the later, more specific bind wins).
+    # The workspace — inside the project — is then bound writable at its
+    # own path, which is the host's only writable project boundary.
     dedicated_tmp = Path(tempfile.mkdtemp(prefix="aperio-sandbox-"))
     argv = [
         "bwrap",
@@ -99,11 +104,14 @@ def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dic
         "/",
         "/",
         "--bind",
+        str(dedicated_tmp),
+        "/tmp",
+        "--ro-bind",
         str(root),
         str(root),
         "--bind",
-        str(dedicated_tmp),
-        "/tmp",
+        str(cwd),
+        str(cwd),
         "--chdir",
         str(cwd),
         "--unshare-net",
