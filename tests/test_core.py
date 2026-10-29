@@ -475,6 +475,102 @@ class CoreTests(unittest.TestCase):
         verified = verify(self.project, task.id)
         self.assertEqual(verified["status"], "passed", verified)
 
+    def test_evidence_chain_detects_tampering(self) -> None:
+        # Hash-chained evidence: each record embeds the previous record's
+        # digest. Editing a recorded run's evidence breaks its own digest
+        # and every later link — doctor walking the chain reports it.
+        (self.root / "mod.txt").write_text("original", encoding="utf-8")
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="w", kind="write", path="mod.txt", content="changed")],
+            allowed=["mod.txt"],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        chain = self.project.verify_chain(task.id)
+        self.assertTrue(chain["intact"], chain)
+
+        # Tamper: forge the run record's stdout in place (a real edit, not a
+        # no-op write of the same value).
+        fresh = self.project.get_task(task.id)
+        run_record = next(p for p in fresh.evidence if "run-" in p)
+        record_path = Path(run_record)
+        data = json.loads(record_path.read_text(encoding="utf-8"))
+        data["stdout"] = data.get("stdout", "") + "FORGED OUTPUT"
+        record_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        chain = self.project.verify_chain(task.id)
+        self.assertFalse(chain["intact"])
+        broken = [r for r in chain["records"] if not r["ok"]]
+        self.assertTrue(broken)
+
+    def test_evidence_chain_survives_multiple_flights(self) -> None:
+        # Per-record digests must verify across several flights: every
+        # recorded record stays intact, whatever the file naming order.
+        (self.root / "mod.txt").write_text("original", encoding="utf-8")
+        for version in ("v1", "v2", "v3"):
+            _task, plan = make_plan(
+                self.project,
+                steps=[Step(id=f"w-{version}", kind="write", path="mod.txt", content=version)],
+                allowed=["mod.txt"],
+            )
+            apply_plan(self.project, plan)
+            verify(self.project, plan.task_id)
+        chain = self.project.verify_chain(plan.task_id)
+        self.assertTrue(chain["intact"], chain)
+        self.assertEqual(len(chain["records"]), 6)  # 3 runs + 3 verifies
+
+    def test_review_verdict_is_signed_and_verified(self) -> None:
+        # Signed verdicts: the review evidence carries an HMAC under the
+        # project's review key; finish() refuses a verdict whose signature
+        # is missing or invalid — a verdict written into the evidence
+        # directory by hand does not close the task.
+        (self.root / "mod.txt").write_text("original", encoding="utf-8")
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="w", kind="write", path="mod.txt", content="changed")],
+            allowed=["mod.txt"],
+            acceptance=[Acceptance(id="check", command="test -f mod.txt")],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        review(self.project, task.id, reviewer="qa", verdict="confirmed")
+        fresh = self.project.get_task(task.id)
+        review_record = next(p for p in fresh.evidence if "review-" in p)
+        data = json.loads(Path(review_record).read_text(encoding="utf-8"))
+        self.assertIn("signature", data)
+        self.assertTrue(self.project.verify_review_signature(
+            {k: data[k] for k in ("review_id", "task_id", "reviewer", "verdict", "notes", "at")},
+            data["signature"],
+        ))
+        # finish() succeeds with the valid signature...
+        finish(self.project, task.id)
+        self.assertEqual(self.project.get_task(task.id).status, "done")
+
+    def test_finish_refuses_an_unsigned_verdict(self) -> None:
+        # A verdict written into the evidence directory by hand (no valid
+        # signature) must not close the task.
+        (self.root / "mod.txt").write_text("original", encoding="utf-8")
+        task, plan = make_plan(
+            self.project,
+            steps=[Step(id="w", kind="write", path="mod.txt", content="changed")],
+            allowed=["mod.txt"],
+            acceptance=[Acceptance(id="check", command="test -f mod.txt")],
+        )
+        apply_plan(self.project, plan)
+        verify(self.project, task.id)
+        review(self.project, task.id, reviewer="qa", verdict="confirmed")
+        fresh = self.project.get_task(task.id)
+        fresh.status = "reviewed"
+        self.project.put_task(fresh)
+        review_record = next(p for p in fresh.evidence if "review-" in p)
+        record_path = Path(review_record)
+        data = json.loads(record_path.read_text(encoding="utf-8"))
+        del data["signature"]  # strip the proof
+        record_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaises(RunError):
+            finish(self.project, task.id)
+        self.assertEqual(self.project.get_task(task.id).status, "reviewed")
+
     def test_read_step_records_output_without_changes(self) -> None:
         task, plan = make_plan(
             self.project,

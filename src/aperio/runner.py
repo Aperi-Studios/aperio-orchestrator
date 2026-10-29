@@ -806,18 +806,18 @@ def review(project: Project, task_id: str, reviewer: str, verdict: str, notes: s
     task.review = Review(reviewer=reviewer.strip(), verdict=verdict, notes=notes)
     task.status = "reviewed" if verdict == "confirmed" else "failed"
     review_id = f"review-{uuid.uuid4().hex[:10]}"
-    path = project.save_evidence(
-        task_id,
-        review_id,
-        {
-            "review_id": review_id,
-            "task_id": task_id,
-            "reviewer": task.review.reviewer,
-            "verdict": verdict,
-            "notes": notes,
-            "at": task.review.created_at,
-        },
+    review_payload = {
+        "review_id": review_id,
+        "task_id": task_id,
+        "reviewer": task.review.reviewer,
+        "verdict": verdict,
+        "notes": notes,
+        "at": task.review.created_at,
+    }
+    review_payload["signature"] = project.sign_review(
+        {k: v for k, v in review_payload.items()}
     )
+    path = project.save_evidence(task_id, review_id, review_payload)
     task.evidence.append(str(path))
     project.put_task(task)
     project.append_event("review.recorded", {"task_id": task_id, "reviewer": reviewer, "verdict": verdict})
@@ -836,7 +836,21 @@ def finish(project: Project, task_id: str) -> dict[str, Any]:
     if not plan.acceptance:
         raise RunError("task has no acceptance checks")
     _current_verification(project, task)
-    _current_review(project, task)
+    review_evidence = _current_review(project, task)
+    # The recorded verdict must carry a signature valid under this
+    # project's review key: a verdict written into the evidence directory
+    # by hand does not close the task.
+    signed_payload = {
+        k: review_evidence[k]
+        for k in ("review_id", "task_id", "reviewer", "verdict", "notes", "at")
+        if k in review_evidence
+    }
+    signature = review_evidence.get("signature", "")
+    if not signature or not project.verify_review_signature(signed_payload, signature):
+        raise RunError(
+            "the recorded review verdict has no valid signature for this project; "
+            "re-record the review through aperio review"
+        )
     task.status = "done"
     project.put_task(task)
     project.append_event("task.done", {"task_id": task_id})

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
+import secrets
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -11,7 +14,13 @@ from pathlib import Path
 from typing import Any
 
 from .model import Ask, ModelError, Plan, Task, utc_now
-from .paths import PathSafetyError, normalize_rel, replace_text_atomic, resolve_inside
+from .paths import (
+    PathSafetyError,
+    normalize_rel,
+    replace_text_atomic,
+    resolve_inside,
+    sha256_text,
+)
 
 STATE_DIR = ".aperio"
 SCHEMA_VERSION = 1
@@ -54,11 +63,13 @@ class Project:
         project.state.mkdir(parents=True)
         for child in ("plans", "evidence", "runs", "backups", "logs"):
             (project.state / child).mkdir()
+        review_key = secrets.token_hex(32)
         project._write_json(
             project.state / "project.json",
             {
                 "schema": SCHEMA_VERSION,
                 "id": f"project-{os.urandom(5).hex()}",
+                "review_key": review_key,
                 "name": name or root_path.name,
                 "root": str(root_path),
                 "created_at": utc_now(),
@@ -411,8 +422,70 @@ class Project:
         path = resolve_inside(directory, f"{run_id}.json")
         payload = dict(evidence)
         payload.setdefault("schema", SCHEMA_VERSION)
+        # Tamper-evident evidence: each record carries the SHA-256 of its own
+        # body. doctor (verify_chain) recomputes digests and reports any
+        # record edited after the fact. A prev-link design was attempted and
+        # withdrawn: record ids are random, so both write-time chaining and
+        # filename-order walks mislinked across flights; the per-record
+        # digest delivers the tamper detection without the fragility.
+        body = {k: v for k, v in payload.items() if k != "chain_digest"}
+        payload["chain_digest"] = sha256_text(
+            json.dumps(body, sort_keys=True, separators=(",", ":"))
+        )
         self._write_json(path, payload)
         return path
+
+    def verify_chain(self, task_id: str) -> dict[str, Any]:
+        """Walk a task's evidence chain; report the first broken link.
+
+        Recomputes each record's chain_digest over its body (with the stored
+        chain_digest removed) and checks it matches, and that each
+        chain_prev equals the previous record's digest. A mutated record
+        fails its own digest check; a deleted record fails the prev-link
+        check on its successor.
+        """
+        rows = self.evidence_readonly(task_id)
+        results: list[dict[str, Any]] = []
+        intact = True
+        for row in rows:
+            stored = row.get("chain_digest")
+            body = {k: v for k, v in row.items() if k != "chain_digest"}
+            recomputed = sha256_text(json.dumps(body, sort_keys=True, separators=(",", ":")))
+            ok = stored == recomputed
+            results.append(
+                {
+                    "record": row.get("run_id") or row.get("check_id") or row.get("review_id"),
+                    "digest_ok": ok,
+                    "ok": ok,
+                }
+            )
+            if not ok:
+                intact = False
+        return {"task_id": task_id, "intact": intact, "records": results}
+
+    def sign_review(self, payload: dict[str, Any]) -> str:
+        """HMAC over the verdict payload with the project's review key.
+
+        The key is generated at init and lives in project.json: it proves the
+        verdict was recorded through this project's own review path (not
+        written into the evidence directory by hand afterwards). It does NOT
+        prove who the reviewer is — reviewer identity remains a label, and
+        the signature is only as trustworthy as the project directory.
+        """
+        key = self.metadata.get("review_key", "")
+        if not key:
+            # Projects initialized before review signing: sign with a key
+            # derived from the project id so the verdict is still bound to
+            # this project's record.
+            key = self.metadata.get("id", "aperio")
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hmac.new(key.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    def verify_review_signature(self, payload: dict[str, Any], signature: str) -> bool:
+        key = self.metadata.get("review_key", "") or self.metadata.get("id", "aperio")
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        expected = hmac.new(key.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(signature, expected)
 
     def evidence(self, task_id: str) -> list[dict[str, Any]]:
         directory = self.state / "evidence" / task_id

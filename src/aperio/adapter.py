@@ -641,6 +641,14 @@ def run_host_review(
         "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    # Sign the same six-field core that manual review() signs, so
+    # finish()'s signature check treats host verdicts identically (the
+    # unsigned-verdict test caught the host path missing the signature).
+    signed_core = {
+        k: evidence[k]
+        for k in ("review_id", "task_id", "reviewer", "verdict", "notes", "at")
+    }
+    evidence["signature"] = project.sign_review(signed_core)
     path = project.save_evidence(task_id, review_id, evidence)
     task.review = Review(reviewer=host, verdict=parsed["verdict"], notes=parsed["notes"])
     task.status = "reviewed" if parsed["verdict"] == "confirmed" else "failed"

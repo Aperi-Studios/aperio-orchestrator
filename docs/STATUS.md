@@ -8,7 +8,7 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 55 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Core unit tests | 59 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
 | Adapter tests | 23 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
@@ -32,12 +32,13 @@
 | Independent host review of the MCP facade | fresh-context Codex review confirmed after 4 refuted rounds; the loop drove doctor's parse validation, the CLI --project default, strict request validation with per-line error containment, and the approval-phrase redaction over RPC | review `review-402597ba02`, task `task-mcp1` in the temporary goldfish project; commits `c5dfbbd` through `bf80f6e` |
 | MCP facade | `apero mcp` serves Aperio's read-only advisors over JSON-RPC 2.0 on stdio with zero dependencies: initialize/tools-list/tools-call for aperio_next, aperio_explain, aperio_status, aperio_lessons, aperio_doctor. Write tools are excluded by design — the approval phrase never travels through an RPC pipe; tool errors surface as isError content, not protocol errors | `src/aperio/mcp.py`; `src/aperio/cli.py::cmd_mcp`; `tests/test_mcp.py` |
 | Lessons ledger | `apero lesson add/list/remove` records what went wrong bound to a task and plain project paths (globs, absolute, and traversal refused); `plan` surfaces lessons whose paths intersect the plan's allowed paths as warnings — teach, never block; lessons live in schema-gated `.aperio/lessons.json` with a 500-entry bound | `src/aperio/lessons.py`; `src/aperio/cli.py::cmd_lesson`; `tests/test_lessons.py` |
+| Tamper-evident evidence and signed verdicts | every evidence record carries the SHA-256 of its own body (doctor's verify_chain recomputes and reports any record edited after the fact; a prev-link design was attempted and withdrawn — random record ids mislinked across flights); review verdicts carry an HMAC under a per-project key generated at init — finish() refuses a verdict whose signature is missing or invalid, and the host-review path signs the same core | `src/aperio/store.py::verify_chain/sign_review/verify_review_signature`; `src/aperio/runner.py::review/finish`; `src/aperio/adapter.py` (host signing); `tests/test_core.py::test_evidence_chain_*`, `test_review_verdict_is_signed_and_verified`, `test_finish_refuses_an_unsigned_verdict` |
 | Independent host review of the lessons ledger | fresh-context Codex review confirmed first round, zero findings; the acceptance evidence ran the lessons suite plus live round-trip and plan-surfacing flows | review `review-ad5fbf52f3`, task `task-les1` in the temporary goldfish project |
 | Lessons tests | 8 passed | same command; `tests/test_lessons.py` |
 | MCP tests | 14 passed | same command; `tests/test_mcp.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 329 passed | same command |
+| Total test suite | 333 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -137,7 +138,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 329-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 333-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps are OS-sandboxed only when a plan sets `sandbox: true` (same boundary as shell/read steps); otherwise changes are detected after execution. Sandboxed host dispatch is proven with the fake host; a live host under the sandbox is not yet recorded.
 - `review --host` supports only the reviewer adapters (claude, codex, dsh, goose); opencode, kilocode, cline, and agy are dispatch-only adapters for `run`.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
