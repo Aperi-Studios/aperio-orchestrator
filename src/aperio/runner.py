@@ -643,12 +643,21 @@ def _floor_violations(
 ) -> list[str]:
     """Scan changed files for newly added Floor markers.
 
-    A marker counts as newly added when the pre-run backup copy of the file
-    (under backup_root) does not contain it. Files with no backup copy are
-    new files, so any marker they carry is new.
+    The Floor fires only on files that EXISTED before the run (a backup
+    copy exists) and whose pre-run content lacked the marker: that is the
+    sneaky-suppression case — slipping a cheat marker into an otherwise
+    legitimate change. A brand-new file's content is the plan's declared
+    write and is reviewed as a whole; scanning it would flag every
+    wholesale file the plan legitimately delivers (the goldfish caught the
+    over-broad version flagging entire copied source files).
     """
     findings: list[str] = []
+    if backup_root is None or not backup_root.is_dir():
+        return findings
     for rel in changed:
+        backup_copy = backup_root / rel
+        if not backup_copy.is_file():
+            continue
         try:
             path = project.resolve_project_path(rel)
         except (PathSafetyError, OSError):
@@ -657,16 +666,9 @@ def _floor_violations(
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
+            old_text = backup_copy.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        old_text = ""
-        if backup_root is not None:
-            backup_copy = backup_root / rel
-            if backup_copy.is_file():
-                try:
-                    old_text = backup_copy.read_text(encoding="utf-8", errors="replace")
-                except OSError:
-                    old_text = ""
         for kind, needle in FLOOR_PATTERNS:
             if needle in text and needle not in old_text:
                 findings.append(f"floor: {rel} adds {kind} ({needle.strip()})")

@@ -426,10 +426,11 @@ class CoreTests(unittest.TestCase):
         )
 
     def test_floor_violation_fails_verification(self) -> None:
-        # The Floor: a changed file that newly adds a suppression comment or
-        # a stub fails verification even when every acceptance check passes
-        # (adopted from the constraint-driven-development skill's cheat-move
-        # taxonomy).
+        # The Floor: slipping a suppression marker into an otherwise
+        # legitimate modification of an existing file fails verification even
+        # when every acceptance check passes (adopted from the
+        # constraint-driven-development skill's cheat-move taxonomy).
+        (self.root / "mod.py").write_text("def f():\n    return 1\n", encoding="utf-8")
         task, plan = make_plan(
             self.project,
             steps=[
