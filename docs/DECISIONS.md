@@ -26,7 +26,7 @@
 
 ## ADR-004: Policy first, optional OS sandbox later
 
-**Decision:** shell and read steps are allowed only inside an approved plan, with declared writes and a changed-file check. A plan may set `sandbox: true` to require `sandbox-exec` on macOS or `bwrap` on Linux; when requested and unavailable, the run fails closed. Host steps are not OS-sandboxed.
+**Decision:** shell and read steps are allowed only inside an approved plan, with declared writes and a changed-file check. A plan may set `sandbox: true` to require `sandbox-exec` on macOS or `bwrap` on Linux; when requested and unavailable, the run fails closed. Host dispatch joins the same sandbox when requested; its writable boundary is the disposable workspace, and the runner applies reviewed changes into the real project afterwards.
 
 **Why:** claiming a path check is isolation would be false. A real sandbox is opt-in and separately tested. Evidence records whether isolation was active.
 

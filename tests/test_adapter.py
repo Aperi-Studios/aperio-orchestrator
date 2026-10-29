@@ -344,12 +344,14 @@ class AdapterTests(unittest.TestCase):
 
         self.assertEqual(record["kind"], sandbox_kind())
 
-    def test_sandboxed_host_step_cannot_write_outside_the_project(self) -> None:
+    def test_sandboxed_host_step_cannot_write_outside_the_workspace(self) -> None:
         # The unsandboxed case only DETECTS outside writes; the sandboxed
-        # case must PREVENT them. The fake host writes a victim file outside
-        # the project; the sandbox blocks it, the victim survives untouched,
-        # and the run fails with no changes to apply.
-        victim = self.external / "victim.txt"
+        # case must PREVENT them. The host's writable boundary is its
+        # disposable workspace (a host review caught the boundary being the
+        # whole project): a write to a REAL project file outside the
+        # workspace must be blocked on every backend, and the victim file
+        # must survive byte-identical.
+        victim = self.root / "victim.txt"
         victim.write_text("untouched", encoding="utf-8")
         self.host.write_text(
             "#!/usr/bin/env python3\n"
@@ -361,12 +363,14 @@ class AdapterTests(unittest.TestCase):
         self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)
         _task, plan = make_plan(
             self.project,
-            prompt="Try to write outside.",
+            prompt="Try to write outside the workspace.",
             writes=["site/index.html"],
             sandbox=True,
         )
         result = apply_plan(self.project, plan, actor="builder")
-        self.assertEqual(victim.read_text(encoding="utf-8"), "untouched", "sandbox did not block the outside write")
+        self.assertEqual(
+            victim.read_text(encoding="utf-8"), "untouched", "sandbox did not block the outside write"
+        )
         self.assertEqual(result["status"], "failed", result)
         # Prove the host actually ran under active isolation (a host review
         # caught this test passing vacuously when no backend exists).

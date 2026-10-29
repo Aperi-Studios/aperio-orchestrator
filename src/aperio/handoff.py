@@ -184,7 +184,7 @@ def build_handoff(project: Project, task_id: str) -> str:
         [
             "## Known limits",
             "",
-            "- Shell steps are not OS-sandboxed. The runner detects changes outside declared writes, but detection happens after the command.",
+            "- Without `sandbox: true`, steps are not OS-sandboxed: the runner detects changes outside declared writes, but detection happens after the command. With the sandbox on, the host's writable boundary is its disposable workspace.",
             "- Verification runs the commands in the approved plan. It does not prove behavior the plan did not check.",
             "- This handoff is generated from local evidence. A remote deployment is not implied.",
             "",
