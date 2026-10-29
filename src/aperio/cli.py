@@ -68,6 +68,10 @@ from .learning import format_status as format_learning
 from .learning import import_dossier as import_learning
 from .learning import record_proof as record_learning_proof
 from .learning import status as learning_status
+from .lessons import add as lesson_add
+from .lessons import format_list as format_lessons
+from .lessons import read_lessons, relevant_lessons
+from .lessons import remove as lesson_remove
 from .mediator import MediationError, mediate
 from .mesh import MeshError, MeshStore
 from .model import (
@@ -293,6 +297,12 @@ def cmd_plan(args: argparse.Namespace) -> int:
         project.put_task(task)
         project.append_event("plan.created", {"task_id": task.id, "plan_id": plan.id})
     print(f"{task.id}  {plan.id}  planned")
+    lessons = relevant_lessons(project, list(allowed_raw))
+    for lesson in lessons:
+        print(
+            f"LESSON {lesson['id']} applies to this plan's paths: {lesson['text']}",
+            file=sys.stderr,
+        )
     print("Approve it before running: aperio approve " + plan.id)
     return 0
 
@@ -589,6 +599,30 @@ def cmd_tutorial(args: argparse.Namespace) -> int:
             print(f"  [{mark}] {entry['step']}")
             if not entry["done"]:
                 print(f"      hint: {entry['hint']}")
+    return 0
+
+
+def cmd_lesson(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.lesson_command == "add":
+        entry = lesson_add(
+            project,
+            args.text,
+            task_id=args.task or "",
+            paths=args.paths.split(",") if args.paths else [],
+            source=args.source,
+        )
+        print(f"{entry['id']}  recorded")
+        return 0
+    if args.lesson_command == "remove":
+        result = lesson_remove(project, args.lesson_id)
+        print(f"{result['removed']}  removed; {result['remaining']} remaining")
+        return 0
+    data = read_lessons(project)
+    if args.json:
+        print(json.dumps(data, indent=2, sort_keys=True))
+    else:
+        print(format_lessons(data))
     return 0
 
 
@@ -1148,6 +1182,21 @@ def build_parser() -> argparse.ArgumentParser:
     tutorial_check_parser.add_argument("directory")
     tutorial_check_parser.add_argument("--json", action="store_true")
     tutorial_check_parser.set_defaults(func=cmd_tutorial)
+
+    p = sub.add_parser("lesson", help="the project's lessons ledger: what went wrong, surfaced before it matters")
+    lesson_sub = p.add_subparsers(dest="lesson_command", required=True)
+    lesson_add_parser = lesson_sub.add_parser("add", help="record a lesson")
+    lesson_add_parser.add_argument("text")
+    lesson_add_parser.add_argument("--task", default="", help="the task that taught this lesson")
+    lesson_add_parser.add_argument("--paths", default="", help="comma-separated project paths the lesson concerns")
+    lesson_add_parser.add_argument("--source", default="manual")
+    lesson_add_parser.set_defaults(func=cmd_lesson)
+    lesson_list_parser = lesson_sub.add_parser("list", help="list recorded lessons")
+    lesson_list_parser.add_argument("--json", action="store_true")
+    lesson_list_parser.set_defaults(func=cmd_lesson)
+    lesson_remove_parser = lesson_sub.add_parser("remove", help="remove a lesson by id")
+    lesson_remove_parser.add_argument("lesson_id")
+    lesson_remove_parser.set_defaults(func=cmd_lesson)
 
     p = sub.add_parser("handoff", help="write the owner handoff")
     p.add_argument("task_id")
