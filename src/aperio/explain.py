@@ -14,7 +14,7 @@ from .discovery import DiscoveryError
 from .discovery import readonly_load as discovery_readonly_load
 from .discovery import status as discovery_status
 from .learning import status as learning_status
-from .readiness import ReadinessError
+from .readiness import ReadinessError, validate_preflight
 from .readiness import status as readiness_status
 from .store import Project
 from .todo import status as todo_status
@@ -36,10 +36,9 @@ def _discovery(project: Project | None) -> str:
         "  explicit dated owner waiver can skip a question.\n"
         "WHY IT EXISTS\n"
         "  Plans built on guesses get reworked after approval. The interview is\n"
-        "  cheap; rework is not — the gate encodes the rebuild's design decision\n"
-        "  that plans bind to recorded owner facts rather than guesses\n"
-        "  (docs/PROJECT-HISTORY.md, the rebuild rationale; no single rework\n"
-        "  incident is recorded). Answers are recorded by the agent on the\n"
+        "  cheap; rework is not. This gate's specific rationale is an\n"
+        "  explanation, not a recorded incident: no rework incident is\n"
+        "  documented. Answers are recorded by the agent on the\n"
         "  owner's behalf; owner identity is not cryptographically verified,\n"
         "  and evidence references are optional. Waivers\n"
         "  exist because some questions genuinely do not apply — but a waiver is\n"
@@ -153,7 +152,12 @@ def _readiness(project: Project | None) -> str:
     if project is not None:
         try:
             progress = readiness_status(project)
-            text += _project_line(f"ready={progress['ready']}, issues={len(progress['issues'])}")
+            preflight_issues = validate_preflight(project)
+            text += _project_line(
+                f"preflight (plan gate) {'OK' if not preflight_issues else 'OPEN: ' + '; '.join(preflight_issues[:3])}"
+                f"; full readiness (done/handoff gate) ready={progress['ready']}, "
+                f"issues={len(progress['issues'])}"
+            )
         except ReadinessError as exc:
             text += _project_line(f"unreadable ({exc})")
     return text

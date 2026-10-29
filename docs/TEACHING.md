@@ -140,5 +140,8 @@ gate.
   independent audits that produced F1–F5 and the P-rows.
 - `docs/PROJECT-HISTORY.md` — the builder/monitor/owner loop that produced
   this discipline, and the hard rules it enforces.
-- `tests/` — every rule above has a named test; `docs/STATUS.md` maps rows
-  to tests.
+- `tests/` — the *enforced* rules above have named tests (the refusal
+  conditions the CLI checks); `docs/STATUS.md` maps rows to tests. The craft
+  recommendations that go beyond enforcement — pairing presence checks with
+  behavior checks, writing acceptance checks first — are advice, not
+  tested gates.
