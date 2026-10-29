@@ -82,6 +82,29 @@ class TutorialTests(unittest.TestCase):
         self.assertEqual(result["passed"], result["total"])
         self.assertTrue((self.root / "site" / "index.html").is_file())
 
+    def test_fixture_gates_refuse_wrong_phrase_and_self_review(self) -> None:
+        # The tutorial's point is meeting the real gates: a wrong approval
+        # phrase and a builder self-review must be refused inside the
+        # fixture, exactly as in a real project (a host review caught the
+        # happy-path-only coverage).
+        build(self.root)
+        self.cli("plan", str(self.root / "starter-plan.json"))
+        status = json.loads(self.cli("status", "--json").stdout)
+        task = [t for t in status["tasks"] if t.get("plan_id")][-1]
+        plan_id, task_id = task["plan_id"], task["id"]
+        bad_phrase = self.cli("approve", plan_id, "--by", "owner", "--confirm", "sure whatever", allow_rc={2})
+        self.assertEqual(bad_phrase.returncode, 2)
+        self.assertIn("I approve this plan", bad_phrase.stderr)
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.cli("run", task_id, "--actor", "learner")
+        self.cli("verify", task_id)
+        self_review = self.cli("review", task_id, "--reviewer", "agent", "--verdict", "confirmed", allow_rc={2})
+        self.assertEqual(self_review.returncode, 2)
+        self.assertTrue(
+            "builder" in self_review.stderr.lower() or "reviewer" in self_review.stderr.lower(),
+            self_review.stderr,
+        )
+
     def test_check_is_read_only(self) -> None:
         build(self.root)
         self.cli("plan", str(self.root / "starter-plan.json"))

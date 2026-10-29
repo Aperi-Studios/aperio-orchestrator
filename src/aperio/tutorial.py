@@ -47,7 +47,7 @@ Your job is to fly the loop's execution half with the starter plan.
    aperio review <task-id> --reviewer mentor --verdict confirmed
 7. Close it:  aperio done <task-id>
 8. Write the handoff:  aperio handoff <task-id>
-9. Check your flight:  aperio tutorial . --check
+9. Check your flight:  aperio tutorial check .
 
 When a command refuses you, run `aperio next` — it names the gate that
 stopped you and the exact command past it. Refusals are the lesson.
@@ -222,7 +222,7 @@ def build(directory: str | Path) -> dict[str, Any]:
         "project": str(root),
         "checklist": str(root / "CHECKLIST.md"),
         "starter_plan": str(root / "starter-plan.json"),
-        "next": "Read CHECKLIST.md, then fly the loop. `aperio tutorial . --check` grades your flight.",
+        "next": "Read CHECKLIST.md, then fly the loop. `aperio tutorial check <dir>` grades your flight.",
     }
 
 
