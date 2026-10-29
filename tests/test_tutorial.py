@@ -150,8 +150,16 @@ class TutorialTests(unittest.TestCase):
         self.cli("review", task_id, "--reviewer", "mentor", "--verdict", "confirmed")
         self.cli("done", task_id)
         self.cli("handoff", task_id)
-        # Tamper: replace the artifact AND plant a canary via a plan command
-        # that check must NOT execute.
+        # Replace the plan's acceptance command with one that WOULD create a
+        # canary if executed; check must not run it (a host review caught
+        # the original test using read-only commands, which proved nothing).
+        plan_state_path = self.root / ".aperio" / "plans" / f"{plan_id}.json"
+        plan_state = json.loads(plan_state_path.read_text(encoding="utf-8"))
+        plan_state["acceptance"] = [
+            {"id": "canary", "command": "echo planted > canary.txt"}
+        ]
+        plan_state_path.write_text(json.dumps(plan_state), encoding="utf-8")
+        # Tamper the artifact so the digest also mismatches.
         (self.root / "site" / "index.html").write_text("<h1>tampered</h1>", encoding="utf-8")
         check(self.root)
         self.assertFalse((self.root / "canary.txt").exists(), "check executed a plan command")
