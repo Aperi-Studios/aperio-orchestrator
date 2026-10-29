@@ -17,7 +17,6 @@ fixture is a disposable copy, not the learner's real project.
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -245,7 +244,6 @@ def check(directory: str | Path) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
     tasks = [t for t in project.tasks_readonly() if t.plan_id]
     task = tasks[-1] if tasks else None
-    plan = project.get_plan_readonly(task.plan_id) if task is not None else None
 
     def step(name: str, done: bool, hint: str) -> None:
         steps.append({"step": name, "done": done, **({"hint": hint} if not done else {})})
@@ -280,26 +278,26 @@ def check(directory: str | Path) -> dict[str, Any]:
                     handoff_written = True
                     break
     step("handoff written for this task", handoff_written, "aperio handoff <task-id>")
-    # Re-run the plan's acceptance checks against the CURRENT artifact: a
-    # task status alone can mask edits made after done (a host review caught
-    # the grader reporting complete on a changed page).
+    # Grade the artifact WITHOUT executing plan commands (a host review
+    # caught the grader shelling out under a read-only claim): compare the
+    # current project digest with the one recorded at verification time.
+    # Matching means the artifact is exactly what passed acceptance; a
+    # mismatch means it changed after done.
+    from .runner import _artifact_digest
+
     acceptance_ok = False
-    if plan is not None:
-        acceptance_ok = True
-        for check_row in plan.acceptance:
-            probe = subprocess.run(
-                ["/bin/sh", "-c", check_row.command],
-                capture_output=True, text=True, check=False,
-                cwd=str(root),
-                timeout=min(check_row.timeout_s, 30),
-            )
-            if probe.returncode != check_row.expected_exit:
-                acceptance_ok = False
-                break
+    if task is not None and task.verify_id:
+        rows = [
+            row
+            for row in project.evidence_readonly(task.id)
+            if row.get("check_id") == task.verify_id
+        ]
+        if rows and rows[-1].get("status") == "passed":
+            acceptance_ok = rows[-1].get("artifact_digest") == _artifact_digest(project)
     step(
-        "artifact passes the plan's acceptance checks now",
+        "artifact still matches what passed verification",
         acceptance_ok,
-        "the artifact changed after done; re-run the flight or inspect site/index.html",
+        "the artifact changed after done; re-fly the loop or inspect site/index.html",
     )
 
     passed = sum(1 for s in steps if s["done"])

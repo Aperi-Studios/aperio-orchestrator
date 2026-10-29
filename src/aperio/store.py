@@ -423,6 +423,16 @@ class Project:
             rows.append(self._read_state_json(path))
         return rows
 
+    def evidence_readonly(self, task_id: str) -> list[dict[str, Any]]:
+        """Read evidence without persisting schema migrations (read-only advisors)."""
+        directory = self.state / "evidence" / task_id
+        if not directory.is_dir():
+            return []
+        rows: list[dict[str, Any]] = []
+        for path in sorted(directory.glob("*.json")):
+            rows.append(self._read_state_json(path, persist_migration=False))
+        return rows
+
     # ---- paths ----------------------------------------------------------
 
     def resolve_project_path(self, rel: str, *, create_parents: bool = False) -> Path:

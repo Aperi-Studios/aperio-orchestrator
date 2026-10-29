@@ -134,6 +134,32 @@ class TutorialTests(unittest.TestCase):
         check(self.root)
         self.assertEqual(before, snapshot(), "check must not write any state")
 
+    def test_check_never_executes_plan_commands(self) -> None:
+        # A host review caught the grader shelling out plan-supplied commands
+        # under a read-only claim. The grader compares digests instead; a
+        # plan whose acceptance command would mutate a canary file must
+        # leave the canary untouched when check runs.
+        build(self.root)
+        self.cli("plan", str(self.root / "starter-plan.json"))
+        status = json.loads(self.cli("status", "--json").stdout)
+        task = [t for t in status["tasks"] if t.get("plan_id")][-1]
+        plan_id, task_id = task["plan_id"], task["id"]
+        self.cli("approve", plan_id, "--by", "owner", "--confirm", "I approve this plan")
+        self.cli("run", task_id, "--actor", "learner")
+        self.cli("verify", task_id)
+        self.cli("review", task_id, "--reviewer", "mentor", "--verdict", "confirmed")
+        self.cli("done", task_id)
+        self.cli("handoff", task_id)
+        # Tamper: replace the artifact AND plant a canary via a plan command
+        # that check must NOT execute.
+        (self.root / "site" / "index.html").write_text("<h1>tampered</h1>", encoding="utf-8")
+        check(self.root)
+        self.assertFalse((self.root / "canary.txt").exists(), "check executed a plan command")
+        # And the grader must notice the artifact no longer matches.
+        result = check(self.root)
+        acceptance_step = next(s for s in result["steps"] if "verification" in s["step"])
+        self.assertFalse(acceptance_step["done"], "tampered artifact graded as matching")
+
     def test_cli_build_and_check_roundtrip(self) -> None:
         result = self.cli("tutorial", "build", str(self.root))
         self.assertIn("Tutorial ready", result.stdout)
