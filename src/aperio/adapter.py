@@ -74,6 +74,7 @@ class HostResult:
     workspace: str = ""
     prompt_sha256: str = ""
     error: str = ""
+    sandbox: dict[str, Any] = field(default_factory=dict)
 
     def evidence(self) -> dict[str, Any]:
         return {
@@ -85,6 +86,7 @@ class HostResult:
             "stdout": self.stdout,
             "stderr": self.stderr,
             "timed_out": self.timed_out,
+            "sandbox": self.sandbox,
             "changes": [
                 {"path": c.path, "op": c.op, "sha256": c.sha256, "bytes": len(c.content or b"")}
                 for c in self.changes
@@ -330,6 +332,17 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
             "APERIO_ALLOWED_PATHS": os.pathsep.join(step.writes),
         }
     )
+    # Optional OS sandbox for host steps (previously shell/read only): the
+    # workspace lives inside the project, so the same write boundary covers
+    # it. Fail closed when plan.sandbox is set and no backend exists.
+    sandbox_record: dict[str, object] = {"requested": False, "active": False, "kind": None}
+    if plan.sandbox:
+        from .sandbox import SandboxError, wrap_argv
+
+        try:
+            command, sandbox_record = wrap_argv(command, project.root, workspace)
+        except SandboxError as exc:
+            raise HostError(f"step {step.id}: {exc}") from exc
     started = time.monotonic()
     exit_code, stdout, stderr, timed_out = _run_bounded(
         command,
@@ -351,6 +364,7 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
         timed_out=timed_out,
         workspace=str(workspace),
         prompt_sha256=hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        sandbox=sandbox_record,
     )
     if exit_code != 0:
         result.status = "failed"

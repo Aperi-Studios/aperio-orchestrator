@@ -16,7 +16,7 @@ from aperio.runner import RunError, apply_plan, finish, review, verify
 from aperio.store import Project
 
 
-def make_plan(project: Project, *, host: str = "claude", prompt: str, writes: list[str]) -> tuple[Task, Plan]:
+def make_plan(project: Project, *, host: str = "claude", prompt: str, writes: list[str], sandbox: bool = False) -> tuple[Task, Plan]:
     task = Task(id="task-host", title="Host task", request="Use a host to write one file", status="planned")
     plan = Plan(
         id="plan-host",
@@ -24,6 +24,7 @@ def make_plan(project: Project, *, host: str = "claude", prompt: str, writes: li
         title=task.title,
         request=task.request,
         allowed_paths=["site/"],
+        sandbox=sandbox,
         steps=[
             Step(
                 id="host-step",
@@ -324,6 +325,68 @@ class AdapterTests(unittest.TestCase):
         result = apply_plan(self.project, plan)
         self.assertEqual(result["status"], "applied", result["violations"])
         self.assertTrue((self.root / "site/new.html").is_file())
+
+    def test_sandboxed_host_step_records_active_isolation(self) -> None:
+        # plan.sandbox now covers host steps: the dispatch runs under the OS
+        # sandbox and the evidence records that isolation was active.
+        _task, plan = make_plan(
+            self.project,
+            prompt="Create site/index.html with the exact text from host.",
+            writes=["site/index.html"],
+            sandbox=True,
+        )
+        result = apply_plan(self.project, plan, actor="builder")
+        self.assertEqual(result["status"], "applied", result)
+        record = result["steps"][0]["sandbox"]
+        self.assertTrue(record["active"])
+        self.assertEqual(record["kind"], "sandbox-exec")
+
+    def test_sandboxed_host_step_cannot_write_outside_the_project(self) -> None:
+        # The unsandboxed case only DETECTS outside writes; the sandboxed
+        # case must PREVENT them. The fake host writes a victim file outside
+        # the project; the sandbox blocks it, the victim survives untouched,
+        # and the run fails with no changes to apply.
+        victim = self.external / "victim.txt"
+        victim.write_text("untouched", encoding="utf-8")
+        self.host.write_text(
+            "#!/usr/bin/env python3\n"
+            "from pathlib import Path\n"
+            f"Path({str(victim)!r}).write_text('pwned')\n"
+            "print('attempted')\n",
+            encoding="utf-8",
+        )
+        self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)
+        _task, plan = make_plan(
+            self.project,
+            prompt="Try to write outside.",
+            writes=["site/index.html"],
+            sandbox=True,
+        )
+        result = apply_plan(self.project, plan, actor="builder")
+        self.assertEqual(victim.read_text(encoding="utf-8"), "untouched", "sandbox did not block the outside write")
+        self.assertEqual(result["status"], "failed", result)
+
+    def test_sandbox_without_backend_fails_closed_for_host_steps(self) -> None:
+        # A sandboxed host step with no sandbox backend must be refused, not
+        # silently downgraded.
+        from unittest import mock
+
+        from aperio import sandbox as sandbox_module
+
+        _task, plan = make_plan(
+            self.project,
+            prompt="Create site/index.html.",
+            writes=["site/index.html"],
+            sandbox=True,
+        )
+        with mock.patch.object(sandbox_module, "kind", return_value=None):
+            result = apply_plan(self.project, plan, actor="builder")
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(
+            any("no supported OS sandbox" in v for v in result["violations"]),
+            result["violations"],
+        )
+        self.assertEqual(self.project.get_task(plan.task_id).status, "failed")
 
     def test_host_symlink_is_rejected(self) -> None:
         self.host.write_text(

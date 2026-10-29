@@ -72,5 +72,36 @@ def wrap(command: str, root: Path, cwd: Path) -> tuple[list[str], dict[str, obje
     return argv, {"requested": True, "active": True, "kind": backend}
 
 
+def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dict[str, object]]:
+    """Wrap an argv-list command (host dispatch) in the OS sandbox.
+
+    Same profile and fail-closed rules as wrap(); the command is exec'd
+    directly instead of through /bin/sh -c because the host adapter already
+    builds an argv.
+    """
+    backend = kind()
+    if backend is None:
+        raise SandboxError("no supported OS sandbox (sandbox-exec or bwrap) is available")
+    if backend == "sandbox-exec":
+        if not Path("/usr/bin/sandbox-exec").is_file():
+            raise SandboxError("sandbox-exec is not installed at /usr/bin/sandbox-exec")
+        argv = ["/usr/bin/sandbox-exec", "-p", _profile(root), *command]
+        return argv, {"requested": True, "active": True, "kind": backend}
+    argv = [
+        "bwrap",
+        "--ro-bind",
+        "/",
+        "/",
+        "--bind",
+        str(root),
+        str(root),
+        "--chdir",
+        str(cwd),
+        "--unshare-net",
+        *command,
+    ]
+    return argv, {"requested": True, "active": True, "kind": backend}
+
+
 def unavailable_record() -> dict[str, object]:
     return {"requested": True, "active": False, "kind": None, "reason": "no supported sandbox"}

@@ -9,7 +9,7 @@
 | Item | Result | Evidence |
 |---|---|---|
 | Core unit tests | 53 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 19 passed | same command; `tests/test_adapter.py` |
+| Adapter tests | 22 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
@@ -31,7 +31,7 @@
 | Tutorial tests | 9 passed | same command; `tests/test_tutorial.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 301 passed | same command |
+| Total test suite | 304 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -60,7 +60,7 @@
 | Security scan | bounded local scan for private keys, high-confidence tokens, sensitive filenames, and assigned secrets; excludes generated and VCS directories | `src/aperio/security.py`; `tests/test_security.py` |
 | Toolchain installer | manifests declare source, version, license, scope, permissions, risk flags, cost, install argv, and verify argv; risky tools require exact owner confirmation; failed verification never records an install | `src/aperio/toolchain.py`; `tests/test_toolchain.py` |
 | Resume interrupted run | `aperio resume` restores the pre-run snapshot, clears stale verification/review, and reruns the same approved plan; it refuses when no run is interrupted | `src/aperio/runner.py::resume_plan`; `tests/test_core.py::test_resume_restores_the_interrupted_snapshot_before_rerunning`, `test_resume_refuses_when_no_run_is_interrupted` |
-| Optional OS sandbox | `plan.sandbox: true` wraps shell/read commands with `sandbox-exec` (macOS) or `bwrap` (Linux); a missing backend fails closed; evidence records whether isolation was active | `src/aperio/sandbox.py`; `tests/test_core.py::test_sandboxed_run_records_active_isolation`, `test_sandboxed_read_records_active_isolation`, `test_sandbox_blocks_a_write_outside_the_project`, `test_sandbox_request_without_a_backend_fails_closed` |
+| Optional OS sandbox | `plan.sandbox: true` wraps shell/read commands AND host dispatch with `sandbox-exec` (macOS) or `bwrap` (Linux); a missing backend fails closed; evidence records whether isolation was active | `src/aperio/sandbox.py`; `tests/test_core.py::test_sandboxed_run_records_active_isolation`, `test_sandboxed_read_records_active_isolation`, `test_sandbox_blocks_a_write_outside_the_project`, `test_sandbox_request_without_a_backend_fails_closed` |
 | Run checkpoint | every run writes a checkpoint file under `.aperio/runs/` before steps and after completion; it is outside the control-state hash | `src/aperio/runner.py::_write_checkpoint`; `tests/test_core.py::test_run_writes_a_step_checkpoint` |
 | Task ID traversal | persisted task ids cannot contain path separators | `tests/test_core.py::test_task_id_traversal_is_refused` |
 | Installer prefix canonicalization | `/..` resolves to `/` and is refused | `tests/test_installer.py::test_prefix_that_resolves_to_root_is_refused` |
@@ -117,7 +117,7 @@
 - Live host dispatch for OpenCode, KiloCode, Cline, and agy; their command shapes are tested, but live runs are deferred until those hosts are actually used.
 - A distributed or live two-host mesh; the current message store is local and persistent.
 - A real host-to-host exchange over that store.
-- OS sandbox for host steps; shell/read steps are optionally sandboxed.
+- Live host dispatch under the OS sandbox is proven only with the fake host; a real host (claude/codex) has not been dispatched sandboxed yet.
 - Native Windows execution of `aperio.cmd`; the PowerShell installer and update/rollback pass under `pwsh` on macOS.
 - Full 138-field discovery module catalog and expanded read-only inspectors; the `discover` command records 10 universal and 10 conditional questions, evidence references, research requests, explicit owner waivers with review dates, readiness, and blocks `plan` until discovery is ready. The full domain catalog is not loaded.
 
@@ -128,8 +128,8 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 301-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
-- Host steps are not jailed. Shell/read steps are sandboxed only when a plan sets `sandbox: true`; otherwise changes are detected after execution.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 304-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Host steps are OS-sandboxed only when a plan sets `sandbox: true` (same boundary as shell/read steps); otherwise changes are detected after execution. Sandboxed host dispatch is proven with the fake host; a live host under the sandbox is not yet recorded.
 - `review --host` supports only the reviewer adapters (claude, codex, dsh, goose); opencode, kilocode, cline, and agy are dispatch-only adapters for `run`.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.
 - Claude dispatch used a budget of 1.50 USD; a smaller budget was rejected by the host.
