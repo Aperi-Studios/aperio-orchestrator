@@ -128,7 +128,7 @@
 - Live host dispatch for OpenCode, KiloCode, Cline, and agy; their command shapes are tested, but live runs are deferred until those hosts are actually used.
 - A distributed or live two-host mesh; the current message store is local and persistent.
 - A real host-to-host exchange over that store.
-- Live host dispatch under the OS sandbox is proven only with the fake host; a real host (claude/codex) has not been dispatched sandboxed yet.
+- Live sandboxed-host proof, measured 2026-10-29: a real Codex dispatch under `plan.sandbox: true` on macOS ran with active sandbox-exec isolation and was blocked from writing outside the project (the outside victim file was never created), but the host itself exited 1 — sandbox-exec's deny-default profile denies operations Codex needs (PATH aliases, in-process app-server client). The boundary held; the host is not yet productive under it. A profile tuned for real hosts (or bwrap on Linux) is future work. Evidence: run recorded in the temporary project `aperio-sbx-live-*` (not retained).
 - Native Windows execution of `aperio.cmd`; the PowerShell installer and update/rollback pass under `pwsh` on macOS.
 - Full 138-field discovery module catalog and expanded read-only inspectors; the `discover` command records 10 universal and 10 conditional questions, evidence references, research requests, explicit owner waivers with review dates, readiness, and blocks `plan` until discovery is ready. The full domain catalog is not loaded.
 
