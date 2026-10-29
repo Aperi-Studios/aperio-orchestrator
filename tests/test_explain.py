@@ -35,8 +35,10 @@ class ExplainTests(unittest.TestCase):
 
     def test_every_topic_anchors_its_rationale(self) -> None:
         # A host review required each topic to connect its rationale to a
-        # traceable source: a repo doc path or a named test. Every topic's
-        # WHY section must reference at least one.
+        # traceable source: a repo doc path or a named test. Some gates are
+        # design decisions of the rebuild (stated as such) rather than the
+        # fix of a single recorded incident; every topic must still cite at
+        # least one traceable source.
         import re
 
         for topic in TOPICS:
