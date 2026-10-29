@@ -17,6 +17,7 @@ fixture is a disposable copy, not the learner's real project.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -244,6 +245,7 @@ def check(directory: str | Path) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
     tasks = [t for t in project.tasks_readonly() if t.plan_id]
     task = tasks[-1] if tasks else None
+    plan = project.get_plan_readonly(task.plan_id) if task is not None else None
 
     def step(name: str, done: bool, hint: str) -> None:
         steps.append({"step": name, "done": done, **({"hint": hint} if not done else {})})
@@ -278,8 +280,27 @@ def check(directory: str | Path) -> dict[str, Any]:
                     handoff_written = True
                     break
     step("handoff written for this task", handoff_written, "aperio handoff <task-id>")
-    page_ok = (root / "site" / "index.html").is_file()
-    step("artifact exists", page_ok, "the run should have created site/index.html")
+    # Re-run the plan's acceptance checks against the CURRENT artifact: a
+    # task status alone can mask edits made after done (a host review caught
+    # the grader reporting complete on a changed page).
+    acceptance_ok = False
+    if plan is not None:
+        acceptance_ok = True
+        for check_row in plan.acceptance:
+            probe = subprocess.run(
+                ["/bin/sh", "-c", check_row.command],
+                capture_output=True, text=True, check=False,
+                cwd=str(root),
+                timeout=min(check_row.timeout_s, 30),
+            )
+            if probe.returncode != check_row.expected_exit:
+                acceptance_ok = False
+                break
+    step(
+        "artifact passes the plan's acceptance checks now",
+        acceptance_ok,
+        "the artifact changed after done; re-run the flight or inspect site/index.html",
+    )
 
     passed = sum(1 for s in steps if s["done"])
     grade = "complete" if passed == len(steps) else "in progress"
