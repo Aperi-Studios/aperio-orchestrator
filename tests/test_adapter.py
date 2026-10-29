@@ -339,7 +339,9 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(result["status"], "applied", result)
         record = result["steps"][0]["sandbox"]
         self.assertTrue(record["active"])
-        self.assertEqual(record["kind"], "sandbox-exec")
+        from aperio.sandbox import kind as sandbox_kind
+
+        self.assertEqual(record["kind"], sandbox_kind())
 
     def test_sandboxed_host_step_cannot_write_outside_the_project(self) -> None:
         # The unsandboxed case only DETECTS outside writes; the sandboxed
