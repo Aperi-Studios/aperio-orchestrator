@@ -130,6 +130,26 @@ class McpLiveTests(unittest.TestCase):
         payload = json.loads(response["result"]["content"][0]["text"])
         self.assertIn("action", payload)
 
+    def test_doctor_reports_malformed_state_as_unhealthy(self) -> None:
+        # A host review caught doctor reporting presence only, while its
+        # description promises parseable. A corrupted state file must be
+        # reported unparseable, and a healthy file must carry its schema.
+        (self.project.state / "queue.json").write_text("{corrupt", encoding="utf-8")
+        response = handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 9,
+                "method": "tools/call",
+                "params": {"name": "aperio_doctor", "arguments": {"project": str(self.root)}},
+            }
+        )
+        payload = json.loads(response["result"]["content"][0]["text"])
+        by_name = {c["file"]: c for c in payload["checks"]}
+        self.assertFalse(by_name["queue.json"]["parseable"])
+        self.assertIn("error", by_name["queue.json"])
+        self.assertTrue(by_name["project.json"]["parseable"])
+        self.assertEqual(by_name["project.json"]["schema"], 1)
+
     def test_serve_over_real_stdio_subprocess(self) -> None:
         requests = "\n".join(
             [

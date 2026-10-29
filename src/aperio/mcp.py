@@ -60,7 +60,16 @@ def _tool_doctor(args: dict[str, Any]) -> dict[str, Any]:
     checks = []
     for name in ("project.json", "queue.json", "lessons.json"):
         path = project.state / name
-        checks.append({"file": name, "present": path.is_file()})
+        entry: dict[str, Any] = {"file": name, "present": path.is_file()}
+        if path.is_file():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                entry["parseable"] = isinstance(data, dict)
+                entry["schema"] = data.get("schema") if isinstance(data, dict) else None
+            except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                entry["parseable"] = False
+                entry["error"] = str(exc)[:200]
+        checks.append(entry)
     return {"project": str(project.root), "checks": checks}
 
 
