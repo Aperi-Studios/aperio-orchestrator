@@ -34,14 +34,41 @@ def normalize_allowed(value: str) -> str:
     return normalize_rel(value)
 
 
+def _glob_matches(rel: str, pattern: str) -> bool:
+    """Segment-aware glob match: a single * does not cross /.
+
+    Mirrors runner._glob_matches so host-change validation enforces the same
+    boundary the post-run check does (a host review caught fnmatch's *
+    crossing / and letting out/sub/x.html pass out/*.html).
+    """
+    rel_parts = rel.split("/")
+    pattern_parts = pattern.split("/")
+
+    def match(parts: list[str], pattern: list[str]) -> bool:
+        if not pattern:
+            return not parts
+        head = pattern[0]
+        if head == "**":
+            return any(match(parts[i:], pattern[1:]) for i in range(len(parts) + 1))
+        if not parts:
+            return False
+        if not any(char in head for char in "*?["):
+            return parts[0] == head and match(parts[1:], pattern[1:])
+        if not fnmatchcase(parts[0], head):
+            return False
+        return match(parts[1:], pattern[1:])
+
+    return match(rel_parts, pattern_parts)
+
+
 def _matches(path: str, allowed: str) -> bool:
     if allowed == "*":
         return True
     if any(char in allowed for char in "*?["):
-        if fnmatchcase(path, allowed):
+        if _glob_matches(path, allowed):
             return True
         # Treat **/ as zero or more directories, matching common glob intent.
-        return bool("**/" in allowed and fnmatchcase(path, allowed.replace("**/", "")))
+        return bool("**/" in allowed and _glob_matches(path, allowed.replace("**/", "")))
     return path == allowed or path.startswith(allowed.rstrip("/") + "/")
 
 

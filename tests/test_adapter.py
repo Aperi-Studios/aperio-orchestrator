@@ -284,6 +284,47 @@ class AdapterTests(unittest.TestCase):
         self.assertFalse((self.root / "site/extra.html").exists())
         self.assertFalse((self.root / "site/index.html").exists())
 
+    def test_host_change_under_glob_does_not_cross_directories(self) -> None:
+        # A host review caught policy._matches using raw fnmatch, whose *
+        # crosses /: a host change to site/sub/x.html passed a declaration of
+        # site/*.html and was applied before the post-run scan failed the
+        # run. Host validation must use the same segment-aware matcher as
+        # the post-run check and reject the nested path before applying it.
+        self.host.write_text(
+            "#!/usr/bin/env python3\n"
+            "from pathlib import Path\n"
+            "Path('site/sub').mkdir(parents=True, exist_ok=True)\n"
+            "Path('site/sub/x.html').write_text('nested')\n"
+            "print('wrote nested')\n",
+            encoding="utf-8",
+        )
+        self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)
+        _task, plan = make_plan(self.project, prompt="Write nested.", writes=["site/*.html"])
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(
+            any("site/sub/x.html" in v for v in result["violations"]),
+            result["violations"],
+        )
+        self.assertFalse((self.root / "site/sub/x.html").exists())
+
+    def test_host_change_matching_the_glob_is_applied(self) -> None:
+        # The inverse: a direct child matching the glob must still apply, so
+        # the segment-aware fix is not an allow-nothing regression.
+        self.host.write_text(
+            "#!/usr/bin/env python3\n"
+            "from pathlib import Path\n"
+            "Path('site').mkdir(exist_ok=True)\n"
+            "Path('site/new.html').write_text('<h1>ok</h1>')\n"
+            "print('wrote page')\n",
+            encoding="utf-8",
+        )
+        self.host.chmod(self.host.stat().st_mode | stat.S_IXUSR)
+        _task, plan = make_plan(self.project, prompt="Write page.", writes=["site/*.html"])
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result["violations"])
+        self.assertTrue((self.root / "site/new.html").is_file())
+
     def test_host_symlink_is_rejected(self) -> None:
         self.host.write_text(
             "#!/usr/bin/env python3\n"
