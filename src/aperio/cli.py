@@ -72,6 +72,7 @@ from .lessons import add as lesson_add
 from .lessons import format_list as format_lessons
 from .lessons import read_lessons, relevant_lessons
 from .lessons import remove as lesson_remove
+from .mcp import serve as mcp_serve
 from .mediator import MediationError, mediate
 from .mesh import MeshError, MeshStore
 from .model import (
@@ -599,6 +600,12 @@ def cmd_tutorial(args: argparse.Namespace) -> int:
             print(f"  [{mark}] {entry['step']}")
             if not entry["done"]:
                 print(f"      hint: {entry['hint']}")
+    return 0
+
+
+def cmd_mcp(args: argparse.Namespace) -> int:
+    """Serve Aperio's read-only advisors over JSON-RPC 2.0 on stdio."""
+    mcp_serve()
     return 0
 
 
@@ -1197,6 +1204,12 @@ def build_parser() -> argparse.ArgumentParser:
     lesson_remove_parser = lesson_sub.add_parser("remove", help="remove a lesson by id")
     lesson_remove_parser.add_argument("lesson_id")
     lesson_remove_parser.set_defaults(func=cmd_lesson)
+
+    p = sub.add_parser(
+        "mcp",
+        help="serve Aperio's read-only advisors over JSON-RPC 2.0 on stdio (MCP)",
+    )
+    p.set_defaults(func=cmd_mcp)
 
     p = sub.add_parser("handoff", help="write the owner handoff")
     p.add_argument("task_id")

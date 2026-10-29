@@ -113,6 +113,8 @@ See [docs/HOST-PROOFS.md](docs/HOST-PROOFS.md) for the exact host commands and o
 - Readiness record for pre-flight, deployment, after-sales, design, and security facts; `aperio readiness validate` refuses gaps and high/critical unresolved risk.
 - Project-scoped skill creation: `aperio skill create` writes a validated scaffold under `.aperio/skills/` and refuses to overwrite a foreign skill.
 - Bounded local secret scan: `aperio security scan` flags high-confidence tokens, private keys, sensitive filenames, and assigned secrets; it does not replace a dependency or history scanner.
+- Lessons ledger: `apero lesson add` records what went wrong bound to task and paths; `plan` surfaces lessons whose paths intersect the plan — the project's mistakes compound instead of repeating.
+- MCP facade: `apero mcp` serves the read-only advisors (next, explain, status, lessons, doctor) over JSON-RPC 2.0 on stdio with zero dependencies — any MCP-capable host can consult Aperio's gates. Write tools are excluded by design.
 - Tutorial flight simulator: `aperio tutorial build <dir>` creates a practice fixture with every gate pre-satisfied; the learner flies the loop; `aperio tutorial check <dir>` grades the flight from real state.
 - Gate explainer: `aperio explain <topic>` teaches each gate — what it checks, why it exists, and this project's live status; strictly read-only.
 - Next-action advisor: `aperio next` reads the state and names the single next legal action, the exact command, and which gate requires it; strictly read-only.
