@@ -345,7 +345,15 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
             # real files directly, and the restore path only covers
             # snapshotted files (a host review caught this). The runner
             # applies reviewed changes into the real project afterwards.
-            command, sandbox_record = wrap_argv(command, workspace, workspace)
+            # The host binary's directory stays visible: it may live under
+            # the real /tmp, which the dedicated tmp mount would otherwise
+            # shadow (the Linux CI failure named it).
+            command, sandbox_record = wrap_argv(
+                command,
+                workspace,
+                workspace,
+                extra_visible=[Path(binary).parent],
+            )
         except SandboxError as exc:
             raise HostError(f"step {step.id}: {exc}") from exc
     started = time.monotonic()

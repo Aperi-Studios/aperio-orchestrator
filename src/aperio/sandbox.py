@@ -73,7 +73,13 @@ def wrap(command: str, root: Path, cwd: Path) -> tuple[list[str], dict[str, obje
     return argv, {"requested": True, "active": True, "kind": backend}
 
 
-def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dict[str, object]]:
+def wrap_argv(
+    command: list[str],
+    root: Path,
+    cwd: Path,
+    *,
+    extra_visible: list[Path] | None = None,
+) -> tuple[list[str], dict[str, object]]:
     """Wrap an argv-list command (host dispatch) in the OS sandbox.
 
     Same profile and fail-closed rules as wrap(); the command is exec'd
@@ -97,6 +103,8 @@ def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dic
     # (bwrap binds apply in order; the later, more specific bind wins).
     # The workspace — inside the project — is then bound writable at its
     # own path, which is the host's only writable project boundary.
+    # extra_visible paths (e.g. the host binary's directory, which may live
+    # under the real /tmp) are re-bound read-only last, for the same reason.
     dedicated_tmp = Path(tempfile.mkdtemp(prefix="aperio-sandbox-"))
     argv = [
         "bwrap",
@@ -112,6 +120,10 @@ def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dic
         "--bind",
         str(cwd),
         str(cwd),
+    ]
+    for path in extra_visible or []:
+        argv += ["--ro-bind", str(path), str(path)]
+    argv += [
         "--chdir",
         str(cwd),
         "--unshare-net",
