@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -87,6 +88,11 @@ def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dic
             raise SandboxError("sandbox-exec is not installed at /usr/bin/sandbox-exec")
         argv = ["/usr/bin/sandbox-exec", "-p", _profile(root), *command]
         return argv, {"requested": True, "active": True, "kind": backend}
+    # A dedicated writable tmp dir instead of all of /tmp: binding /tmp
+    # wholesale would make the project writable too whenever the project
+    # lives under /tmp (CI runners do exactly that), defeating the boundary
+    # (a host review + a Linux CI failure caught this).
+    dedicated_tmp = Path(tempfile.mkdtemp(prefix="aperio-sandbox-"))
     argv = [
         "bwrap",
         "--ro-bind",
@@ -96,7 +102,7 @@ def wrap_argv(command: list[str], root: Path, cwd: Path) -> tuple[list[str], dic
         str(root),
         str(root),
         "--bind",
-        "/tmp",
+        str(dedicated_tmp),
         "/tmp",
         "--chdir",
         str(cwd),
