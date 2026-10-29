@@ -152,6 +152,28 @@ _HANDLERS = {
     "aperio_doctor": _tool_doctor,
 }
 
+# The approval phrase never travels through the facade: over RPC it would
+# be a copy-paste-ready bypass an agent could run without the owner ever
+# typing it. CLI users keep the guidance; RPC agents get a pointer to it.
+APPROVAL_PHRASE = "I approve this plan"
+PHRASE_REDACTION = (
+    "<redacted: the exact approval phrase is documented in docs/TEACHING.md "
+    "and printed by `aperio explain approval` at the CLI; the owner types it>"
+)
+
+
+def _redact_phrase(payload: Any) -> Any:
+    """Replace the approval phrase anywhere in a response payload."""
+    if isinstance(payload, str):
+        return payload.replace(f'--confirm "{APPROVAL_PHRASE}"', f'--confirm {PHRASE_REDACTION}').replace(
+            f"--confirm '{APPROVAL_PHRASE}'", f"--confirm {PHRASE_REDACTION}"
+        ).replace(APPROVAL_PHRASE, PHRASE_REDACTION)
+    if isinstance(payload, dict):
+        return {k: _redact_phrase(v) for k, v in payload.items()}
+    if isinstance(payload, list):
+        return [_redact_phrase(item) for item in payload]
+    return payload
+
 
 def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
     """Handle one JSON-RPC 2.0 request; returns the response or None for notifications."""
@@ -217,7 +239,12 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
         return ok(
             {
                 "content": [
-                    {"type": "text", "text": json.dumps(result, indent=2, sort_keys=True, default=str)}
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            _redact_phrase(result), indent=2, sort_keys=True, default=str
+                        ),
+                    }
                 ]
             }
         )

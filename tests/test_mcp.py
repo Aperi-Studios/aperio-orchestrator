@@ -194,6 +194,24 @@ class McpLiveTests(unittest.TestCase):
         self.assertEqual(json.loads(lines[4])["error"]["code"], -32602)
         self.assertIn("serverInfo", json.loads(lines[5])["result"])
 
+    def test_approval_phrase_never_travels_over_rpc(self) -> None:
+        # The facade's own invariant: the approval phrase must never travel
+        # through an RPC pipe — over RPC it would be a copy-paste-ready
+        # bypass an agent could run without the owner ever typing it. Both
+        # explain(approval) and next (for a planned task) must come back
+        # redacted. (A host review caught the leak.)
+        response = handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 10,
+                "method": "tools/call",
+                "params": {"name": "aperio_explain", "arguments": {"topic": "approval"}},
+            }
+        )
+        text = response["result"]["content"][0]["text"]
+        self.assertNotIn("I approve this plan", text)
+        self.assertIn("redacted", text)
+
     def test_serve_over_real_stdio_subprocess(self) -> None:
         requests = "\n".join(
             [
