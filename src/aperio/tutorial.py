@@ -33,6 +33,9 @@ This project is a practice fixture: every plan gate is already satisfied
 (discovery answered, learning proven, todo started, readiness imported).
 Your job is to fly the loop's execution half with the starter plan.
 
+First: `cd` into this directory and stay there — every command below uses
+the current directory as the project.
+
 ## Your flight plan (in order)
 
 1. Read the starter plan at `starter-plan.json`. Notice its three parts:
@@ -196,6 +199,14 @@ STARTER_PLAN = {
 def build(directory: str | Path) -> dict[str, Any]:
     """Create the practice fixture with every plan gate pre-satisfied."""
     root = Path(directory).expanduser().resolve()
+    if root.exists() and any(root.iterdir()) and not (root / ".aperio" / "project.json").is_file():
+        # Refuse a nonempty directory that is not already the tutorial
+        # fixture: build writes learning.json, readiness.json,
+        # starter-plan.json, and CHECKLIST.md, and must not clobber files
+        # the caller already has (a host review caught the overwrite).
+        raise FileExistsError(
+            f"refusing to build into a nonempty directory that is not a tutorial fixture: {root}"
+        )
     root.mkdir(parents=True, exist_ok=True)
     project = Project.init(root, "tutorial")
     for question_id, choices, text in DISCOVERY_ANSWERS:

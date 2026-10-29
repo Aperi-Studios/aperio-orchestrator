@@ -56,6 +56,20 @@ class TutorialTests(unittest.TestCase):
         with self.assertRaises(StoreError):
             build(self.root)
 
+    def test_build_refuses_a_nonempty_foreign_directory(self) -> None:
+        # A host review caught build clobbering pre-existing files (it
+        # write_text's CHECKLIST.md et al). A nonempty directory that is not
+        # a tutorial fixture must be refused, and the user's file preserved.
+        self.root.mkdir(parents=True)
+        (self.root / "notes.md").write_text("USER'S PRECIOUS NOTES", encoding="utf-8")
+        with self.assertRaises(FileExistsError):
+            build(self.root)
+        self.assertEqual(
+            (self.root / "notes.md").read_text(encoding="utf-8"),
+            "USER'S PRECIOUS NOTES",
+        )
+        self.assertFalse((self.root / "CHECKLIST.md").exists())
+
     def test_fresh_fixture_grades_in_progress(self) -> None:
         build(self.root)
         result = check(self.root)
