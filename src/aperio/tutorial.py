@@ -231,7 +231,7 @@ def check(directory: str | Path) -> dict[str, Any]:
     root = Path(directory).expanduser().resolve()
     project = Project.open(root)
     steps: list[dict[str, Any]] = []
-    tasks = [t for t in project.tasks() if t.plan_id]
+    tasks = [t for t in project.tasks_readonly() if t.plan_id]
     task = tasks[-1] if tasks else None
 
     def step(name: str, done: bool, hint: str) -> None:
@@ -240,17 +240,17 @@ def check(directory: str | Path) -> dict[str, Any]:
     planned = task is not None
     step("plan created", planned, "aperio plan starter-plan.json")
     approved = planned and task is not None and task.status in {"approved", "applied", "verified", "reviewed", "done"}
-    step("plan approved with the exact phrase", approved, "apero approve <plan-id> --by owner --confirm \"I approve this plan\"")
+    step("plan approved with the exact phrase", approved, "aperio approve <plan-id> --by owner --confirm \"I approve this plan\"")
     applied = planned and task is not None and task.status in {"applied", "verified", "reviewed", "done"}
-    step("run applied by a different actor", applied, "apero run <task-id> --actor learner")
+    step("run applied by a different actor", applied, "aperio run <task-id> --actor learner")
     verified = planned and task is not None and task.status in {"verified", "reviewed", "done"}
-    step("acceptance checks passed", verified, "apero verify <task-id>")
+    step("acceptance checks passed", verified, "aperio verify <task-id>")
     reviewed = planned and task is not None and task.status in {"reviewed", "done"}
-    step("independent review confirmed", reviewed, "apero review <task-id> --reviewer mentor --verdict confirmed")
+    step("independent review confirmed", reviewed, "aperio review <task-id> --reviewer mentor --verdict confirmed")
     done = planned and task is not None and task.status == "done"
-    step("task closed", done, "apero done <task-id>")
+    step("task closed", done, "aperio done <task-id>")
     handoff_written = (project.state / "handoff.md").is_file()
-    step("handoff written", handoff_written, "apero handoff <task-id>")
+    step("handoff written", handoff_written, "aperio handoff <task-id>")
     page_ok = (root / "site" / "index.html").is_file()
     step("artifact exists", page_ok, "the run should have created site/index.html")
 

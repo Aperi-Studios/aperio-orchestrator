@@ -577,7 +577,7 @@ def cmd_tutorial(args: argparse.Namespace) -> int:
         else:
             print(f"Tutorial ready: {result['project']}")
             print(f"  checklist: {result['checklist']}")
-            print("  fly the loop, then: aperio tutorial <dir> --check")
+            print("  fly the loop, then: aperio tutorial check <dir>")
         return 0
     result = tutorial_check(args.directory)
     if args.json:
