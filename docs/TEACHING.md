@@ -23,9 +23,11 @@ after approval invalidates the plan (Z-D binding tests; `tests/test_discovery.py
 - Use a glob only when the set is genuinely dynamic: `writes: ["out/*.html"]`.
   Globs match one segment per `*` — `out/*.html` does **not** reach
   `out/sub/x.html`; recursion needs `**` (Z-D6, found by a live host review).
-- A shell step that writes outside its declared `writes` fails the run even
-  if the path is inside `allowed_paths` (Z-P1 class;
-  `test_host_change_outside_step_writes_is_rejected`).
+- A shell step that writes outside its declared `writes` fails the run when
+  the path is outside the plan's `allowed_paths`
+  (`tests/test_core.py::test_command_outside_write_is_detected`); for host
+  steps the stricter per-step boundary is enforced before apply
+  (`tests/test_adapter.py::test_host_change_outside_step_writes_is_rejected`).
 
 **The craft:** `allowed_paths` is the fence; step `writes` are the doors. An
 agent that opens the whole fence ("allowed_paths: [\"*\"]") to avoid thinking
@@ -90,8 +92,9 @@ each was once missing:
   builder conversation.
 - **A reviewer's changes are detected and the review is refused** — the
   runner fingerprints the tree before and after the host process; a change
-  raises and the verdict is discarded. The process is not sandboxed, so its
-  edits may remain until rollback
+  raises and the verdict is discarded. The process is not sandboxed and no
+  automatic restore runs, so its edits remain and need separate cleanup;
+  `aperio rollback` covers only the files in the run's backup manifest
   (`tests/test_adapter.py::test_reviewer_cannot_change_the_project`).
 - **A reviewer verdict must engage with the brief.** The goldfish reviewer
   sees only the brief, the changed files, and the evidence. Confirming
