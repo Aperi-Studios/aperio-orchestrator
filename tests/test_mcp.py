@@ -150,6 +150,50 @@ class McpLiveTests(unittest.TestCase):
         self.assertTrue(by_name["project.json"]["parseable"])
         self.assertEqual(by_name["project.json"]["schema"], 1)
 
+    def test_default_project_from_serve(self) -> None:
+        # A host review caught the CLI --project being ignored when a tool
+        # call omits its project argument.
+        import io
+
+        requests = "\n".join(
+            [
+                json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "aperio_status", "arguments": {}}}),
+            ]
+        )
+        stdin = io.StringIO(requests + "\n")
+        stdout = io.StringIO()
+        serve(stdin=stdin, stdout=stdout, default_project=str(self.root))
+        payload = json.loads(json.loads(stdout.getvalue().splitlines()[0])["result"]["content"][0]["text"])
+        self.assertEqual(Path(payload["project"]), self.root.resolve())
+
+    def test_malformed_requests_do_not_kill_the_server(self) -> None:
+        # A host review caught non-dict params and bad request shapes
+        # reaching the handlers. Each malformed line must yield a JSON-RPC
+        # error and the server must keep serving the next line.
+        import io
+
+        lines_in = "\n".join(
+            [
+                json.dumps({"jsonrpc": "1.0", "id": 1, "method": "initialize"}),
+                json.dumps({"id": 2, "method": "initialize"}),
+                json.dumps({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": "not-an-object"}),
+                json.dumps({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": 42}}),
+                json.dumps({"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "aperio_status", "arguments": "not-an-object"}}),
+                json.dumps({"jsonrpc": "2.0", "id": 6, "method": "initialize"}),
+            ]
+        )
+        stdin = io.StringIO(lines_in + "\n")
+        stdout = io.StringIO()
+        serve(stdin=stdin, stdout=stdout)
+        lines = stdout.getvalue().strip().splitlines()
+        self.assertEqual(len(lines), 6, "every malformed line gets an error; the last line still succeeds")
+        self.assertEqual(json.loads(lines[0])["error"]["code"], -32600)
+        self.assertEqual(json.loads(lines[1])["error"]["code"], -32600)
+        self.assertEqual(json.loads(lines[2])["error"]["code"], -32602)
+        self.assertEqual(json.loads(lines[3])["error"]["code"], -32602)
+        self.assertEqual(json.loads(lines[4])["error"]["code"], -32602)
+        self.assertIn("serverInfo", json.loads(lines[5])["result"])
+
     def test_serve_over_real_stdio_subprocess(self) -> None:
         requests = "\n".join(
             [

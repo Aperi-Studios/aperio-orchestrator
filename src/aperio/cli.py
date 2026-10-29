@@ -605,7 +605,7 @@ def cmd_tutorial(args: argparse.Namespace) -> int:
 
 def cmd_mcp(args: argparse.Namespace) -> int:
     """Serve Aperio's read-only advisors over JSON-RPC 2.0 on stdio."""
-    mcp_serve()
+    mcp_serve(default_project=args.project or "")
     return 0
 
 

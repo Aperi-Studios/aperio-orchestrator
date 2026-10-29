@@ -73,8 +73,14 @@ def _tool_doctor(args: dict[str, Any]) -> dict[str, Any]:
     return {"project": str(project.root), "checks": checks}
 
 
+# The default project, set from the CLI's --project at serve time: a tool
+# call that omits its project argument targets the server's own project
+# (a host review caught the CLI value being ignored).
+_DEFAULT_PROJECT: list[str] = []
+
+
 def _open(args: dict[str, Any], *, required: bool = True) -> Project | None:
-    root = str(args.get("project", "") or ".")
+    root = str(args.get("project", "") or (_DEFAULT_PROJECT[0] if _DEFAULT_PROJECT else "."))
     try:
         return Project.open(Path(root).expanduser())
     except StoreError:
@@ -165,6 +171,13 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
             error["data"] = data
         return {"jsonrpc": "2.0", "id": msg_id, "error": error}
 
+    if not isinstance(method, str) or not method:
+        return err(-32600, "method must be a non-empty string")
+    if request.get("jsonrpc") != "2.0":
+        return err(-32600, "jsonrpc must be '2.0'")
+    if msg_id is not None and (not isinstance(msg_id, (str, int, float)) or isinstance(msg_id, bool)):
+        return err(-32600, "id must be a string or number")
+
     if method == "initialize":
         return ok(
             {
@@ -180,13 +193,20 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
     if method == "tools/list":
         return ok({"tools": TOOLS})
     if method == "tools/call":
-        params = request.get("params", {})
+        params = request.get("params")
+        if not isinstance(params, dict):
+            return err(-32602, "tools/call params must be an object")
         name = params.get("name", "")
+        if not isinstance(name, str):
+            return err(-32602, "tool name must be a string")
         handler = _HANDLERS.get(name)
         if handler is None:
             return err(-32602, f"unknown tool: {name}")
+        arguments = params.get("arguments", {})
+        if not isinstance(arguments, dict):
+            return err(-32602, "tool arguments must be an object")
         try:
-            result = handler(params.get("arguments", {}))
+            result = handler(arguments)
         except (StoreError, ValueError) as exc:
             return ok(
                 {
@@ -204,8 +224,11 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
     return err(-32601, f"method not found: {method}")
 
 
-def serve(stdin: Any = None, stdout: Any = None) -> None:
+def serve(stdin: Any = None, stdout: Any = None, *, default_project: str = "") -> None:
     """Serve JSON-RPC 2.0 over stdio until EOF. One request per line."""
+    if default_project:
+        _DEFAULT_PROJECT.clear()
+        _DEFAULT_PROJECT.append(default_project)
     stdin = stdin if stdin is not None else sys.stdin
     stdout = stdout if stdout is not None else sys.stdout
     for line in stdin:
