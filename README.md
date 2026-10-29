@@ -164,7 +164,7 @@ Aperio is deliberately conservative:
 - a builder label cannot be the only reviewer label; this is not authenticated identity, so use `review --host` when a separate process matters;
 - a task is `done` only after acceptance checks pass, the verified artifact and plan still match, and matching review evidence is confirmed.
 
-The shell limitation is real. A command can change a file before Aperio detects it, and a write outside the scanned project is not detected at all. A plan can set `sandbox: true` to require `sandbox-exec` (macOS) or `bwrap` (Linux); if neither is available the run refuses rather than silently downgrading. Host steps remain outside this boundary.
+The shell limitation is real. A command can change a file before Aperio detects it, and a write outside the scanned project is not detected at all. A plan can set `sandbox: true` to require `sandbox-exec` (macOS) or `bwrap` (Linux); if neither is available the run refuses rather than silently downgrading. With the sandbox on, host dispatch runs inside its disposable workspace as the writable boundary — the host cannot reach the real project; Aperio applies the reviewed changes afterwards. Without the sandbox, host changes are detected after execution only.
 
 ## Documentation
 

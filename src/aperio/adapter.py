@@ -340,7 +340,12 @@ def run_host_step(project: Project, plan: Plan, step: Step, run_id: str) -> Host
         from .sandbox import SandboxError, wrap_argv
 
         try:
-            command, sandbox_record = wrap_argv(command, project.root, workspace)
+            # The writable boundary is the disposable WORKSPACE, not the
+            # project: a host that can write the whole project could modify
+            # real files directly, and the restore path only covers
+            # snapshotted files (a host review caught this). The runner
+            # applies reviewed changes into the real project afterwards.
+            command, sandbox_record = wrap_argv(command, workspace, workspace)
         except SandboxError as exc:
             raise HostError(f"step {step.id}: {exc}") from exc
     started = time.monotonic()

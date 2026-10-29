@@ -13,6 +13,7 @@ from aperio.adapter import HostError, _command_for, run_host_review
 from aperio.handoff import write_handoff
 from aperio.model import Acceptance, Approval, ModelError, Plan, Step, Task
 from aperio.runner import RunError, apply_plan, finish, review, verify
+from aperio.sandbox import kind as sandbox_kind
 from aperio.store import Project
 
 
@@ -367,6 +368,11 @@ class AdapterTests(unittest.TestCase):
         result = apply_plan(self.project, plan, actor="builder")
         self.assertEqual(victim.read_text(encoding="utf-8"), "untouched", "sandbox did not block the outside write")
         self.assertEqual(result["status"], "failed", result)
+        # Prove the host actually ran under active isolation (a host review
+        # caught this test passing vacuously when no backend exists).
+        record = result["steps"][0]["sandbox"]
+        self.assertTrue(record["active"], record)
+        self.assertEqual(record["kind"], sandbox_kind())
 
     def test_sandbox_without_backend_fails_closed_for_host_steps(self) -> None:
         # A sandboxed host step with no sandbox backend must be refused, not

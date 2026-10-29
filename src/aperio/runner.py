@@ -452,9 +452,9 @@ def apply_plan(project: Project, plan: Plan, actor: str = "agent") -> dict[str, 
         "violations": [],
         "snapshot": {"files": len(manifest), "limited_to": targets[:50]},
         "limits": (
-            "Shell steps requested the OS sandbox; host steps are not OS-sandboxed."
+            "Shell and host steps requested the OS sandbox; the host's writable boundary is its disposable workspace."
             if plan.sandbox
-            else "Shell steps are not OS-sandboxed. Writes outside the plan are detected after they happen."
+            else "Steps are not OS-sandboxed. Writes outside the plan are detected after they happen."
         ),
     }
     project.append_event("run.started", {"run_id": run_id, "task_id": plan.task_id, "actor": actor})

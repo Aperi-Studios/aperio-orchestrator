@@ -1049,7 +1049,7 @@ implemented merely by appearing in this table.
 
 | ID | Suggestion | Priority | Acceptance proof |
 |---|---|---|---|
-| Z-01 | Optional OS sandbox for `run`/`read` shell steps using `sandbox-exec` or `bubblewrap` when available; host steps are not sandboxed | P1 | sandboxed and fallback tests; evidence shows whether isolation was active |
+| Z-01 | Optional OS sandbox for `run`/`read` shell steps and host dispatch using `sandbox-exec` or `bubblewrap` when available; the host's writable boundary is its disposable workspace | P1 | sandboxed and fallback tests; evidence shows whether isolation was active |
 | Z-02 | Make `.git` and `.aperio` non-overridable protected paths, independent of project policy | P1 | plan/run attempts through those paths fail even if policy omits them |
 | Z-03 | Add a read-only step kind for exploration and audit work | P1 | schema, runner, and policy tests prove the step cannot write |
 | Z-04 | Add `type` and `version` to every mutable `.aperio` JSON document | P1 | migration/refusal tests; old and new documents read predictably |
