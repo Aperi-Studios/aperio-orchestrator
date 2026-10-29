@@ -121,7 +121,7 @@ Confirmation is earned only when the refutation attempts fail.
 | Readiness | preflight incomplete at `plan`; full record incomplete at `done`/`handoff` | deployment facts and threat model are owner decisions, not agent guesses |
 | Approval | phrase mismatch, plan edited, approver == actor | the phrase binds the plan hash; self-approval was incident F1 |
 | Writes | outside declared paths, protected paths, control state | Z-02, Z-P1, control-state tamper tests |
-| Review | builder as reviewer, tampering, missing evidence | F1, tamper tests |
+| Review | builder as reviewer, tampering, missing evidence | F2 (reviewer identity), tamper tests |
 
 ## 5. Working the loop with `aperio next`
 
