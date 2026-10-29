@@ -88,6 +88,10 @@ class ExplainTests(unittest.TestCase):
                 self.assertIn("--confirm 'I accept this risk'", info["text"])
             if topic == "todo":
                 self.assertIn("--confirm 'I accept this task'", info["text"])
+            if topic == "approval":
+                self.assertIn("--confirm 'I approve this plan'", info["text"])
+            if topic == "writes":
+                self.assertIn("--yes", info["text"])
 
     def test_read_only_across_all_topics(self) -> None:
         def snapshot() -> dict[str, bytes]:

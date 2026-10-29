@@ -29,7 +29,9 @@ def _project_line(status_text: str) -> str:
 def _discovery(project: Project | None) -> str:
     text = (
         "WHAT IT CHECKS\n"
-        "  `plan` refuses while discovery questions are unanswered. Answers are\n"
+        "  `plan` refuses while discovery questions are unanswered, while an\n"
+        "  answer is marked as an unresolved research request, and while a\n"
+        "  waiver has expired. Answers are\n"
         "  recorded on the owner's behalf, evidence references are optional, and only an\n"
         "  explicit dated owner waiver can skip a question.\n"
         "WHY IT EXISTS\n"

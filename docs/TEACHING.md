@@ -120,7 +120,7 @@ Confirmation is earned only when the refutation attempts fail.
 | Todo | ledger empty or ≠1 in progress at `plan`; linked todo unsettled at `run` | one slice at a time keeps review and rollback meaningful |
 | Readiness | preflight incomplete at `plan`; full record incomplete at `done`/`handoff` | deployment facts and threat model are owner decisions, not agent guesses |
 | Approval | phrase mismatch, plan edited, approver == actor | the phrase binds the plan hash; self-approval was incident F1 |
-| Writes | outside declared paths, protected paths, control state | Z-02, Z-P1, control-state tamper tests |
+| Writes | outside declared paths, protected paths, control state | Z-02; `tests/test_discovery.py::test_run_cannot_rewrite_discovery_control_state`; `tests/test_core.py::test_command_outside_write_is_detected` |
 | Review | builder as reviewer, tampering, missing evidence | F2 (reviewer identity), tamper tests |
 
 ## 5. Working the loop with `aperio next`
