@@ -180,9 +180,11 @@ def _approval(project: Project | None) -> str:
 def _writes(project: Project | None) -> str:
     text = (
         "WHAT IT CHECKS\n"
-        "  Every step declares the paths it may change. The runner snapshots\n"
-        "  declared targets before the run, diffs the scanned tree after, and\n"
-        "  fails the run on any change outside the declaration. The scan skips\n"
+        "  Every step declares the paths it may change; the union of those\n"
+        "  declarations is the run boundary. The runner snapshots the declared\n"
+        "  targets before the run, diffs the scanned tree after, and fails the\n"
+        "  run on any change outside that union (host steps are additionally\n"
+        "  held to their own step's writes). The scan skips\n"
         "  .git, .aperio, node_modules, virtualenvs, and cache dirs, and cannot\n"
         "  see writes outside the project (README, known limits). `.git` and\n"
         "  `.aperio` are protected and cannot be un-protected by project policy.\n"

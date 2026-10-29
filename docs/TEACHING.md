@@ -29,11 +29,12 @@ after approval invalidates the plan (Z-D binding tests; `tests/test_discovery.py
   steps the stricter per-step boundary is enforced before apply
   (`tests/test_adapter.py::test_host_change_outside_step_writes_is_rejected`).
 
-**The craft:** `allowed_paths` is the fence; step `writes` are the doors. An
-agent that opens the whole fence ("allowed_paths: [\"*\"]") to avoid thinking
-about doors is announcing that it does not know what its own commands do.
-Narrow both, and the run's post-check becomes a real detector instead of a
-formality.
+**The craft:** `allowed_paths` is the fence; the union of step `writes` is
+the set of doors (the post-run check is plan-wide; host steps are held to
+their own step's writes). An agent that opens the whole fence
+("allowed_paths: [\"*\"]") to avoid thinking about doors is announcing that
+it does not know what its own commands do. Narrow both, and the run's
+post-check becomes a real detector instead of a formality.
 
 ### 1.2 One step, one effect
 
