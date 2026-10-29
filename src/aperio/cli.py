@@ -114,6 +114,8 @@ from .toolchain import import_manifest as import_toolchain
 from .toolchain import install as install_tool
 from .toolchain import status as toolchain_status
 from .toolchain import validate_manifest as validate_toolchain
+from .tutorial import build as tutorial_build
+from .tutorial import check as tutorial_check
 
 
 def _project(args: argparse.Namespace) -> Project:
@@ -564,6 +566,29 @@ def cmd_explain(args: argparse.Namespace) -> int:
         print(json.dumps(info, indent=2, sort_keys=True))
     else:
         print(info["text"])
+    return 0
+
+
+def cmd_tutorial(args: argparse.Namespace) -> int:
+    if args.tutorial_command == "build":
+        result = tutorial_build(args.directory)
+        if args.json:
+            print(json.dumps(result, indent=2, sort_keys=True))
+        else:
+            print(f"Tutorial ready: {result['project']}")
+            print(f"  checklist: {result['checklist']}")
+            print("  fly the loop, then: aperio tutorial <dir> --check")
+        return 0
+    result = tutorial_check(args.directory)
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        print(f"Flight: {result['grade']} ({result['passed']}/{result['total']})")
+        for entry in result["steps"]:
+            mark = "x" if entry["done"] else " "
+            print(f"  [{mark}] {entry['step']}")
+            if not entry["done"]:
+                print(f"      hint: {entry['hint']}")
     return 0
 
 
@@ -1109,6 +1134,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("topic", choices=EXPLAIN_TOPICS)
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_explain)
+
+    p = sub.add_parser(
+        "tutorial",
+        help="build a practice fixture and fly the loop, or grade a flight (read-only check)",
+    )
+    tutorial_sub = p.add_subparsers(dest="tutorial_command", required=True)
+    tutorial_build_parser = tutorial_sub.add_parser("build", help="create the practice fixture")
+    tutorial_build_parser.add_argument("directory")
+    tutorial_build_parser.add_argument("--json", action="store_true")
+    tutorial_build_parser.set_defaults(func=cmd_tutorial)
+    tutorial_check_parser = tutorial_sub.add_parser("check", help="grade a flight from real state (read-only)")
+    tutorial_check_parser.add_argument("directory")
+    tutorial_check_parser.add_argument("--json", action="store_true")
+    tutorial_check_parser.set_defaults(func=cmd_tutorial)
 
     p = sub.add_parser("handoff", help="write the owner handoff")
     p.add_argument("task_id")
