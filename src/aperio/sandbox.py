@@ -117,13 +117,16 @@ def wrap_argv(
         "--ro-bind",
         str(root),
         str(root),
-        "--bind",
-        str(cwd),
-        str(cwd),
     ]
     for path in extra_visible or []:
         argv += ["--ro-bind", str(path), str(path)]
+    # The workspace bind goes LAST: bwrap's later, more specific binds win,
+    # and the workspace must be writable even though it sits inside the
+    # read-only project root bind.
     argv += [
+        "--bind",
+        str(cwd),
+        str(cwd),
         "--chdir",
         str(cwd),
         "--unshare-net",
