@@ -8,8 +8,8 @@
 
 | Item | Result | Evidence |
 |---|---|---|
-| Core unit tests | 53 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
-| Adapter tests | 22 passed | same command; `tests/test_adapter.py` |
+| Core unit tests | 55 passed | `PYTHONPATH=src python3 -m unittest discover -s tests -v` |
+| Adapter tests | 23 passed | same command; `tests/test_adapter.py` |
 | Drift tests | 5 passed | same command; `tests/test_drift.py` |
 | Mesh tests | 5 passed | same command; `tests/test_mesh.py` |
 | Mediator tests | 6 passed | same command; `tests/test_mediator.py` |
@@ -31,7 +31,7 @@
 | Tutorial tests | 9 passed | same command; `tests/test_tutorial.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
-| Total test suite | 304 passed | same command |
+| Total test suite | 307 passed | same command |
 | CLI end-to-end | passed | `tests/test_cli.py::test_full_cli_flow` |
 | Discovery core | 10 universal + 10 conditional questions persist; evidence, research requests, explicit owner waivers with review dates, and readiness survive restart | `tests/test_discovery.py`; `aperio discover status` |
 | Discovery plan gate | a valid plan is refused until discovery is ready; an explicit owner waiver allows it with a warning; a plan is invalidated if discovery changes before approval or run; plan body and discovery digest are checked again at run | `tests/test_cli.py::test_plan_without_discovery_is_refused`; `tests/test_discovery.py::test_plan_is_invalidated_by_discovery_change`, `test_plan_body_tamper_after_approval_is_refused` |
@@ -106,6 +106,7 @@
 | Independent host review of the next-action advisor | fresh-context Codex review confirmed after 15 refuted rounds; the loop drove 13 fixes (binary name across 21 commands, gate order, stale/missing bindings, preflight vs full readiness, handoff completion, task-selection mismatches, shell-safe paths, placeholder quoting, legacy-plan discovery exemption) | review `review-a8def7727b`, task `task-next1` in the temporary goldfish project; commits `3a50af7` through `751de0c` |
 | Independent host review of the tutorial slice | fresh-context Codex review `review-` (task-tut1): static inspection found no defect; the reviewer's read-only sandbox could not create temp dirs, so runtime re-verification was environment-blocked — the recorded acceptance evidence (executed at verify time) covers the full flight, the wrong-phrase and self-review refusals, and the tutorial test suite | task `task-tut1` in the temporary goldfish project; commits `15c72a0` through `a5f77e0` |
 | Tutorial flight simulator | `aperio tutorial build <dir>` creates a practice fixture with every plan gate pre-satisfied (discovery, learning proof, todo started, readiness) plus a starter plan and CHECKLIST; the learner flies plan→approve→run→verify→review→done→handoff; `aperio tutorial check <dir>` grades the flight from real state (read-only: a test asserts no writes) | `src/aperio/tutorial.py`; `src/aperio/cli.py::cmd_tutorial`; `tests/test_tutorial.py` |
+| Skill-format adoption (audit of public agent skills) | frontmatter upgraded per the agent-skills spec and Anthropic's skill-creator guidance (pushy trigger-rich description, compatibility, metadata, license); TEACHING.md ships inside the skill as references/ (both installers copy it); claim→evidence table and rationalization tables added to TEACHING.md from this repo's own review-loop history; the Floor (new suppression/stub/skip markers in changed files fail verification); review brief is EXTRACT-without-CLAIM (builder request narrative removed) | `skill/aperio/SKILL.md`; `skill/aperio/references/TEACHING.md`; `docs/TEACHING.md`; `src/aperio/runner.py::_floor_violations`; `src/aperio/adapter.py::_review_brief`; `tests/test_core.py::test_floor_*`; `tests/test_adapter.py::test_review_brief_omits_the_builder_claim` |
 | Independent host review of host-step sandboxing | fresh-context Codex review confirmed after 2 refuted rounds; the loop drove the workspace-scoped write boundary (the whole project was writable to the sandboxed host), the ordered bwrap recipe (dedicated tmp, read-only project, writable workspace last), and the visibility binds that keep the host binary and the project tree reachable under the tmp shadow | review `review-e9a447121e`, task `task-sbx1` in the temporary goldfish project; commits `a858538` through `71fdee3` |
 | Independent host review of the explainer slice | fresh-context Codex review confirmed after 17 refuted rounds; the loop drove 20+ verified fixes across explain/TEACHING and two shipped-code bugs (plan sandbox field dropped by cmd_plan; host glob validation crossing `/`) | review `review-bc9c259b4a`, task `task-explain2` in the temporary goldfish project; commits `a56dd37` through `7cadf8e` |
 | Gate explainer | `aperio explain <topic>` explains discovery, learning, todo, readiness, approval, writes, and review: what each checks, the incident that motivated it, and live project status; read-only (a test asserts no state change); every printed command uses the real binary name | `src/aperio/explain.py`; `src/aperio/cli.py::cmd_explain`; `tests/test_explain.py`; craft page `docs/TEACHING.md` |
@@ -129,7 +130,7 @@
 
 ## Known limits
 
-- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 304-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
+- Independent Claude and adversarial subagent audits found and narrowed the boundary issues; the remaining limits are documented in `SECURITY.md`. The 307-test suite is not a whole-repository audit. Reviewer identity is a label, not a cryptographic identity. Discovery answers are recorded by the agent on the owner's behalf; owner identity is not cryptographically verified. See `docs/AUDIT-CODEX-20261026.md` and `docs/AUDIT-CLAUDE-20261026.md`.
 - Host steps are OS-sandboxed only when a plan sets `sandbox: true` (same boundary as shell/read steps); otherwise changes are detected after execution. Sandboxed host dispatch is proven with the fake host; a live host under the sandbox is not yet recorded.
 - `review --host` supports only the reviewer adapters (claude, codex, dsh, goose); opencode, kilocode, cline, and agy are dispatch-only adapters for `run`.
 - URL inspection rejects private and credential URLs and revalidates redirects, but DNS rebinding during host resolution is not fully prevented.

@@ -425,6 +425,55 @@ class CoreTests(unittest.TestCase):
             result["violations"],
         )
 
+    def test_floor_violation_fails_verification(self) -> None:
+        # The Floor: a changed file that newly adds a suppression comment or
+        # a stub fails verification even when every acceptance check passes
+        # (adopted from the constraint-driven-development skill's cheat-move
+        # taxonomy).
+        task, plan = make_plan(
+            self.project,
+            steps=[
+                Step(
+                    id="sneak",
+                    kind="write",
+                    path="mod.py",
+                    content="def f():\n    return 1  # noqa\n",
+                )
+            ],
+            allowed=["mod.py"],
+            acceptance=[Acceptance(id="check", command="test -f mod.py")],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        verified = verify(self.project, task.id)
+        self.assertEqual(verified["status"], "failed", verified)
+        self.assertTrue(
+            any("floor" in v for v in verified.get("floor_violations", [])),
+            verified,
+        )
+
+    def test_floor_ignores_pre_existing_markers(self) -> None:
+        # The Floor fires only on NEWLY added markers: a file that already
+        # carried one before the run is not a violation of this change.
+        (self.root / "old.py").write_text("def g():\n    return 1  # noqa\n", encoding="utf-8")
+        task, plan = make_plan(
+            self.project,
+            steps=[
+                Step(
+                    id="touch",
+                    kind="write",
+                    path="old.py",
+                    content="def g():\n    return 1  # noqa\n# touched\n",
+                )
+            ],
+            allowed=["old.py"],
+            acceptance=[Acceptance(id="check", command="test -f old.py")],
+        )
+        result = apply_plan(self.project, plan)
+        self.assertEqual(result["status"], "applied", result)
+        verified = verify(self.project, task.id)
+        self.assertEqual(verified["status"], "passed", verified)
+
     def test_read_step_records_output_without_changes(self) -> None:
         task, plan = make_plan(
             self.project,

@@ -485,7 +485,6 @@ def _parse_review(text: str) -> dict[str, Any]:
 
 
 def _review_brief(project: Project, task_id: str) -> tuple[Path, list[str]]:
-    from .handoff import build_handoff
 
     task = project.get_task(task_id)
     if not task.plan_id:
@@ -526,7 +525,11 @@ def _review_brief(project: Project, task_id: str) -> tuple[Path, list[str]]:
         "You are a Goldfish reviewer. You have no builder conversation.",
         "Read this brief and the files under `tree/`. Do not edit anything.",
         "",
-        f"## Task\n\n{task.request}",
+        # EXTRACT-without-CLAIM (doubt-driven-development): the reviewer sees
+        # the artifact and the contract — the plan's steps, writes, and
+        # acceptance — but NOT the builder's own request narrative, which
+        # would bias the review toward the builder's conclusion.
+        "## Contract\n\nJudge only what is written below and in `tree/`: the declared steps, the allowed paths, and the acceptance checks. The builder's request narrative is intentionally not included.\n",
         "",
         f"## Plan\n\n{plan.title}\n\nAllowed paths: {', '.join(plan.allowed_paths)}",
         "",
@@ -561,10 +564,6 @@ def _review_brief(project: Project, task_id: str) -> tuple[Path, list[str]]:
             "```",
             "",
             "Use `confirmed` only if the delivered artifact satisfies the stated request and the acceptance evidence is credible. Use `refuted` if it does not. Do not invent findings. Do not edit files. Do not use the network.",
-            "",
-            "## Handoff summary",
-            "",
-            build_handoff(project, task_id),
         ]
     )
     (workspace / "BRIEF.md").write_text("\n".join(brief), encoding="utf-8")

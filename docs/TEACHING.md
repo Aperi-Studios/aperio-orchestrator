@@ -133,7 +133,40 @@ review rounds (`review-a8def7727b`). When a refusal surprises you, run
 `aperio next` before guessing: the refusal text and the advisor name the same
 gate.
 
-## 6. Where the incidents live
+## 6. Evidence tables: what claim requires what proof
+
+Every gate's acceptance is a claim. A claim is only as good as its freshest
+evidence — a previous run, a screenshot from yesterday, or "should pass" is
+not evidence. This is the claim→evidence table for the loop; the named tests
+are the proofs that the enforcement exists.
+
+| Claim | Required fresh evidence | Enforced by |
+|---|---|---|
+| "The plan is approved" | the exact phrase `--confirm "I approve this plan"` + a SHA-256 of the plan body recorded at approval | `cli.py::cmd_approve`; tamper test |
+| "The run stayed in bounds" | the post-run diff against the union of declared writes, on the scanned tree | `runner.apply_plan`; `test_command_outside_write_is_detected` |
+| "The acceptance checks pass" | fresh check executions recorded with exit codes in the verify evidence — never a prior run | `runner.verify`; `test_noop_acceptance_is_refused` |
+| "An independent reviewer confirmed" | review evidence from a reviewer who is not the builder, matched to the current verification | `policy.assert_reviewer`; `test_reviewer_cannot_change_the_project` |
+| "The host stayed in its workspace" | the sandbox record + the workspace diff, against the step's writes | `adapter.run_host_step`; sandbox tests |
+| "The handoff describes reality" | the handoff built from the recorded evidence, written after `done` | `handoff.write_handoff` |
+
+## 7. Rationalization tables: the excuses, pre-rebutted
+
+These are not hypothetical. Each row is an excuse class observed in this
+repository's own review loops and audits (F1–F5, Z-D1–Z-D7, and the host
+review rounds recorded in `docs/STATUS.md`).
+
+| Excuse | Rebuttal |
+|---|---|
+| "The check passed last time; no need to re-run." | Verification evidence must be fresh. A prior run proves a prior state, not this one. |
+| "It's just a small change; skipping review is fine." | Review is not sized by the diff. F2 existed because one process could self-assert review. |
+| "I'm confident the fix works; the test would be redundant." | A test that fails without the fix and passes with it is the proof. Confidence is not evidence. |
+| "The plan changed slightly after approval; it's basically the same." | The approval binds the plan's hash. Any edit invalidates it — re-plan and re-approve. |
+| "The acceptance check is technically passing, that's what matters." | A check that passes while proving nothing (no-op, presence-only) is refused at plan time (F4). |
+| "I'll widen allowed_paths just in case." | The fence exists to make the post-run check a real detector. Widen only to what the steps need. |
+| "The reviewer is nitpicking; these findings are noise." | Findings are classified, not dismissed: contract misread, valid+actionable, valid trade-off (documented), noise. The first two require action. |
+| "Skipping the sandbox for this one host run is pragmatic." | The sandbox is opt-in but fail-closed: requested and unavailable means the run fails. Pragmatism is a plan-level decision, made before approval. |
+
+## 8. Where the incidents live
 
 - `docs/PRD.md` — the Z-D / Z-P defect and proposal ledger with dispositions.
 - `docs/AUDIT-CLAUDE-20261026.md`, `docs/AUDIT-CODEX-20261026.md` — the

@@ -1,6 +1,19 @@
 ---
 name: aperio
-description: Use when a request needs Aperio's bounded project loop: record the ask, plan, approve, apply, verify, review, and hand off with evidence.
+description: >-
+  Run any build, fix, or change through Aperio's bounded project loop: record
+  the ask, interview discovery, plan, approve with the exact phrase, apply
+  within declared paths, verify with acceptance checks, require an
+  independent review, and hand off with evidence. Use this whenever the user
+  asks to build, create, change, fix, redesign, extend, or hand off a
+  project, website, app, or tool — even if they don't mention process,
+  planning, approval, or review.
+compatibility: Requires the aperio CLI installed and on PATH (see install.sh)
+metadata:
+  version: "2.0"
+  author: Aperio Studios
+  spec: agent-skills
+license: MIT
 ---
 
 # Aperio v2
@@ -279,7 +292,7 @@ aperio mediate <task-id>
 aperio hosts
 ```
 
-The craft pages live in `docs/TEACHING.md`: writing plans, writing acceptance checks that cannot lie, and reviewing honestly — each rule anchored to a real incident in this repository.
+The craft pages live in this skill's `references/TEACHING.md` (also at `docs/TEACHING.md` in the repository): writing plans, writing acceptance checks that cannot lie, and reviewing honestly — each rule anchored to a real incident in this repository.
 
 When unsure what to do next — after a refusal, on resume, or on first contact with an existing project — run `aperio next` (or `aperio next --json`). It reads the state and names the one legal action, the exact command, and the gate that requires it. It never performs the action and never bypasses a gate.
 

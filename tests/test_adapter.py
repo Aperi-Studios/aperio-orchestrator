@@ -403,6 +403,28 @@ class AdapterTests(unittest.TestCase):
         )
         self.assertEqual(self.project.get_task(plan.task_id).status, "failed")
 
+    def test_review_brief_omits_the_builder_claim(self) -> None:
+        # EXTRACT-without-CLAIM (doubt-driven-development): the reviewer sees
+        # the artifact and the contract, not the builder's request narrative
+        # — passing the builder's conclusion biases the review toward
+        # agreement. Build a real brief and assert the request text and the
+        # handoff-style summary are absent while the contract is present.
+        _task, plan = make_plan(
+            self.project,
+            prompt="Create the page.",
+            writes=["site/index.html"],
+        )
+        apply_plan(self.project, plan, actor="builder")
+        verify(self.project, plan.task_id)
+        review(self.project, plan.task_id, reviewer="qa", verdict="confirmed")
+        from aperio.adapter import _review_brief
+
+        workspace, _included = _review_brief(self.project, plan.task_id)
+        brief = (workspace / "BRIEF.md").read_text(encoding="utf-8")
+        self.assertNotIn("Use a host to write one file", brief, "builder claim leaked into the brief")
+        self.assertIn("## Contract", brief)
+        self.assertIn("Allowed paths: site/", brief)
+
     def test_host_symlink_is_rejected(self) -> None:
         self.host.write_text(
             "#!/usr/bin/env python3\n"

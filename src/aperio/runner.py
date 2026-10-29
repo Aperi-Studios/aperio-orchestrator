@@ -616,6 +616,63 @@ def resume_plan(project: Project, task_id: str, actor: str = "agent") -> dict[st
     return apply_plan(project, plan, actor=actor)
 
 
+# The Floor: a mechanically checkable minimum bar for changed files,
+# adapted from the constraint-driven-development skill (public domain of
+# ideas; the taxonomy of cheat moves is the useful part). A changed file
+# that newly contains a suppression comment, a stub throw, or a skipped
+# test fails verification even when every acceptance check passes.
+FLOOR_PATTERNS = [
+    ("suppression", "# noqa",),
+    ("suppression", "# type: ignore"),
+    ("suppression", "// eslint-disable"),
+    ("suppression", "@ts-ignore"),
+    ("stub", "raise NotImplementedError"),
+    ("stub", "not implemented"),
+    ("stub", "pass  # TODO"),
+    ("skipped-test", "@unittest.skip"),
+    ("skipped-test", "@pytest.mark.skip"),
+    ("skipped-test", "it.skip("),
+    ("skipped-test", "test.skip("),
+]
+
+
+def _floor_violations(
+    project: Project,
+    changed: list[str],
+    backup_root: Path | None,
+) -> list[str]:
+    """Scan changed files for newly added Floor markers.
+
+    A marker counts as newly added when the pre-run backup copy of the file
+    (under backup_root) does not contain it. Files with no backup copy are
+    new files, so any marker they carry is new.
+    """
+    findings: list[str] = []
+    for rel in changed:
+        try:
+            path = project.resolve_project_path(rel)
+        except (PathSafetyError, OSError):
+            continue
+        if not path.is_file() or path.is_symlink():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        old_text = ""
+        if backup_root is not None:
+            backup_copy = backup_root / rel
+            if backup_copy.is_file():
+                try:
+                    old_text = backup_copy.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    old_text = ""
+        for kind, needle in FLOOR_PATTERNS:
+            if needle in text and needle not in old_text:
+                findings.append(f"floor: {rel} adds {kind} ({needle.strip()})")
+    return findings
+
+
 def verify(project: Project, task_id: str) -> dict[str, Any]:
     task = project.get_task(task_id)
     if not task.plan_id:
@@ -693,6 +750,26 @@ def verify(project: Project, task_id: str) -> dict[str, Any]:
     if _hash_control_state(project) != control_before:
         all_ok = False
         evidence["state_mutated"] = True
+    # The Floor scans the files the RUN changed (from the run's recorded
+    # changed_files), not verify-time mutation: verify's own before-hash
+    # snapshot starts after the run already wrote, so its mutation set is
+    # empty for run-made changes.
+    backup_root = (
+        project.state / "backups" / task.run_id / "files" if task.run_id else None
+    )
+    run_changed: list[str] = []
+    if task.run_id:
+        run_records = [
+            row
+            for row in project.evidence(task_id)
+            if row.get("run_id") == task.run_id
+        ]
+        if run_records:
+            run_changed = list(run_records[-1].get("changed_files", []))
+    floor = _floor_violations(project, run_changed, backup_root)
+    if floor:
+        all_ok = False
+        evidence["floor_violations"] = floor
     evidence["artifact_digest"] = _artifact_digest(project)
     evidence["plan_digest"] = _plan_digest(plan)
     evidence["status"] = "passed" if all_ok else "failed"

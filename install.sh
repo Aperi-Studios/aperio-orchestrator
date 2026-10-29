@@ -176,10 +176,12 @@ if [ "$UNINSTALL" -eq 1 ]; then
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$SKILL_DIR/$MARKER" ]; then
     run rm -f "$SKILL_DIR/SKILL.md" "$SKILL_DIR/VERSION" "$SKILL_DIR/$MARKER"
+    run rm -rf "$SKILL_DIR/references"
     if [ "$DRY_RUN" -eq 0 ]; then rmdir "$SKILL_DIR" 2>/dev/null || true; echo "removed Aperio files in $SKILL_DIR"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$CODEX_SKILL_DIR/$MARKER" ]; then
     run rm -f "$CODEX_SKILL_DIR/SKILL.md" "$CODEX_SKILL_DIR/VERSION" "$CODEX_SKILL_DIR/$MARKER"
+    run rm -rf "$CODEX_SKILL_DIR/references"
     if [ "$DRY_RUN" -eq 0 ]; then rmdir "$CODEX_SKILL_DIR" 2>/dev/null || true; echo "removed Aperio files in $CODEX_SKILL_DIR"; fi
   fi
   if [ "$DO_SKILL" -eq 1 ] && [ -f "$COMMAND_FILE" ] && grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
@@ -220,6 +222,10 @@ fi
 if [ "$DO_SKILL" -eq 1 ]; then
   run mkdir -p "$SKILL_DIR"
   run cp "$ROOT/skill/aperio/SKILL.md" "$SKILL_DIR/SKILL.md"
+  if [ -d "$ROOT/skill/aperio/references" ]; then
+    run mkdir -p "$SKILL_DIR/references"
+    run cp "$ROOT"/skill/aperio/references/*.md "$SKILL_DIR/references/"
+  fi
   write_text "$SKILL_DIR/VERSION" "$VERSION"
   write_text "$SKILL_DIR/$MARKER" "$MARKER"
   if [ -f "$COMMAND_FILE" ] && grep -q "Aperio v2" "$COMMAND_FILE" 2>/dev/null; then
@@ -230,6 +236,10 @@ if [ "$DO_SKILL" -eq 1 ]; then
     CODEX_DIR="$HOME/.codex/skills/aperio"
     run mkdir -p "$CODEX_DIR"
     run cp "$ROOT/skill/aperio/SKILL.md" "$CODEX_DIR/SKILL.md"
+    if [ -d "$ROOT/skill/aperio/references" ]; then
+      run mkdir -p "$CODEX_DIR/references"
+      run cp "$ROOT"/skill/aperio/references/*.md "$CODEX_DIR/references/"
+    fi
     write_text "$CODEX_DIR/VERSION" "$VERSION"
     write_text "$CODEX_DIR/$MARKER" "$MARKER"
   fi

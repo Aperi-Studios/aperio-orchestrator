@@ -127,7 +127,7 @@ if ($Uninstall) {
         if (-not $DryRun) { Write-Host "removed $Launcher" }
     }
     if (-not $NoSkill -and (Test-Path (Join-Path $SkillDir $Marker))) {
-        Invoke-Step { Remove-Item -Force (Join-Path $SkillDir "SKILL.md"), (Join-Path $SkillDir "VERSION"), (Join-Path $SkillDir $Marker) -ErrorAction SilentlyContinue } "remove Aperio files in $SkillDir"
+        Invoke-Step { Remove-Item -Force (Join-Path $SkillDir "SKILL.md"), (Join-Path $SkillDir "VERSION"), (Join-Path $SkillDir $Marker) -ErrorAction SilentlyContinue; Remove-Item -Recurse -Force (Join-Path $SkillDir "references") -ErrorAction SilentlyContinue } "remove Aperio files in $SkillDir"
         if (-not $DryRun) { if (Test-Path $SkillDir) { Remove-Item $SkillDir -Force -ErrorAction SilentlyContinue }; Write-Host "removed Aperio files in $SkillDir" }
     }
     if (-not $NoSkill -and (Test-Path $CommandFile) -and (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
@@ -190,6 +190,9 @@ Write-Text $Cmd $cmdText
 if (-not $NoSkill) {
     Invoke-Step { New-Item -ItemType Directory -Force -Path $SkillDir | Out-Null } "create $SkillDir"
     Invoke-Step { Copy-Item -Force (Join-Path $Root "skill/aperio/SKILL.md") (Join-Path $SkillDir "SKILL.md") } "copy skill to $SkillDir"
+    if (Test-Path (Join-Path $Root "skill/aperio/references")) {
+        Invoke-Step { New-Item -ItemType Directory -Force (Join-Path $SkillDir "references") | Out-Null; Copy-Item -Force (Join-Path $Root "skill/aperio/references/*.md") (Join-Path $SkillDir "references") } "copy skill references to $SkillDir"
+    }
     Write-Text (Join-Path $SkillDir "VERSION") $Version
     Write-Text (Join-Path $SkillDir $Marker) $Marker
     if ((Test-Path $CommandFile) -and (Select-String -Path $CommandFile -Pattern "Aperio v2" -Quiet)) {
