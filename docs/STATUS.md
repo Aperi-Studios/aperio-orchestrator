@@ -29,6 +29,8 @@
 | Next advisor tests | 35 passed | same command; `tests/test_next.py` |
 | Explainer tests | 12 passed | same command; `tests/test_explain.py` |
 | Tutorial tests | 9 passed | same command; `tests/test_tutorial.py` |
+| Lessons ledger | `apero lesson add/list/remove` records what went wrong bound to a task and plain project paths (globs, absolute, and traversal refused); `plan` surfaces lessons whose paths intersect the plan's allowed paths as warnings — teach, never block; lessons live in schema-gated `.aperio/lessons.json` with a 500-entry bound | `src/aperio/lessons.py`; `src/aperio/cli.py::cmd_lesson`; `tests/test_lessons.py` |
+| Independent host review of the lessons ledger | fresh-context Codex review confirmed first round, zero findings; the acceptance evidence ran the lessons suite plus live round-trip and plan-surfacing flows | review `review-ad5fbf52f3`, task `task-les1` in the temporary goldfish project |
 | Lessons tests | 8 passed | same command; `tests/test_lessons.py` |
 | Installer tests | 23 passed | same command; `tests/test_installer.py` |
 | PowerShell installer | install, launcher version, uninstall, check, update with backup, and rollback pass under `pwsh` 7.6.7 on macOS | `tests/test_installer.py::test_powershell_installer`, `test_powershell_update_check_and_rollback` |
