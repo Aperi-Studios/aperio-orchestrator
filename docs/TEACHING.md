@@ -173,7 +173,15 @@ define before code, verify before audit, audit without the builder's claim,
 a bounded fix loop, and a ship gate with a rollback plan. The Aperio-specific
 contract is in `docs/AGENTS.md` ("Ship-ready workflow").
 
-## 9. Where the incidents live
+## 9. Motion and video work
+
+When the owner asks for a product video, motion graphic, or animated demo,
+follow the motion doctrine in `docs/MOTION.md`: the shot sheet is the plan
+(approved before any animation code), the determinism contract makes the
+output reviewable frame-by-frame, and lint/validate gates stand in for the
+acceptance checks.
+
+## 10. Where the incidents live
 
 - `docs/PRD.md` — the Z-D / Z-P defect and proposal ledger with dispositions.
 - `docs/AUDIT-CLAUDE-20261026.md`, `docs/AUDIT-CODEX-20261026.md` — the
