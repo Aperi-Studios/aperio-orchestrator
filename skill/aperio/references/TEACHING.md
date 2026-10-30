@@ -166,7 +166,14 @@ review rounds recorded in `docs/STATUS.md`).
 | "The reviewer is nitpicking; these findings are noise." | Findings are classified, not dismissed: contract misread, valid+actionable, valid trade-off (documented), noise. The first two require action. |
 | "Skipping the sandbox for this one host run is pragmatic." | The sandbox is opt-in but fail-closed: requested and unavailable means the run fails. Pragmatism is a plan-level decision, made before approval. |
 
-## 8. Where the incidents live
+## 8. Multi-agent builds
+
+When several agents build together, the roles run as a gated pipeline —
+define before code, verify before audit, audit without the builder's claim,
+a bounded fix loop, and a ship gate with a rollback plan. The Aperio-specific
+contract is in `docs/AGENTS.md` ("Ship-ready workflow").
+
+## 9. Where the incidents live
 
 - `docs/PRD.md` — the Z-D / Z-P defect and proposal ledger with dispositions.
 - `docs/AUDIT-CLAUDE-20261026.md`, `docs/AUDIT-CODEX-20261026.md` — the

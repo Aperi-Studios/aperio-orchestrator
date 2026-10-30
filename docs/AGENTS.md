@@ -55,6 +55,38 @@ The mediator re-runs the baseline and compares it with the handover. A mismatch 
 9. Leave the next unblocked task named.
 10. Report what is not verified, not only what passed.
 
+## Ship-ready workflow (for multi-agent builds)
+
+For any multi-agent build — a feature, a fix, a project — run the roles as a
+gated pipeline, not a roster. The full doctrine lives in the maintainer's
+`ship-ready-workflow` skill; the Aperio-specific contract is:
+
+1. **Define before code.** A recorded ask (owner's words, non-goals
+   included), a plan with slices worth a fresh reviewer's gate (≤5 files,
+   ≤3 acceptance criteria each), boundaries in Always / Ask First / Never
+   tiers, and the owner's approval — bound to the plan's content. No code
+   exists before approval.
+2. **Verify before audit.** Acceptance checks run fresh with recorded exit
+   codes; a no-op check is refused; a newly added suppression comment, stub,
+   or skipped test in a changed file fails verification (the Floor). Never
+   audit code that does not run.
+3. **Audit sees the contract, not the claim.** The reviewer gets the
+   artifact and the requirements — never the builder's narrative of the
+   work. Findings carry severity and are classified: contract misread,
+   valid+actionable, valid trade-off (documented), noise.
+4. **Security review runs in parallel**, and every candidate finding gets a
+   refuting pass before it is reported.
+5. **The fix loop is bounded.** Three audit→fix→re-audit cycles, each fix
+   with a test that fails without it. Persistent findings after three cycles
+   mean the slice or the spec is broken: decompose or escalate.
+6. **Ship is a gate, not an act.** Go/no-go criteria and a rollback plan
+   with time targets are written before deploy; the owner gives final
+   approval. Aperio does not deploy — the Shipping role prepares everything
+   to that line and records the owner's decision.
+
+Failures feed the lessons ledger (`apero lesson add`): a failure that does
+not change the next task's gates was wasted.
+
 ## Handover checklist
 
 - [ ] Branch and HEAD re-measured.
