@@ -87,6 +87,7 @@ from .model import (
 )
 from .nextstep import next_action
 from .policy import PolicyError
+from .promo import PromoError, build_promo
 from .readiness import ReadinessError, import_readiness, validate_preflight
 from .readiness import format_status as format_readiness
 from .readiness import status as readiness_status
@@ -600,6 +601,30 @@ def cmd_tutorial(args: argparse.Namespace) -> int:
             print(f"  [{mark}] {entry['step']}")
             if not entry["done"]:
                 print(f"      hint: {entry['hint']}")
+    return 0
+
+
+def cmd_promo(args: argparse.Namespace) -> int:
+    project = _project(args)
+    try:
+        result = build_promo(
+            project,
+            args.task_id,
+            duration=args.duration,
+            vertical=args.vertical,
+        )
+    except PromoError as exc:
+        print(f"apero: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        sheet = result["sheet"]
+        print(f"Promo draft for task {args.task_id}")
+        print(f"  {sheet['duration_s']}s @ {sheet['fps']}fps  {sheet['width']}x{sheet['height']}")
+        for scene in sheet["scenes"]:
+            print(f"  {scene['start']:>6.2f}s  {scene['name']:<10} {scene.get('text', '')}")
+        print("  next: approve and run the generated promo plan (see --json)")
     return 0
 
 
@@ -1210,6 +1235,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="serve Aperio's read-only advisors over JSON-RPC 2.0 on stdio (MCP)",
     )
     p.set_defaults(func=cmd_mcp)
+
+    p = sub.add_parser(
+        "promo",
+        help="draft a launch-video shot sheet and promo plan from a completed task",
+    )
+    p.add_argument("task_id")
+    p.add_argument("--duration", type=int, default=12, help="seconds, 8..30 (default 12)")
+    p.add_argument("--vertical", action="store_true", help="1080x1920 instead of 1920x1080")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_promo)
 
     p = sub.add_parser("handoff", help="write the owner handoff")
     p.add_argument("task_id")
