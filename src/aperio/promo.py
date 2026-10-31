@@ -37,13 +37,15 @@ PALETTE = {
 }
 
 
-def _changed_files(project: Project, task_id: str) -> list[str]:
-    changed: list[str] = []
-    for row in project.evidence_readonly(task_id):
-        rows = row.get("changed_files")
-        if rows:
-            changed.extend(rows)
-    return sorted(set(changed))
+def _changed_files(project: Project, task: Any) -> list[str]:
+    """Files changed by the task's CURRENT run — not earlier runs (a host
+    review caught the union across records citing stale files)."""
+    if not task.run_id:
+        return []
+    for row in project.evidence_readonly(task.id):
+        if row.get("run_id") == task.run_id:
+            return sorted(set(row.get("changed_files") or []))
+    return []
 
 
 def _acceptance_summary(current: dict[str, Any]) -> list[dict[str, Any]]:
@@ -145,6 +147,31 @@ def build_promo(
     review = task.review
     if review is None or review.verdict != "confirmed":
         raise PromoError("task has no confirmed review; the promo cannot cite one")
+    # The cited review evidence must exist, match the task review, and carry
+    # a valid signature — the same bar finish() applies (a host review
+    # caught generation citing unvalidated review records).
+    review_rows = [
+        row
+        for row in project.evidence_readonly(task_id)
+        if row.get("review_id")
+        and str(row.get("reviewer", "")).strip().lower() == review.reviewer.strip().lower()
+        and str(row.get("verdict", "")).lower() == review.verdict
+    ]
+    if not review_rows:
+        raise PromoError("the confirmed review's evidence record is missing")
+    review_evidence = review_rows[-1]
+    signed_core = {
+        k: review_evidence[k]
+        for k in ("review_id", "task_id", "reviewer", "verdict", "notes", "at")
+        if k in review_evidence
+    }
+    if not project.verify_review_signature(
+        signed_core, review_evidence.get("signature", "")
+    ):
+        raise PromoError(
+            "the recorded review verdict has no valid signature for this project; "
+            "re-record the review through aperio review"
+        )
 
     # The promo cites the CURRENT verification, validated for staleness:
     # a stale or failed record must never be presented as proof (a host
@@ -158,7 +185,7 @@ def build_promo(
             f"the task's verification is not current — re-verify before generating "
             f"the promo: {exc}"
         ) from exc
-    changed = _changed_files(project, task_id)
+    changed = _changed_files(project, task)
     checks = _acceptance_summary(current)
 
     width, height = (1080, 1920) if vertical else (1920, 1080)
@@ -183,7 +210,11 @@ def build_promo(
             "task_id": task.id,
             "plan_id": plan.id,
             "verify_id": current.get("check_id"),
-            "review": {"reviewer": review.reviewer, "verdict": review.verdict},
+            "review": {
+                "review_id": review_evidence.get("review_id"),
+                "reviewer": review.reviewer,
+                "verdict": review.verdict,
+            },
             "changed_files": changed,
             "acceptance_checks": checks,
         },
@@ -252,7 +283,7 @@ def _acceptance(cid: str, command: str) -> dict[str, Any]:
 
 
 NO_RANDOM_COMMAND = (
-    "! grep -rnE 'Math\\.random|Date\\.now' promo/composition.html"
+    "! grep -rnE 'Math\\.random|Date\\.now|\\basync\\b' promo/composition.html"
 )
 
 

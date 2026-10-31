@@ -188,6 +188,82 @@ class PromoTests(unittest.TestCase):
             total = sum(s["duration"] for s in result["sheet"]["scenes"])
             self.assertAlmostEqual(total, duration, places=2)
 
+    def test_sheet_cites_only_the_current_run_files(self) -> None:
+        # A host review caught _changed_files unioning every record: an
+        # earlier run's files leaked into the sheet. Fly a second task that
+        # touches a different file; the first task's sheet must not cite it.
+        (self.project.root / "other").mkdir(exist_ok=True)
+        (self.project.root / "other" / "b.txt").write_text("x", encoding="utf-8")
+        from aperio.model import Acceptance, Approval, Plan, Step, plan_body_digest
+
+        task2 = __import__("aperio.model", fromlist=["Task"]).Task(
+            id="task-second", title="Second", request="Second slice"
+        )
+        task2.status = "approved"
+        tasks = self.project.tasks()
+        tasks.append(task2)
+        self.project.save_tasks(tasks)
+        plan2 = Plan(
+            id="plan-second",
+            task_id=task2.id,
+            title="Second",
+            request=task2.request,
+            allowed_paths=["other/"],
+            steps=[Step(id="w", kind="write", path="other/b.txt", content="y")],
+            acceptance=[Acceptance(id="check", command="test -f other/b.txt")],
+        )
+        task2.plan_id = plan2.id
+        self.project.put_task(task2)
+        plan2.approval = Approval(approved_by="owner", plan_sha256=plan_body_digest(plan2))
+        self.project.save_plan(plan2)
+        plan2 = self.project.get_plan(plan2.id)
+        from aperio.runner import apply_plan as apply2
+        from aperio.runner import finish as finish2
+        from aperio.runner import review as review2
+        from aperio.runner import verify as verify2
+
+        apply2(self.project, plan2, actor="builder")
+        verify2(self.project, task2.id)
+        review2(self.project, task2.id, reviewer="qa", verdict="confirmed")
+        finish2(self.project, task2.id)
+        result = build_promo(self.project, "task-second")
+        cited = result["sheet"]["sourced_from"]["changed_files"]
+        self.assertIn("other/b.txt", cited)
+        self.assertNotIn("site/index.html", cited, "an earlier task's files leaked")
+
+    def test_promo_refuses_when_review_signature_is_stripped(self) -> None:
+        # The cited review must carry a valid signature — the same bar
+        # finish() applies (a host review caught generation citing
+        # unvalidated review records).
+        fresh = self.project.get_task("task-promo-src")
+        review_record = next(p for p in fresh.evidence if "review-" in p)
+        record_path = Path(review_record)
+        data = json.loads(record_path.read_text(encoding="utf-8"))
+        del data["signature"]
+        record_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        with self.assertRaises(PromoError):
+            build_promo(self.project, "task-promo-src")
+
+    def test_determinism_check_covers_async(self) -> None:
+        # docs/MOTION.md forbids Math.random, Date.now, AND async; the
+        # generated acceptance check must reject all three (a host review
+        # caught the check covering only two).
+        result = build_promo(self.project, "task-promo-src")
+        check = next(
+            a
+            for a in result["promo_plan"]["acceptance"]
+            if a["id"] == "determinism-contract"
+        )
+        # The generated composition passes its own check...
+        probe = subprocess.run(
+            ["/bin/sh", "-c", check["command"]],
+            capture_output=True, text=True, check=False,
+            cwd=str(self.project.root),
+        )
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        # ...and the pattern genuinely covers async.
+        self.assertIn("async", check["command"])
+
     def test_cli_promo_on_done_task(self) -> None:
         result = subprocess.run(
             [sys.executable, "-m", "aperio", "--project", str(self.project.root),
