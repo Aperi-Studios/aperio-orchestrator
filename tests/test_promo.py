@@ -73,7 +73,7 @@ class PromoTests(unittest.TestCase):
         promo_plan = result["promo_plan"]
         self.assertEqual(promo_plan["allowed_paths"], ["promo/"])
         writes = [s for s in promo_plan["steps"] if s["kind"] == "write"]
-        self.assertEqual(len(writes), 3)
+        self.assertEqual(len(writes), 4)
         for step in writes:
             self.assertTrue(step["path"].startswith("promo/"))
         # The render is a declared run step (a host review caught it missing).
@@ -88,6 +88,18 @@ class PromoTests(unittest.TestCase):
         self.assertIn("hyperframes lint", render_sh)
         self.assertIn("hyperframes validate", render_sh)
         self.assertIn("hyperframes render", render_sh)
+        # The local-font rule: fail closed without fonts/promo.woff2.
+        self.assertIn("missing fonts/promo.woff2", render_sh)
+        font_readme = next(
+            s["content"] for s in promo_plan["steps"] if s["path"] == "promo/fonts/README.md"
+        )
+        self.assertIn("promo.woff2", font_readme)
+        composition = next(
+            s["content"] for s in promo_plan["steps"] if s["path"] == "promo/composition.html"
+        )
+        self.assertIn("@font-face", composition)
+        self.assertIn("fonts/promo.woff2", composition)
+        self.assertNotIn("'Inter'", composition)
         # And the acceptance carries the video-exists gate.
         acceptance_ids = [a["id"] for a in promo_plan["acceptance"]]
         self.assertIn("video-rendered", acceptance_ids)
@@ -141,7 +153,7 @@ class PromoTests(unittest.TestCase):
         plan = Plan.from_dict(data)
         self.project.save_plan(plan)
         loaded = self.project.get_plan("plan-generated")
-        self.assertEqual(len(loaded.steps), 4)
+        self.assertEqual(len(loaded.steps), 5)
 
     def test_evidence_text_is_escaped_in_composition(self) -> None:
         # A host review caught unescaped interpolation: task content could

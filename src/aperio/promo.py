@@ -46,18 +46,16 @@ def _changed_files(project: Project, task_id: str) -> list[str]:
     return sorted(set(changed))
 
 
-def _acceptance_summary(project: Project, task_id: str) -> list[dict[str, Any]]:
-    summary: list[dict[str, Any]] = []
-    for row in project.evidence_readonly(task_id):
-        for check in row.get("checks", []):
-            summary.append(
-                {
-                    "id": check.get("check_id"),
-                    "command": check.get("command"),
-                    "ok": check.get("ok"),
-                }
-            )
-    return summary
+def _acceptance_summary(current: dict[str, Any]) -> list[dict[str, Any]]:
+    """Checks from the CURRENT verification record only — never stale ones."""
+    return [
+        {
+            "id": check.get("check_id"),
+            "command": check.get("command"),
+            "ok": check.get("ok"),
+        }
+        for check in current.get("checks", [])
+    ]
 
 
 def _sheet_scenes(
@@ -148,10 +146,20 @@ def build_promo(
     if review is None or review.verdict != "confirmed":
         raise PromoError("task has no confirmed review; the promo cannot cite one")
 
+    # The promo cites the CURRENT verification, validated for staleness:
+    # a stale or failed record must never be presented as proof (a host
+    # review caught generation trusting verify_id alone).
+    from .runner import RunError, _current_verification
+
+    try:
+        current = _current_verification(project, task)
+    except RunError as exc:
+        raise PromoError(
+            f"the task's verification is not current — re-verify before generating "
+            f"the promo: {exc}"
+        ) from exc
     changed = _changed_files(project, task_id)
-    checks = _acceptance_summary(project, task_id)
-    if not task.verify_id:
-        raise PromoError("task has no verification evidence")
+    checks = _acceptance_summary(current)
 
     width, height = (1080, 1920) if vertical else (1920, 1080)
     if duration < 8 or duration > 30:
@@ -174,6 +182,7 @@ def build_promo(
         "sourced_from": {
             "task_id": task.id,
             "plan_id": plan.id,
+            "verify_id": current.get("check_id"),
             "review": {"reviewer": review.reviewer, "verdict": review.verdict},
             "changed_files": changed,
             "acceptance_checks": checks,
@@ -195,6 +204,12 @@ def build_promo(
         "steps": [
             _write_step("promo/shot-sheet.json", json.dumps(sheet, indent=2) + "\n"),
             _write_step("promo/composition.html", composition),
+            _write_step(
+                "promo/fonts/README.md",
+                "Place a licensed .woff2 font here named `promo.woff2`.\n"
+                "The motion doctrine (docs/MOTION.md) forbids relying on system fonts:\n"
+                "the render script fails closed without this file.\n",
+            ),
             _write_step("promo/render.sh", render_script),
             {
                 "id": "render-promo",
@@ -267,7 +282,7 @@ def _composition_html(sheet: dict[str, Any]) -> str:
             f"{selector} {{ position:absolute; inset:0; display:flex; "
             "align-items:center; justify-content:center; flex-direction:column; "
             f"opacity:0; }}\n{selector} .text {{ color: {palette['ink']}; "
-            "font-family: 'Inter', sans-serif; font-weight: 700; "
+            "font-family: 'AperioPromo', sans-serif; font-weight: 700; "
             f"font-size: {height // 12}px; }}\n{selector} .item {{ color: {palette['muted']}; "
             f"font-size: {height // 24}px; margin: 4px; }}"
         )
@@ -299,6 +314,7 @@ def _composition_html(sheet: dict[str, Any]) -> str:
         f"<meta name=\"hyperframes\" content=\"duration:{duration},fps:30,width:{width},height:{height}\">\n"
         "<title>Aperio promo</title>\n"
         "<style>\n"
+        "@font-face { font-family: 'AperioPromo'; src: url('fonts/promo.woff2') format('woff2'); font-display: block; }\n"
         f"body {{ margin:0; background: {palette['bg']}; width:{width}px; height:{height}px; overflow:hidden; }}\n"
         + "\n".join(scene_css)
         + "\n</style></head><body>\n"
@@ -321,6 +337,10 @@ def _render_script(width: int, height: int, duration: int) -> str:
         "# the installed HyperFrames version and may need adjusting.\n"
         "set -e\n"
         "cd \"$(dirname \"$0\")\"\n"
+        "if [ ! -f fonts/promo.woff2 ]; then\n"
+        "  echo \"missing fonts/promo.woff2: place a licensed .woff2 there (docs/MOTION.md local-font rule)\" >&2\n"
+        "  exit 1\n"
+        "fi\n"
         "npx hyperframes lint composition.html\n"
         "npx hyperframes validate composition.html\n"
         f"npx hyperframes render composition.html --width {width} --height {height} "
