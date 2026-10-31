@@ -15,22 +15,22 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 
 
-def _fly_task_to_done(project: Project) -> None:
+def _fly_task_to_done(project: Project, *, task_id: str = "task-promo-src", title: str = "Landing page") -> None:
     """Build a real done task: run, verify, review — through the real runner."""
-    from aperio.model import Acceptance, Approval, Plan, Step, plan_body_digest
+    from aperio.model import Acceptance, Approval, Plan, Step, Task, plan_body_digest
     from aperio.runner import apply_plan, finish, review, verify
 
     (project.root / "site").mkdir(exist_ok=True)
     (project.root / "site" / "index.html").write_text("<h1>draft</h1>", encoding="utf-8")
-    task = __import__("aperio.model", fromlist=["Task"]).Task(
-        id="task-promo-src", title="Landing page", request="Build the landing page"
+    task = Task(
+        id=task_id, title=title, request="Build the landing page"
     )
     task.status = "approved"
     tasks = project.tasks()
     tasks.append(task)
     project.save_tasks(tasks)
     plan = Plan(
-        id="plan-promo-src",
+        id=f"plan-{task_id}",
         task_id=task.id,
         title="Landing page",
         request=task.request,
@@ -72,9 +72,25 @@ class PromoTests(unittest.TestCase):
         # The promo plan is a valid plan-shaped dict with bounded paths.
         promo_plan = result["promo_plan"]
         self.assertEqual(promo_plan["allowed_paths"], ["promo/"])
-        for step in promo_plan["steps"]:
-            self.assertEqual(step["kind"], "write")
+        writes = [s for s in promo_plan["steps"] if s["kind"] == "write"]
+        self.assertEqual(len(writes), 3)
+        for step in writes:
             self.assertTrue(step["path"].startswith("promo/"))
+        # The render is a declared run step (a host review caught it missing).
+        render_steps = [s for s in promo_plan["steps"] if s["kind"] == "run"]
+        self.assertEqual(len(render_steps), 1)
+        self.assertEqual(render_steps[0]["command"], "sh promo/render.sh")
+        self.assertEqual(render_steps[0]["writes"], ["promo/promo.mp4"])
+        # The motion contract's gate lives in the script: lint && validate before render.
+        render_sh = next(
+            s["content"] for s in promo_plan["steps"] if s["path"] == "promo/render.sh"
+        )
+        self.assertIn("hyperframes lint", render_sh)
+        self.assertIn("hyperframes validate", render_sh)
+        self.assertIn("hyperframes render", render_sh)
+        # And the acceptance carries the video-exists gate.
+        acceptance_ids = [a["id"] for a in promo_plan["acceptance"]]
+        self.assertIn("video-rendered", acceptance_ids)
 
     def test_refuses_a_task_that_is_not_done(self) -> None:
         from aperio.model import Task
@@ -125,7 +141,40 @@ class PromoTests(unittest.TestCase):
         plan = Plan.from_dict(data)
         self.project.save_plan(plan)
         loaded = self.project.get_plan("plan-generated")
-        self.assertEqual(len(loaded.steps), 3)
+        self.assertEqual(len(loaded.steps), 4)
+
+    def test_evidence_text_is_escaped_in_composition(self) -> None:
+        # A host review caught unescaped interpolation: task content could
+        # inject markup or scripts into the generated composition. A title
+        # carrying HTML must come out escaped.
+        _fly_task_to_done(
+            self.project,
+            task_id="task-evil",
+            title="Evil <script>alert(1)</script> & <b>bold</b>",
+        )
+        result = build_promo(self.project, "task-evil")
+        composition = next(
+            s["content"]
+            for s in result["promo_plan"]["steps"]
+            if s["path"] == "promo/composition.html"
+        )
+        self.assertNotIn("<script>alert(1)</script>", composition)
+        self.assertIn("&lt;script&gt;", composition)
+
+    def test_button_lands_in_the_final_two_seconds(self) -> None:
+        # The motion contract requires the button shot in the last two
+        # seconds for every supported duration (a host review caught the
+        # 20s promo starting its button at 17s with a 3s span).
+        for duration in (8, 12, 20, 30):
+            result = build_promo(self.project, "task-promo-src", duration=duration)
+            button = result["sheet"]["scenes"][-1]
+            self.assertEqual(button["name"], "button")
+            self.assertLessEqual(button["duration"], 2.0)
+            self.assertAlmostEqual(
+                button["start"] + button["duration"], duration, places=2
+            )
+            total = sum(s["duration"] for s in result["sheet"]["scenes"])
+            self.assertAlmostEqual(total, duration, places=2)
 
     def test_cli_promo_on_done_task(self) -> None:
         result = subprocess.run(

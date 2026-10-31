@@ -17,6 +17,7 @@ dependency.
 
 from __future__ import annotations
 
+import html
 import json
 from typing import Any
 
@@ -71,17 +72,21 @@ def _sheet_scenes(
     Times are proportional to the declared duration and sum to it exactly.
     """
     n_checks = min(len(checks), 3)
+    # The button shot is the last two seconds (docs/MOTION.md): its duration
+    # is capped at 2.0s and it ends exactly at the runtime. The other four
+    # beats share the remainder proportionally.
+    button_dur = min(2.0, max(1.2, round(duration * 0.15, 2)))
+    rest = round(duration - button_dur, 2)
     fractions = [
-        ("hook", 0.15),
-        ("establish", 0.25),
-        ("proof", 0.25),
-        ("craft", 0.20),
-        ("button", 0.15),
+        ("hook", 0.15 / 0.85),
+        ("establish", 0.25 / 0.85),
+        ("proof", 0.25 / 0.85),
+        ("craft", 0.20 / 0.85),
     ]
     scenes: list[dict[str, Any]] = []
     cursor = 0.0
     for name, fraction in fractions:
-        span = round(duration * fraction, 2)
+        span = round(rest * fraction, 2)
         scene: dict[str, Any] = {
             "name": name,
             "start": round(cursor, 2),
@@ -100,15 +105,22 @@ def _sheet_scenes(
         elif name == "craft":
             scene["kind"] = "files"
             scene["items"] = changed[:4] or ["the delivered work"]
-        elif name == "button":
-            scene["kind"] = "logo"
-            scene["text"] = task_title
         scenes.append(scene)
         cursor = round(cursor + span, 2)
-    # Rounding drift lands on the last scene so times sum exactly.
-    drift = round(duration - cursor, 2)
+    # Rounding drift lands on craft (the last beat before the button) so the
+    # times sum exactly and the button ends at the runtime.
+    drift = round(rest - cursor, 2)
     if scenes and drift:
         scenes[-1]["duration"] = round(scenes[-1]["duration"] + drift, 2)
+    scenes.append(
+        {
+            "name": "button",
+            "start": round(duration - button_dur, 2),
+            "duration": button_dur,
+            "kind": "logo",
+            "text": task_title,
+        }
+    )
     return scenes
 
 
@@ -184,12 +196,20 @@ def build_promo(
             _write_step("promo/shot-sheet.json", json.dumps(sheet, indent=2) + "\n"),
             _write_step("promo/composition.html", composition),
             _write_step("promo/render.sh", render_script),
+            {
+                "id": "render-promo",
+                "kind": "run",
+                "command": "sh promo/render.sh",
+                "writes": ["promo/promo.mp4"],
+                "timeout_s": 600,
+            },
         ],
         "acceptance": [
             _acceptance("sheet-times-sum", _times_sum_command(duration)),
             _acceptance("determinism-contract", NO_RANDOM_COMMAND),
             _acceptance("composition-declared", "grep -q 'name=\"hyperframes\"' promo/composition.html"),
             _acceptance("render-script-present", "test -f promo/render.sh"),
+            _acceptance("video-rendered", "test -s promo/promo.mp4"),
         ],
     }
     return {
@@ -197,9 +217,11 @@ def build_promo(
         "promo_plan": promo_plan,
         "note": (
             "The promo plan is a normal Aperio plan: approve it, run it, verify it. "
-            "Rendering requires the HyperFrames toolchain (Node 22+); install it "
-            "through `apero tool` and run promo/render.sh after the plan applies. "
-            "The render command is NOT executed by Aperio."
+            "Its render step executes promo/render.sh, which runs `npx hyperframes "
+            "lint && validate && render` — install the HyperFrames toolchain (Node 22+) "
+            "through `apero tool` BEFORE running the plan; without it the render step "
+            "fails closed. Rendering is a declared, owner-approved plan step, not an "
+            "Aperio built-in."
         ),
     }
 
@@ -255,12 +277,18 @@ def _composition_html(sheet: dict[str, Any]) -> str:
             f"tl.to('{selector}', {{opacity: 1, duration: {max(span - 0.6, 0.1)}}}, {start + 0.6});\n"
             f"tl.to('{selector}', {{opacity: 0, duration: 0.25, ease: 'power2.in'}}, {round(start + span - 0.25, 2)});"
         )
+    # Evidence-derived text (task title, request, file names) is escaped:
+    # unescaped interpolation would let task content inject markup or
+    # scripts into the composition (a host review caught this).
     items_html = "".join(
         f"<div class='scene scene-{i}'>"
         + (
-            f"<div class='text'>{s.get('text', '')}</div>"
+            f"<div class='text'>{html.escape(str(s.get('text', '')))}</div>"
             if s.get("text")
-            else "".join(f"<div class='item'>{item}</div>" for item in s.get("items", []))
+            else "".join(
+                f"<div class='item'>{html.escape(str(item))}</div>"
+                for item in s.get("items", [])
+            )
         )
         + "</div>"
         for i, s in enumerate(scenes)
@@ -288,10 +316,13 @@ def _composition_html(sheet: dict[str, Any]) -> str:
 def _render_script(width: int, height: int, duration: int) -> str:
     return (
         "#!/bin/sh\n"
-        "# Render the promo with HyperFrames (installed via `apero tool`).\n"
-        "# Aperio does not run this script; the owner or a rendered plan step does.\n"
+        "# Validate and render the promo with HyperFrames (installed via `apero tool`).\n"
+        "# The motion contract's gate is lint && validate before render; flags follow\n"
+        "# the installed HyperFrames version and may need adjusting.\n"
         "set -e\n"
         "cd \"$(dirname \"$0\")\"\n"
+        "npx hyperframes lint composition.html\n"
+        "npx hyperframes validate composition.html\n"
         f"npx hyperframes render composition.html --width {width} --height {height} "
         f"--duration {duration} --fps 30 --output promo.mp4\n"
         "echo \"rendered promo.mp4\"\n"
